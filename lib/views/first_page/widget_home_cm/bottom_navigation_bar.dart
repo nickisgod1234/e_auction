@@ -1,0 +1,47 @@
+import 'package:flutter/material.dart';
+import 'package:e_auction/theme/app_theme.dart';
+
+class CustomBottomNavigationBar extends StatelessWidget {
+  final int currentIndex;
+  final Function(int) onItemTapped;
+
+  const CustomBottomNavigationBar({
+    super.key,
+    required this.currentIndex,
+    required this.onItemTapped,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomNavigationBar(
+      currentIndex: currentIndex,
+      onTap: onItemTapped,
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: context.customTheme.primaryColor,
+      unselectedItemColor: Colors.grey,
+      items: [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: 'หน้าแรก',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.search),
+          label: 'ค้นหา',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.add_circle_outline),
+          label: 'ลงประมูล',
+        ),
+      
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          label: 'โปรไฟล์',
+        ),
+          BottomNavigationBarItem(
+          icon: Icon(Icons.settings),
+          label: 'ตั้งค่า',
+        ),
+      ],
+    );
+  }
+}

@@ -52,14 +52,16 @@ dependencies:
   shared_preferences: ^2.1.1
   flutter_launcher_icons: ^0.14.1
   http: ^1.2.0
+  another_flushbar: ^1.12.30
+  provider: ^6.1.2
 
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/icon/icon_morket.png"
-  adaptive_icon_foreground: "assets/icon/icon_morket.png"
-  adaptive_icon_background: "#FFFFFF"  # หรือใส่ path รูป background ก็ได้
+  image_path: "assets/icon/HR.png"
+  adaptive_icon_foreground: "assets/icon/HR.png"
+  adaptive_icon_background: "#FFFFFF"  # หรือใส่ path รูป background ก็ได้ด
 
 
 dev_dependencies:
