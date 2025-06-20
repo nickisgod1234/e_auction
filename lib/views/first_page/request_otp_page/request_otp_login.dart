@@ -115,8 +115,12 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
   void _submitPhoneNumber() async {
     final phoneNumber = _phoneController.text;
 
-    // Demo Mode
+    // Demo Mode for Apple Review
     if (phoneNumber == '0001112345') {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('id', 'APPLE_TEST_ID');
+      await prefs.setString('mem_fullname', 'Apple Review Tester');
+
       setState(() {
         _refno = 'DEMO';
         _isPinVisible = true;
@@ -288,6 +292,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
       await prefs.setString('phone_number', '0001112345');
       await prefs.setString('token_otp', 'demo_token');
       await prefs.setString('id', '999');
+      await prefs.setString('mem_fullname', 'Apple Review Tester');
       await prefs.setString('email', 'nick888@hmail.com');
       await prefs.setString('password', '12345');
       // เพิ่มข้อมูลจำลองอื่น ๆ ตามต้องการ
@@ -581,7 +586,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                             ),
                             SizedBox(height: 10),
                             Text(
-                              "สร้างบัญชีหรือเข้าสู่ระบบ",
+                              "เข้าสู่ระบบ",
                               style: TextStyle(
                                 fontSize: 18,
                                 color: context.customTheme.primaryColor,

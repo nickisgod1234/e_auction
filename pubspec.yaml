@@ -54,6 +54,7 @@ dependencies:
   http: ^1.2.0
   another_flushbar: ^1.12.30
   provider: ^6.1.2
+  marquee: ^2.2.3
 
 
 flutter_icons:

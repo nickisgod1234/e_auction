@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
+import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
 import 'package:intl/intl.dart';
 
 class CurrentAuctionCard extends StatelessWidget {
@@ -17,7 +17,7 @@ class CurrentAuctionCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetailPage(auctionData: auctionData),
+            builder: (context) => AuctionDetailViewPage(auctionData: auctionData),
           ),
         );
       },
@@ -46,6 +46,19 @@ class CurrentAuctionCard extends StatelessWidget {
                 child: Image.asset(
                   auctionData['image'] ?? 'assets/images/morket_banner.png',
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading image: ${auctionData['image']}');
+                    return Container(
+                      width: 300,
+                      height: 200,
+                      color: Colors.grey[300],
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 50,
+                        color: Colors.grey[600],
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

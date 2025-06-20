@@ -1,3 +1,4 @@
+import 'package:e_auction/widgets/loading_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/request_otp_page/request_otp_login.dart';
 import 'package:e_auction/theme/app_theme.dart';
@@ -16,6 +17,10 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.getThemeForClient(AppTheme.currentClient),
       home: RequestOtpLoginPage(),
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        // Wrap the app with the loading overlay.
+        return LoadingOverlay(child: child!);
+      },
     );
   }
 }

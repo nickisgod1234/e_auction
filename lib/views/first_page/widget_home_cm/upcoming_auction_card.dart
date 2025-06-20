@@ -47,6 +47,19 @@ class UpcomingAuctionCard extends StatelessWidget {
                 child: Image.asset(
                   auctionData['image'] ?? 'assets/images/morket_banner.png',
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading image: ${auctionData['image']}');
+                    return Container(
+                      width: 280,
+                      height: 200,
+                      color: Colors.grey[300],
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 50,
+                        color: Colors.grey[600],
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

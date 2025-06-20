@@ -1,13 +1,25 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/current_auction_card.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/upcoming_auction_card.dart';
-import 'package:e_auction/views/first_page/widget_home_cm/completed_auction_card.dart';
+// import 'package:e_auction/views/first_page/widget_home_cm/completed_auction_card.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/bottom_navigation_bar.dart';
 import 'package:e_auction/views/first_page/profile_page/profile.dart';
 import 'package:e_auction/views/first_page/setting_page/setting_page.dart';
 import 'package:e_auction/views/first_page/auction_page/current_auction_page.dart';
 import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
 import 'package:e_auction/theme/app_theme.dart';
+import 'package:e_auction/views/first_page/auction_page/all_current_auctions_page.dart';
+import 'package:e_auction/views/first_page/auction_page/all_upcoming_auctions_page.dart';
+import 'package:e_auction/views/first_page/auction_page/my_auctions_page.dart';
+import 'package:e_auction/views/first_page/auction_page/all_winner_announcements_page.dart';
+import 'package:e_auction/views/first_page/widget_home_cm/winner_announcement_card.dart';
+import 'package:e_auction/views/first_page/auction_page/auction_result_page.dart';
+import 'package:e_auction/views/first_page/notification_page/notification_page.dart';
+import 'package:intl/intl.dart';
+import 'package:e_auction/views/first_page/widget_home_cm/marquee_runner.dart';
+import 'package:e_auction/utils/loading_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'bidCount': 12,
       'timeRemaining': 'เหลือ 2:30:45',
       'isActive': true,
-      'image': 'assets/images/morket_banner.png',
+      'image': 'assets/images/m126618lb-0002.png',
       'description': 'นาฬิกา Rolex Submariner รุ่นคลาสสิก วัสดุคุณภาพสูง มาพร้อมกับกล่องและเอกสารรับประกัน อยู่ในสภาพดีมาก เหมาะสำหรับนักสะสมและผู้ที่ชื่นชอบนาฬิกาคุณภาพสูง',
       'brand': 'Rolex',
       'model': 'Submariner',
@@ -101,8 +113,8 @@ class _HomeScreenState extends State<HomeScreen> {
       'bidCount': 8,
       'timeRemaining': 'เหลือ 1:15:30',
       'isActive': true,
-      'image': 'assets/images/morket_banner.png',
-      'description': 'iPhone 15 Pro Max สี Titanium Natural 256GB อยู่ในสภาพใหม่ ยังไม่เคยใช้งาน มาพร้อมกับกล่องและอุปกรณ์ครบชุด',
+      'image': 'assets/images/4ebcdc_032401a646044297adbcf3438498a19b~mv2.png',
+      'description': 'iPhone 15 Pro Max สี Titanium Natural 256GB อยู่ในสภาพใหม่ มาพร้อมกับกล่องและอุปกรณ์ครบชุด',
       'brand': 'Apple',
       'model': 'iPhone 15 Pro Max',
       'material': 'Titanium',
@@ -121,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'bidCount': 15,
       'timeRemaining': 'เหลือ 3:45:20',
       'isActive': true,
-      'image': 'assets/images/morket_banner.png',
+      'image': 'assets/images/noimage.jpg',
       'description': 'MacBook Pro 14 นิ้ว พร้อมชิป M3 512GB SSD 16GB RAM อยู่ในสภาพดีมาก เหมาะสำหรับงานกราฟิกและพัฒนาโปรแกรม',
       'brand': 'Apple',
       'model': 'MacBook Pro M3',
@@ -141,8 +153,8 @@ class _HomeScreenState extends State<HomeScreen> {
       'bidCount': 6,
       'timeRemaining': 'เหลือ 0:30:15',
       'isActive': true,
-      'image': 'assets/images/morket_banner.png',
-      'description': 'กล้อง DSLR Sony A7R V 61MP มาพร้อมกับเลนส์ 24-70mm f/2.8 GM อยู่ในสภาพดีมาก เหมาะสำหรับช่างภาพมืออาชีพ',
+      'image': 'assets/images/noimage.jpg',
+      'description': 'กล้อง DSLR Sony A7R V 61MP มาพร้อมกับเลนส์ 24-70mm f/2.8 GM อยู่ในสภาพดีมาก',
       'brand': 'Sony',
       'model': 'A7R V',
       'material': 'Magnesium Alloy',
@@ -152,26 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'sellerName': 'Camera Pro',
       'sellerRating': '4.6',
       'category': 'cameras'
-    },
-    {
-      'id': 'hermes_birkin_005',
-      'title': 'Hermès Birkin Bag',
-      'currentPrice': 250000,
-      'startingPrice': 200000,
-      'bidCount': 20,
-      'timeRemaining': 'เหลือ 4:20:10',
-      'isActive': true,
-      'image': 'assets/images/morket_banner.png',
-      'description': 'กระเป๋า Hermès Birkin 30cm สี Black Togo Leather มาพร้อมกับกล่องและเอกสารรับประกัน อยู่ในสภาพดีมาก',
-      'brand': 'Hermès',
-      'model': 'Birkin 30',
-      'material': 'Togo Leather',
-      'size': '30cm',
-      'color': 'ดำ',
-      'condition': 'ดีมาก',
-      'sellerName': 'Luxury Collection',
-      'sellerRating': '4.9',
-      'category': 'bags'
     },
   ];
 
@@ -183,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'startingPrice': 1500000,
       'timeUntilStart': '2 วัน',
       'isActive': false,
-      'image': 'assets/images/morket_banner.png',
+      'image': 'assets/images/The-ultimative-Patek-Philippe-Nautilus-Guide.jpg',
       'description': 'นาฬิกา Patek Philippe Nautilus รุ่น 5711/1A สีฟ้า วัสดุสแตนเลสสตีล อยู่ในสภาพดีมาก มาพร้อมกับกล่องและเอกสารรับประกัน',
       'brand': 'Patek Philippe',
       'model': 'Nautilus 5711/1A',
@@ -201,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'startingPrice': 3500000,
       'timeUntilStart': '5 วัน',
       'isActive': false,
-      'image': 'assets/images/morket_banner.png',
+      'image': 'assets/images/testlamodels.png',
       'description': 'รถยนต์ไฟฟ้า Tesla Model S Long Range สีแดง 2023 อยู่ในสภาพใหม่ วิ่งได้ 396 ไมล์ต่อการชาร์จหนึ่งครั้ง',
       'brand': 'Tesla',
       'model': 'Model S Long Range',
@@ -219,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'startingPrice': 180000,
       'timeUntilStart': '1 วัน',
       'isActive': false,
-      'image': 'assets/images/morket_banner.png',
+      'image': 'assets/images/noimage.jpg',
       'description': 'กระเป๋า Chanel Classic Flap Medium สีดำ มาพร้อมกับกล่องและเอกสารรับประกัน อยู่ในสภาพดีมาก',
       'brand': 'Chanel',
       'model': 'Classic Flap Medium',
@@ -236,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'startingPrice': 280000,
       'timeUntilStart': '3 วัน',
       'isActive': false,
-      'image': 'assets/images/morket_banner.png',
+      'image': 'assets/images/noimage.jpg',
       'description': 'กล้อง Leica M11 Digital Rangefinder 60MP มาพร้อมกับเลนส์ Summilux-M 50mm f/1.4 ASPH อยู่ในสภาพดีมาก',
       'brand': 'Leica',
       'model': 'M11',
@@ -249,60 +241,51 @@ class _HomeScreenState extends State<HomeScreen> {
     },
   ];
 
-  // Mock data for completed auctions
-  final List<Map<String, dynamic>> _completedAuctions = [
-    {
-      'id': 'cartier_santos_010',
-      'title': 'Cartier Santos',
-      'finalPrice': 680000,
-      'startingPrice': 600000,
-      'bidCount': 18,
-      'completedDate': '2 วันที่แล้ว',
-      'isActive': false,
-      'image': 'assets/images/morket_banner.png',
-      'description': 'นาฬิกา Cartier Santos Automatic สีขาว วัสดุสแตนเลสสตีล อยู่ในสภาพดีมาก มาพร้อมกับกล่องและเอกสารรับประกัน',
-      'brand': 'Cartier',
-      'model': 'Santos Automatic',
-      'material': 'สแตนเลสสตีล',
-      'size': '39.8mm',
-      'color': 'ขาว',
-      'condition': 'ดีมาก',
-      'sellerName': 'Luxury Timepieces',
-      'sellerRating': '4.8',
-      'winner': 'ผู้ชนะ: user123',
-      'category': 'watches'
-    },
+  // Mock data for winner announcements - sorted with the most recent first
+  final List<Map<String, dynamic>> _winnerAnnouncements = [
     {
       'id': 'apple_watch_ultra_011',
       'title': 'Apple Watch Ultra',
       'finalPrice': 32000,
-      'startingPrice': 28000,
-      'bidCount': 25,
+      'image': 'assets/images/AppleWatch_Ultra_Titanium_MidnightOceanBand_1200x.png',
+      'winner': 'คุณ Tech L.',
       'completedDate': '1 วันที่แล้ว',
-      'isActive': false,
-      'image': 'assets/images/morket_banner.png',
-      'description': 'Apple Watch Ultra 49mm สี Titanium อยู่ในสภาพใหม่ มาพร้อมกับสายนาฬิกาและอุปกรณ์ครบชุด',
-      'brand': 'Apple',
-      'model': 'Apple Watch Ultra',
-      'material': 'Titanium',
-      'size': '49mm',
-      'color': 'Titanium',
-      'condition': 'ใหม่',
+      'category': 'watches',
+      'bidCount': 25,
+      'duration': '7 วัน',
+      'viewCount': 1247,
+      'startDate': '15 มกราคม 2024',
+      'endDate': '22 มกราคม 2024',
+      'startingPrice': 28000,
       'sellerName': 'Apple Store Thailand',
-      'sellerRating': '4.9',
-      'winner': 'ผู้ชนะ: tech_lover',
-      'category': 'watches'
+    },
+    {
+      'id': 'cartier_santos_010',
+      'title': 'Cartier Santos',
+      'finalPrice': 680000,
+      'image':
+          'assets/images/wssa0063-cartier-santos-de-cartier-medium-model-car0356037.png',
+      'winner': 'คุณ Panuwat S.',
+      'completedDate': '2 วันที่แล้ว',
+      'category': 'watches',
+      'bidCount': 18,
+      'duration': '5 วัน',
+      'viewCount': 892,
+      'startDate': '17 มกราคม 2024',
+      'endDate': '22 มกราคม 2024',
+      'startingPrice': 600000,
+      'sellerName': 'Luxury Timepieces',
     },
     {
       'id': 'louis_vuitton_keepall_012',
       'title': 'Louis Vuitton Keepall',
       'finalPrice': 85000,
-      'startingPrice': 70000,
-      'bidCount': 32,
+      'image': 'assets/images/noimage.jpg',
+      'winner': 'คุณ Travel P.',
       'completedDate': '3 วันที่แล้ว',
-      'isActive': false,
-      'image': 'assets/images/morket_banner.png',
-      'description': 'กระเป๋าเดินทาง Louis Vuitton Keepall 55cm สี Monogram Canvas อยู่ในสภาพดีมาก มาพร้อมกับกล่องและเอกสารรับประกัน',
+      'category': 'bags',
+      'description':
+          'กระเป๋าเดินทาง Louis Vuitton Keepall 55cm สี Monogram Canvas อยู่ในสภาพดีมาก มาพร้อมกับกล่องและเอกสารรับประกัน',
       'brand': 'Louis Vuitton',
       'model': 'Keepall 55',
       'material': 'Monogram Canvas',
@@ -311,18 +294,23 @@ class _HomeScreenState extends State<HomeScreen> {
       'condition': 'ดีมาก',
       'sellerName': 'LV Boutique',
       'sellerRating': '4.7',
-      'winner': 'ผู้ชนะ: travel_pro',
+      'bidCount': 32,
+      'duration': '10 วัน',
+      'viewCount': 1567,
+      'startDate': '12 มกราคม 2024',
+      'endDate': '22 มกราคม 2024',
+      'startingPrice': 70000,
     },
     {
       'id': 'canon_eos_r5_013',
       'title': 'Canon EOS R5',
       'finalPrice': 95000,
-      'startingPrice': 85000,
-      'bidCount': 15,
+      'image': 'assets/images/noimage.jpg',
+      'winner': 'คุณ Photo M.',
       'completedDate': '5 วันที่แล้ว',
-      'isActive': false,
-      'image': 'assets/images/morket_banner.png',
-      'description': 'กล้อง Mirrorless Canon EOS R5 45MP มาพร้อมกับเลนส์ RF 24-105mm f/4L IS USM อยู่ในสภาพดีมาก',
+      'category': 'cameras',
+      'description':
+          'กล้อง Mirrorless Canon EOS R5 45MP มาพร้อมกับเลนส์ RF 24-105mm f/4L IS USM อยู่ในสภาพดีมาก',
       'brand': 'Canon',
       'model': 'EOS R5',
       'material': 'Magnesium Alloy',
@@ -331,27 +319,12 @@ class _HomeScreenState extends State<HomeScreen> {
       'condition': 'ดีมาก',
       'sellerName': 'Canon Thailand',
       'sellerRating': '4.6',
-      'winner': 'ผู้ชนะ: photo_master',
-    },
-    {
-      'id': 'omega_speedmaster_014',
-      'title': 'Omega Speedmaster',
-      'finalPrice': 420000,
-      'startingPrice': 380000,
-      'bidCount': 22,
-      'completedDate': '1 สัปดาห์ที่แล้ว',
-      'isActive': false,
-      'image': 'assets/images/morket_banner.png',
-      'description': 'นาฬิกา Omega Speedmaster Professional Moonwatch สีดำ วัสดุสแตนเลสสตีล อยู่ในสภาพดีมาก',
-      'brand': 'Omega',
-      'model': 'Speedmaster Professional',
-      'material': 'สแตนเลสสตีล',
-      'size': '42mm',
-      'color': 'ดำ',
-      'condition': 'ดีมาก',
-      'sellerName': 'Omega Boutique',
-      'sellerRating': '4.9',
-      'winner': 'ผู้ชนะ: watch_collector',
+      'bidCount': 15,
+      'duration': '7 วัน',
+      'viewCount': 734,
+      'startDate': '15 มกราคม 2024',
+      'endDate': '22 มกราคม 2024',
+      'startingPrice': 85000,
     },
   ];
 
@@ -379,35 +352,53 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  void _onItemTapped(int index) {
+  Future<void> _navigateToPage(BuildContext context, Widget page) async {
+    LoadingService.instance.show();
+    // Simulate a network delay or data fetching
+    await Future.delayed(const Duration(milliseconds: 300));
+    LoadingService.instance.hide(); // Hide the loader BEFORE pushing the new page
+
+    if (mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => page),
+      );
+    }
+  }
+
+  void _onItemTapped(int index) async {
     setState(() {
       _selectedIndex = index;
+      
+      // Reset category filter to "ทั้งหมด" when home tab is tapped
+      if (index == 0) {
+        _selectedCategoryIndex = 0;
+        _searchQuery = '';
+        _searchController.clear();
+        _isSearching = false;
+      }
     });
     
     // Navigate to different pages based on selected index
     if (index == 2) { // Current Auction tab
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CurrentAuctionPage(),
-        ),
-      );
-    }
-    if (index == 3) { // Profile tab
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ProfilePage(),
-        ),
-      );
-    }
-    if (index == 4) { // Setting tab
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SettingPage(),
-        ),
-      );
+      await _navigateToPage(context, CurrentAuctionPage());
+      setState(() => _selectedIndex = 0); // Reset index after returning
+    } else if (index == 3) { // Profile tab
+      await _navigateToPage(context, ProfilePage());
+      setState(() => _selectedIndex = 0);
+    } else if (index == 4) { // Setting tab
+      await _navigateToPage(context, SettingPage());
+      setState(() => _selectedIndex = 0);
+    } else {
+       setState(() {
+        _selectedIndex = index;
+        if (index == 0) {
+          _selectedCategoryIndex = 0;
+          _searchQuery = '';
+          _searchController.clear();
+          _isSearching = false;
+        }
+      });
     }
   }
 
@@ -493,7 +484,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final filteredCurrentAuctions = _getFilteredAuctions(_currentAuctions);
     final filteredUpcomingAuctions = _getFilteredAuctions(_upcomingAuctions);
-    final filteredCompletedAuctions = _getFilteredAuctions(_completedAuctions);
+    final filteredWinnerAnnouncements =
+        _getFilteredAuctions(_winnerAnnouncements);
 
     return Scaffold(
       appBar: AppBar(
@@ -510,9 +502,50 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
         actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: Icon(Icons.notifications_outlined, color: Colors.black),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NotificationPage(),
+                    ),
+                  );
+                },
+              ),
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: const Text(
+                    '1',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
           IconButton(
-            icon: Icon(Icons.notifications_outlined, color: Colors.black),
-            onPressed: () {},
+            icon: Icon(Icons.list_alt, color: Colors.black),
+            onPressed: () {
+              _navigateToPage(context, MyAuctionsPage());
+            },
           ),
           IconButton(
             icon: Icon(
@@ -567,7 +600,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      _navigateToPage(
+                          context,
+                          AllCurrentAuctionsPage(
+                              currentAuctions: _currentAuctions));
+                    },
                     child: Text(
                       'ดูทั้งหมด',
                       style: TextStyle(
@@ -619,7 +657,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      _navigateToPage(
+                          context,
+                          AllUpcomingAuctionsPage(
+                              upcomingAuctions: _upcomingAuctions));
+                    },
                     child: Text(
                       'ดูทั้งหมด',
                       style: TextStyle(
@@ -657,21 +700,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-            // Completed Auctions Section
+            // Winner Announcement Section
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'การประมูลที่เสร็จสิ้น',
+                  const Text(
+                    'ประกาศผลผู้ชนะ',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      _navigateToPage(
+                          context,
+                          AllWinnerAnnouncementsPage(
+                              winnerAnnouncements: _winnerAnnouncements));
+                    },
                     child: Text(
                       'ดูทั้งหมด',
                       style: TextStyle(
@@ -683,30 +731,52 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            if (filteredCompletedAuctions.isEmpty)
-              Center(
+            // Marquee text for latest winner
+            if (filteredWinnerAnnouncements.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                ),
+                child: MarqueeRunner(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.emoji_events, color: Colors.green, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        '🎉 ล่าสุด! ${filteredWinnerAnnouncements.first['winner']} ชนะการประมูล ${filteredWinnerAnnouncements.first['title']} ในราคา ฿${NumberFormat('#,###').format(filteredWinnerAnnouncements.first['finalPrice'])} 🎉',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (filteredWinnerAnnouncements.isEmpty)
+              const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'ไม่พบรายการในหมวดหมู่นี้',
+                    'ไม่พบรายการประกาศผลผู้ชนะ',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: Colors.grey,
                       fontSize: 16,
                     ),
                   ),
                 ),
               )
             else
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filteredCompletedAuctions.length,
-                  itemBuilder: (context, index) {
-                    return CompletedAuctionCard(auctionData: filteredCompletedAuctions[index]);
-                  },
-                ),
+              _buildWinnerAnnouncementListItem(
+                context,
+                filteredWinnerAnnouncements.first,
+                isLatest: true,
               ),
           ],
         ),
@@ -718,9 +788,103 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Widget _buildWinnerAnnouncementListItem(
+      BuildContext context, Map<String, dynamic> auction,
+      {bool isLatest = false}) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          InkWell(
+            onTap: () {
+              _navigateToPage(context, AuctionResultPage(auctionData: auction));
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      auction['image'],
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey[200],
+                          child:
+                              Icon(Icons.image_not_supported, color: Colors.grey),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          auction['title'],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'ผู้ชนะ: ${auction['winner']}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'ราคาปิด: ฿${NumberFormat('#,###').format(auction['finalPrice'])}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isLatest)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'ล่าสุด',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
