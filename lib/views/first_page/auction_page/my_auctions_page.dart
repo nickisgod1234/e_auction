@@ -940,4 +940,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       },
     );
   }
+
+  Future<bool> _isAppleTestAccount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('id') ?? '';
+    final phoneNumber = prefs.getString('phone') ?? '';
+    
+    return userId == 'APPLE_TEST_ID' || phoneNumber == '0001112345';
+  }
 } 

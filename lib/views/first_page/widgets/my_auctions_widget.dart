@@ -1323,7 +1323,7 @@ Widget buildWonAuctionCard(
                 SizedBox(height: 8),
                 if (auction['paymentStatus'] == 'pending')
                   FutureBuilder<bool>(
-                    future: hasWinnerInfo(),
+                    future: _isAppleTestAccount(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Container(
@@ -1340,87 +1340,136 @@ Widget buildWonAuctionCard(
                           ),
                         );
                       }
-                      final hasCompleteInfo = snapshot.data ?? false;
-                      if (hasCompleteInfo) {
-                        return Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.08),
-                                      blurRadius: 8,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
+                      final isAppleTest = snapshot.data ?? false;
+                      
+                      // ไม่แสดงปุ่มกรอกข้อมูลสำหรับ Apple test account
+                      if (isAppleTest) {
+                        return Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.info, size: 16, color: Colors.grey[600]),
+                              SizedBox(width: 4),
+                              Text(
+                                'บัญชีทดสอบ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(8),
-                                    onTap: () async {
-                                      if (await validateWinnerInfo(context)) {
-                                        AuctionDialogs.showPaymentDialog(context, auction);
-                                      }
-                                    },
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 0),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.credit_card, color: Colors.black, size: 16),
-                                          SizedBox(width: 2),
-                                          Text(
-                                            'ติดต่อชำระเงิน',
-                                            style: TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 16,
-                                            ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      return FutureBuilder<bool>(
+                        future: hasWinnerInfo(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return Container(
+                              height: 32,
+                              child: Center(
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[400]!),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          final hasCompleteInfo = snapshot.data ?? false;
+                          if (hasCompleteInfo) {
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[300],
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.08),
+                                          blurRadius: 8,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(8),
+                                        onTap: () async {
+                                          if (await validateWinnerInfo(context)) {
+                                            AuctionDialogs.showPaymentDialog(context, auction);
+                                          }
+                                        },
+                                        child: Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 0),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.credit_card, color: Colors.black, size: 16),
+                                              SizedBox(width: 2),
+                                              Text(
+                                                'ติดต่อชำระเงิน',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            TextButton.icon(
+                                SizedBox(width: 8),
+                                TextButton.icon(
+                                  onPressed: () async {
+                                    await loadProfileAndShowDialog(auction);
+                                  },
+                                  icon: Icon(Icons.edit, size: 16, color: Colors.grey[600]),
+                                  label: Text('แก้ไขข้อมูลผู้ชนะ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.grey[600],
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                ),
+                              ],
+                            );
+                          } else {
+                            return ElevatedButton.icon(
                               onPressed: () async {
                                 await loadProfileAndShowDialog(auction);
                               },
-                              icon: Icon(Icons.edit, size: 16, color: Colors.grey[600]),
-                              label: Text('แก้ไขข้อมูลผู้ชนะ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.grey[600],
-                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              icon: Icon(Icons.edit, size: 16, color: Colors.black),
+                              label: Text('กรอกข้อมูลผู้ชนะ', style: TextStyle(color: Colors.black)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                elevation: 4,
+                                shadowColor: Colors.black.withOpacity(0.3),
+                                // textStyle: TextStyle(fontWeight: FontWeight.w600),
                               ),
-                            ),
-                          ],
-                        );
-                      } else {
-                        return ElevatedButton.icon(
-                          onPressed: () async {
-                            await loadProfileAndShowDialog(auction);
-                          },
-                          icon: Icon(Icons.edit, size: 16, color: Colors.black),
-                          label: Text('กรอกข้อมูลผู้ชนะ', style: TextStyle(color: Colors.black)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 4,
-                            shadowColor: Colors.black.withOpacity(0.3),
-                            // textStyle: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        );
-                      }
+                            );
+                          }
+                        },
+                      );
                     },
                   ),
                 if (auction['paymentStatus'] == 'paid')
@@ -1470,4 +1519,12 @@ Widget buildWonAuctionCard(
       ),
     ),
   );
+}
+
+Future<bool> _isAppleTestAccount() async {
+  final prefs = await SharedPreferences.getInstance();
+  final userId = prefs.getString('id') ?? '';
+  final phoneNumber = prefs.getString('phone') ?? '';
+  
+  return userId == 'APPLE_TEST_ID' || phoneNumber == '0001112345';
 }
