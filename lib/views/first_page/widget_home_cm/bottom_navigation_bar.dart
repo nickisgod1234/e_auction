@@ -29,15 +29,6 @@ class CustomBottomNavigationBar extends StatelessWidget {
           label: 'ค้นหา',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.add_circle_outline),
-          label: 'ลงประมูล',
-        ),
-      
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'โปรไฟล์',
-        ),
-          BottomNavigationBarItem(
           icon: Icon(Icons.settings),
           label: 'ตั้งค่า',
         ),

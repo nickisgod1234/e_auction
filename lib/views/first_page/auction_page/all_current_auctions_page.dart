@@ -1,6 +1,7 @@
 import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:e_auction/utils/format.dart';
 
 class AllCurrentAuctionsPage extends StatelessWidget {
   final List<Map<String, dynamic>> currentAuctions;
@@ -59,7 +60,7 @@ class AllCurrentAuctionsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'ราคาปัจจุบัน: ฿${NumberFormat('#,###').format(auction['currentPrice'])}',
+                      'ราคาปัจจุบัน: ${Format.formatCurrency(auction['currentPrice'])}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[800],

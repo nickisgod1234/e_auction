@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
 import 'package:intl/intl.dart';
+import 'package:e_auction/utils/format.dart';
 
 class CurrentAuctionCard extends StatelessWidget {
   final Map<String, dynamic> auctionData;
@@ -126,7 +127,7 @@ class CurrentAuctionCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'ราคาปัจจุบัน: ฿${NumberFormat('#,###').format(auctionData['currentPrice'] ?? 850000)}',
+                          'ราคาปัจจุบัน: ${Format.formatCurrency(auctionData['currentPrice'] ?? 850000)}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.white,

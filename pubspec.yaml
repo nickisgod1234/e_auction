@@ -60,9 +60,9 @@ dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/icon/HR.png"
-  adaptive_icon_foreground: "assets/icon/HR.png"
-  adaptive_icon_background: "#FFFFFF"  # หรือใส่ path รูป background ก็ได้ด
+  image_path: "assets/icon/appstore.png"
+  adaptive_icon_foreground: "assets/icon/appstore.png"
+  adaptive_icon_background: "#FFFFFF"
 
 
 dev_dependencies:

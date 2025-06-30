@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:e_auction/utils/format.dart';
 
 class AuctionResultPage extends StatelessWidget {
   final Map<String, dynamic> auctionData;
@@ -10,26 +11,11 @@ class AuctionResultPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'ผลการประมูล',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildFakeAppBar(context),
             // Header with image and basic info
             _buildHeader(context),
             
@@ -45,6 +31,57 @@ class AuctionResultPage extends StatelessWidget {
             // Auction details
             _buildAuctionDetails(context),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFakeAppBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/BackgroundProject.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.black.withOpacity(0.6), Colors.black.withOpacity(0.2)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                Expanded(
+                  child: Text(
+                    'ผลการประมูล',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.share, color: Colors.white),
+                  onPressed: () {
+                    // TODO: Implement share functionality
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -198,7 +235,7 @@ class AuctionResultPage extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '฿${NumberFormat('#,###').format(auctionData['finalPrice'])}',
+                  '฿${Format.formatNumber(auctionData['finalPrice'])}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -413,7 +450,7 @@ class AuctionResultPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '฿${NumberFormat('#,###').format(bid['amount'])}',
+                        Format.formatCurrency(bid['amount']),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -456,8 +493,8 @@ class AuctionResultPage extends StatelessWidget {
               children: [
                 _buildDetailRow('วันที่เริ่มประมูล', '${auctionData['startDate'] ?? '15 มกราคม 2024'}'),
                 _buildDetailRow('วันที่สิ้นสุดประมูล', '${auctionData['endDate'] ?? '22 มกราคม 2024'}'),
-                _buildDetailRow('ราคาเริ่มต้น', '฿${NumberFormat('#,###').format(auctionData['startingPrice'] ?? auctionData['finalPrice']! - 50000)}'),
-                _buildDetailRow('ราคาปิดประมูล', '฿${NumberFormat('#,###').format(auctionData['finalPrice'])}'),
+                _buildDetailRow('ราคาเริ่มต้น', '${Format.formatCurrency(auctionData['startingPrice'] ?? auctionData['finalPrice']! - 50000)}'),
+                _buildDetailRow('ราคาปิดประมูล', '${Format.formatCurrency(auctionData['finalPrice'])}'),
                 _buildDetailRow('ผู้ขาย', '${auctionData['sellerName'] ?? 'ผู้ขายมืออาชีพ'}'),
                 _buildDetailRow('หมวดหมู่', '${_getCategoryName(auctionData['category'])}'),
               ],

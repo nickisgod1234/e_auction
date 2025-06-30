@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:e_auction/utils/format.dart';
 
 class DetailPage extends StatefulWidget {
   final Map<String, dynamic> auctionData;
@@ -55,7 +56,7 @@ class _DetailPageState extends State<DetailPage> {
     if (increment < _minBidIncrement) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('ต้องเพิ่มขั้นต่ำ ฿${NumberFormat('#,###').format(_minBidIncrement)} (3% ของราคาเริ่มต้น)'),
+          content: Text('ต้องเพิ่มขั้นต่ำ ฿${Format.formatCurrency(_minBidIncrement)} (3% ของราคาเริ่มต้น)'),
           backgroundColor: Colors.red,
         ),
       );
@@ -117,7 +118,7 @@ class _DetailPageState extends State<DetailPage> {
                     child: Row(
                       children: [
                         Text(
-                          '฿${NumberFormat('#,###').format(bidAmount)}',
+                          '฿${Format.formatCurrency(bidAmount)}',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -153,7 +154,7 @@ class _DetailPageState extends State<DetailPage> {
                         ),
                         SizedBox(height: 8),
                         Text(
-                          '• การประมูลสินค้าชิ้นนี้จะเพิ่มครั้งละ 3% จากยอดเริ่มต้น\n• ราคาเริ่มต้น: ฿${NumberFormat('#,###').format(widget.auctionData['startingPrice'] ?? 850000)}\n• เพิ่มขั้นต่ำ: ฿${NumberFormat('#,###').format(_minBidIncrement)}',
+                          '• การประมูลสินค้าชิ้นนี้จะเพิ่มครั้งละ 3% จากยอดเริ่มต้น\n• ราคาเริ่มต้น: ${Format.formatCurrency(widget.auctionData['startingPrice'] ?? 850000)}\n• เพิ่มขั้นต่ำ: ${Format.formatCurrency(_minBidIncrement)}',
                           style: TextStyle(fontSize: 14),
                         ),
                       ],
@@ -226,7 +227,7 @@ class _DetailPageState extends State<DetailPage> {
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('ประมูลสำเร็จ! ราคา: ฿${NumberFormat('#,###').format(bidAmount)}'),
+        content: Text('ประมูลสำเร็จ! ราคา: ฿${Format.formatCurrency(bidAmount)}'),
         backgroundColor: Colors.green,
       ),
     );
@@ -241,6 +242,15 @@ class _DetailPageState extends State<DetailPage> {
         foregroundColor: Colors.black,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.share,
+              color: Colors.grey,
+            ),
+            onPressed: () {
+              // TODO: Implement share functionality
+            },
+          ),
           IconButton(
             icon: Icon(
               _isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -381,7 +391,7 @@ class _DetailPageState extends State<DetailPage> {
                         ),
                       ),
                       Text(
-                        '฿${NumberFormat('#,###').format(_currentBid)}',
+                        '฿${Format.formatCurrency(_currentBid)}',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -394,7 +404,7 @@ class _DetailPageState extends State<DetailPage> {
 
                   // Starting Price
                   Text(
-                    'ราคาเริ่มต้น: ฿${NumberFormat('#,###').format(widget.auctionData['startingPrice'] ?? 850000)}',
+                    'ราคาเริ่มต้น: ${Format.formatCurrency(widget.auctionData['startingPrice'] ?? 850000)}',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -404,7 +414,7 @@ class _DetailPageState extends State<DetailPage> {
 
                   // Minimum Bid Increment
                   Text(
-                    'เพิ่มขั้นต่ำ: ฿${NumberFormat('#,###').format(_minBidIncrement)} (3% ของราคาเริ่มต้น)',
+                    'เพิ่มขั้นต่ำ: ${Format.formatCurrency(_minBidIncrement)} (3% ของราคาเริ่มต้น)',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],

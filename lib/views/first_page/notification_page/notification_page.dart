@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:e_auction/utils/format.dart';
 
 class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
@@ -247,8 +248,8 @@ class NotificationPage extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   isWonAuction
-                                      ? 'ราคาที่ชนะ: ฿${NumberFormat('#,###').format(notification['finalPrice'])}'
-                                      : 'ราคาปัจจุบัน: ฿${NumberFormat('#,###').format(notification['currentPrice'])}',
+                                      ? 'ราคาที่ชนะ: ${Format.formatCurrency(notification['finalPrice'])}'
+                                      : 'ราคาปัจจุบัน: ${Format.formatCurrency(notification['currentPrice'])}',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: isWonAuction ? Colors.green : Colors.grey[600],

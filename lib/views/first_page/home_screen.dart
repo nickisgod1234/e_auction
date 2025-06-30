@@ -20,6 +20,8 @@ import 'package:e_auction/views/first_page/notification_page/notification_page.d
 import 'package:intl/intl.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/marquee_runner.dart';
 import 'package:e_auction/utils/loading_service.dart';
+import 'package:e_auction/views/first_page/request_otp_page/request_otp_login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,56 +34,111 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
-  int _selectedCategoryIndex = 0;
   String _searchQuery = '';
+  bool _pdpaDialogShown = false;
 
-  final List<Map<String, dynamic>> _categories = [
-    {
-      'icon': Icons.grid_view,
-      'label': 'ทั้งหมด',
-      'id': 'all'
-    },
-    {
-      'icon': Icons.watch,
-      'label': 'นาฬิกา',
-      'id': 'watches'
-    },
-    {
-      'icon': Icons.phone_iphone,
-      'label': 'มือถือ',
-      'id': 'phones'
-    },
-    {
-      'icon': Icons.laptop_mac,
-      'label': 'คอมพิวเตอร์',
-      'id': 'computers'
-    },
-    {
-      'icon': Icons.camera_alt,
-      'label': 'กล้อง',
-      'id': 'cameras'
-    },
-    {
-      'icon': Icons.shopping_bag,
-      'label': 'กระเป๋า',
-      'id': 'bags'
-    },
-    {
-      'icon': Icons.car_rental,
-      'label': 'รถยนต์',
-      'id': 'cars'
-    },
-    {
-      'icon': Icons.diamond,
-      'label': 'เครื่องประดับ',
-      'id': 'jewelry'
-    },
-    {
-      'icon': Icons.sports_esports,
-      'label': 'เกมส์',
-      'id': 'games'
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _checkAndShowPdpaDialog();
+  }
+
+  Future<void> _checkAndShowPdpaDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final consent = prefs.getBool('userConsent') ?? false;
+    final userId = prefs.getString('id') ?? '';
+    final phoneNumber = prefs.getString('phone') ?? '';
+    
+    // ไม่แสดง PDPA dialog สำหรับ Apple test account
+    if (userId == 'APPLE_TEST_ID' || phoneNumber == '0001112345') {
+      return;
+    }
+    
+    if (!consent && !_pdpaDialogShown) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showPdpaDialog();
+      });
+      _pdpaDialogShown = true;
+    }
+  }
+
+  void _showPdpaDialog() {
+    bool dontShowAgain = false;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.privacy_tip, color: Colors.black, size: 28),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'นโยบายความเป็นส่วนตัว (PDPA)',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('บริษัทฯ จะเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านเพื่อวัตถุประสงค์ในการให้บริการตามที่ท่านร้องขอ โดยท่านสามารถศึกษารายละเอียดเพิ่มเติมได้ในนโยบายความเป็นส่วนตัวของบริษัทฯ'),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: dontShowAgain,
+                        onChanged: (val) {
+                          setState(() {
+                            dontShowAgain = val ?? false;
+                          });
+                        },
+                      ),
+                      Expanded(child: Text('ไม่ต้องแสดงอีกจนกว่าจะปิดแอป')),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    // ปฏิเสธ - ล้างข้อมูล user และกลับไปหน้า login
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('userConsent', false);
+                    await prefs.remove('id');
+                    await prefs.remove('phone');
+                    await prefs.remove('token');
+                    await prefs.remove('refno');
+                    if (mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (context) => RequestOtpLoginPage()),
+                        (Route<dynamic> route) => false,
+                      );
+                    }
+                  },
+                  child: Text('ไม่ยอมรับ', style: TextStyle(color: Colors.red)),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('userConsent', true);
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('ยอมรับ'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   // Mock data for current auctions
   final List<Map<String, dynamic>> _currentAuctions = [
@@ -241,114 +298,17 @@ class _HomeScreenState extends State<HomeScreen> {
     },
   ];
 
-  // Mock data for winner announcements - sorted with the most recent first
-  final List<Map<String, dynamic>> _winnerAnnouncements = [
-    {
-      'id': 'apple_watch_ultra_011',
-      'title': 'Apple Watch Ultra',
-      'finalPrice': 32000,
-      'image': 'assets/images/AppleWatch_Ultra_Titanium_MidnightOceanBand_1200x.png',
-      'winner': 'คุณ Tech L.',
-      'completedDate': '1 วันที่แล้ว',
-      'category': 'watches',
-      'bidCount': 25,
-      'duration': '7 วัน',
-      'viewCount': 1247,
-      'startDate': '15 มกราคม 2024',
-      'endDate': '22 มกราคม 2024',
-      'startingPrice': 28000,
-      'sellerName': 'Apple Store Thailand',
-    },
-    {
-      'id': 'cartier_santos_010',
-      'title': 'Cartier Santos',
-      'finalPrice': 680000,
-      'image':
-          'assets/images/wssa0063-cartier-santos-de-cartier-medium-model-car0356037.png',
-      'winner': 'คุณ Panuwat S.',
-      'completedDate': '2 วันที่แล้ว',
-      'category': 'watches',
-      'bidCount': 18,
-      'duration': '5 วัน',
-      'viewCount': 892,
-      'startDate': '17 มกราคม 2024',
-      'endDate': '22 มกราคม 2024',
-      'startingPrice': 600000,
-      'sellerName': 'Luxury Timepieces',
-    },
-    {
-      'id': 'louis_vuitton_keepall_012',
-      'title': 'Louis Vuitton Keepall',
-      'finalPrice': 85000,
-      'image': 'assets/images/noimage.jpg',
-      'winner': 'คุณ Travel P.',
-      'completedDate': '3 วันที่แล้ว',
-      'category': 'bags',
-      'description':
-          'กระเป๋าเดินทาง Louis Vuitton Keepall 55cm สี Monogram Canvas อยู่ในสภาพดีมาก มาพร้อมกับกล่องและเอกสารรับประกัน',
-      'brand': 'Louis Vuitton',
-      'model': 'Keepall 55',
-      'material': 'Monogram Canvas',
-      'size': '55cm',
-      'color': 'Monogram',
-      'condition': 'ดีมาก',
-      'sellerName': 'LV Boutique',
-      'sellerRating': '4.7',
-      'bidCount': 32,
-      'duration': '10 วัน',
-      'viewCount': 1567,
-      'startDate': '12 มกราคม 2024',
-      'endDate': '22 มกราคม 2024',
-      'startingPrice': 70000,
-    },
-    {
-      'id': 'canon_eos_r5_013',
-      'title': 'Canon EOS R5',
-      'finalPrice': 95000,
-      'image': 'assets/images/noimage.jpg',
-      'winner': 'คุณ Photo M.',
-      'completedDate': '5 วันที่แล้ว',
-      'category': 'cameras',
-      'description':
-          'กล้อง Mirrorless Canon EOS R5 45MP มาพร้อมกับเลนส์ RF 24-105mm f/4L IS USM อยู่ในสภาพดีมาก',
-      'brand': 'Canon',
-      'model': 'EOS R5',
-      'material': 'Magnesium Alloy',
-      'size': 'Full Frame',
-      'color': 'ดำ',
-      'condition': 'ดีมาก',
-      'sellerName': 'Canon Thailand',
-      'sellerRating': '4.6',
-      'bidCount': 15,
-      'duration': '7 วัน',
-      'viewCount': 734,
-      'startDate': '15 มกราคม 2024',
-      'endDate': '22 มกราคม 2024',
-      'startingPrice': 85000,
-    },
-  ];
-
   List<Map<String, dynamic>> _getFilteredAuctions(List<Map<String, dynamic>> auctions) {
-    // First filter by category
-    List<Map<String, dynamic>> categoryFiltered = _selectedCategoryIndex == 0
-        ? auctions
-        : auctions.where((auction) => auction['category'] == _categories[_selectedCategoryIndex]['id']).toList();
-
-    // Then filter by search query if exists
+    // Filter by search query if exists
     if (_searchQuery.isEmpty) {
-      return categoryFiltered;
+      return auctions;
     }
 
-    return categoryFiltered.where((auction) {
+    return auctions.where((auction) {
       final title = auction['title']?.toString().toLowerCase() ?? '';
-      final category = _categories
-          .firstWhere((cat) => cat['id'] == auction['category'],
-              orElse: () => {'label': ''})['label']
-          .toString()
-          .toLowerCase();
       final searchLower = _searchQuery.toLowerCase();
 
-      return title.contains(searchLower) || category.contains(searchLower);
+      return title.contains(searchLower);
     }).toList();
   }
 
@@ -370,9 +330,8 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedIndex = index;
       
-      // Reset category filter to "ทั้งหมด" when home tab is tapped
+      // Reset search when home tab is tapped
       if (index == 0) {
-        _selectedCategoryIndex = 0;
         _searchQuery = '';
         _searchController.clear();
         _isSearching = false;
@@ -380,20 +339,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     
     // Navigate to different pages based on selected index
-    if (index == 2) { // Current Auction tab
-      await _navigateToPage(context, CurrentAuctionPage());
-      setState(() => _selectedIndex = 0); // Reset index after returning
-    } else if (index == 3) { // Profile tab
-      await _navigateToPage(context, ProfilePage());
-      setState(() => _selectedIndex = 0);
-    } else if (index == 4) { // Setting tab
+    if (index == 2) { // Settings tab
       await _navigateToPage(context, SettingPage());
-      setState(() => _selectedIndex = 0);
+      setState(() => _selectedIndex = 0); // Reset index after returning
     } else {
        setState(() {
         _selectedIndex = index;
         if (index == 0) {
-          _selectedCategoryIndex = 0;
           _searchQuery = '';
           _searchController.clear();
           _isSearching = false;
@@ -423,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
       controller: _searchController,
       autofocus: true,
       decoration: InputDecoration(
-        hintText: 'ค้นหาจากชื่อสินค้าหรือหมวดหมู่...',
+        hintText: 'ค้นหาจากชื่อสินค้า...',
         hintStyle: TextStyle(color: Colors.grey[400]),
         border: InputBorder.none,
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -434,58 +386,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryItem(int index) {
-    final category = _categories[index];
-    final isSelected = _selectedCategoryIndex == index;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedCategoryIndex = index;
-        });
-        // Handle category selection here
-        print('Selected category: ${category['label']}');
-      },
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 6),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? context.customTheme.primaryColor : Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? context.customTheme.primaryColor : Colors.grey[300]!,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              category['icon'],
-              size: 16,
-              color: isSelected ? Colors.white : Colors.grey[600],
-            ),
-            SizedBox(width: 6),
-            Text(
-              category['label'],
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.white : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final filteredCurrentAuctions = _getFilteredAuctions(_currentAuctions);
     final filteredUpcomingAuctions = _getFilteredAuctions(_upcomingAuctions);
-    final filteredWinnerAnnouncements =
-        _getFilteredAuctions(_winnerAnnouncements);
 
     return Scaffold(
       appBar: AppBar(
@@ -542,12 +446,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           IconButton(
-            icon: Icon(Icons.list_alt, color: Colors.black),
-            onPressed: () {
-              _navigateToPage(context, MyAuctionsPage());
-            },
-          ),
-          IconButton(
             icon: Icon(
               _isSearching ? Icons.close : Icons.search,
               color: Colors.black,
@@ -560,18 +458,34 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Categories Section
+            // Disclaimer Banner
             Container(
-              height: 50,
-              margin: EdgeInsets.only(top: 8),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _categories.length,
-                itemBuilder: (context, index) => _buildCategoryItem(index),
+              width: double.infinity,
+              color: Colors.white,
+              height: 36,
+              child: Row(
+                children: [
+                  SizedBox(width: 8),
+                  Icon(Icons.info_outline, color: Colors.black, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: MarqueeRunner(
+                      child: Text(
+                        '• บริษัทฯ ขอสงวนสิทธิ์ในการยกเลิกหรือเลื่อนการประมูลโดยไม่ต้องแจ้งเหตุผล   '
+                        '• คำตัดสินของคณะกรรมการหรือผู้แทนบริษัทฯ ถือเป็นที่สิ้นสุด   '
+                        '• บริษัทฯ ไม่รับผิดชอบต่อความเสียหายหรือข้อพิพาทที่อาจเกิดขึ้นหลังจากการส่งมอบสินค้า',
+                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.visible,
+                      ),
+                      millisecondsPerPixel: 20,
+                      pauseDuration: Duration(seconds: 1),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                ],
               ),
             ),
-
             // Show search results message when searching
             if (_searchQuery.isNotEmpty)
               Padding(
@@ -699,191 +613,97 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
+            SizedBox(height: 15),
 
-            // Winner Announcement Section
+            // My Auctions Section
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(5),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    'ประกาศผลผู้ชนะ',
+                    'ประวัติการประมูลของฉัน',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      _navigateToPage(
-                          context,
-                          AllWinnerAnnouncementsPage(
-                              winnerAnnouncements: _winnerAnnouncements));
-                    },
-                    child: Text(
-                      'ดูทั้งหมด',
-                      style: TextStyle(
-                        color: context.customTheme.primaryColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                  
                 ],
               ),
             ),
-            // Marquee text for latest winner
-            if (filteredWinnerAnnouncements.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+            // My Auctions Preview Card
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: MarqueeRunner(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.emoji_events, color: Colors.green, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        '🎉 ล่าสุด! ${filteredWinnerAnnouncements.first['winner']} ชนะการประมูล ${filteredWinnerAnnouncements.first['title']} ในราคา ฿${NumberFormat('#,###').format(filteredWinnerAnnouncements.first['finalPrice'])} 🎉',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green,
+                child: InkWell(
+                  onTap: () {
+                    _navigateToPage(context, MyAuctionsPage());
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.history,
+                            color: Colors.blue,
+                            size: 32,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (filteredWinnerAnnouncements.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'ไม่พบรายการประกาศผลผู้ชนะ',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ดูประวัติการประมูลทั้งหมด',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'กำลังประมูล • ชนะ • ไม่ชนะ',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          color: Colors.grey[400],
+                          size: 20,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              )
-            else
-              _buildWinnerAnnouncementListItem(
-                context,
-                filteredWinnerAnnouncements.first,
-                isLatest: true,
               ),
+            ),
+            
+            // Bottom spacing
+            SizedBox(height: 20),
           ],
         ),
       ),
       bottomNavigationBar: CustomBottomNavigationBar(
         currentIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-      ),
-    );
-  }
-
-  Widget _buildWinnerAnnouncementListItem(
-      BuildContext context, Map<String, dynamic> auction,
-      {bool isLatest = false}) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          InkWell(
-            onTap: () {
-              _navigateToPage(context, AuctionResultPage(auctionData: auction));
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      auction['image'],
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 80,
-                          height: 80,
-                          color: Colors.grey[200],
-                          child:
-                              Icon(Icons.image_not_supported, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          auction['title'],
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'ผู้ชนะ: ${auction['winner']}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.green,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'ราคาปิด: ฿${NumberFormat('#,###').format(auction['finalPrice'])}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (isLatest)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'ล่าสุด',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }

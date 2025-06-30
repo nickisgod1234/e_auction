@@ -1,6 +1,7 @@
 import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:e_auction/utils/format.dart';
 
 class AllUpcomingAuctionsPage extends StatelessWidget {
   final List<Map<String, dynamic>> upcomingAuctions;
@@ -59,7 +60,7 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'ราคาเริ่มต้น: ฿${NumberFormat('#,###').format(auction['startingPrice'])}',
+                      'ราคาเริ่มต้น: ${Format.formatCurrency(auction['startingPrice'])}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[800],

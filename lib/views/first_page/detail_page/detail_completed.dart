@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:e_auction/utils/format.dart';
 
 class DetailCompleted extends StatelessWidget {
   final Map<String, dynamic> auctionData;
@@ -64,8 +65,8 @@ class DetailCompleted extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: 12),
-                        _buildDetailRow('ราคาสุดท้าย', '฿${NumberFormat('#,###').format(auctionData['finalPrice'] ?? 0)}'),
-                        _buildDetailRow('ราคาเริ่มต้น', '฿${NumberFormat('#,###').format(auctionData['startingPrice'] ?? 0)}'),
+                        _buildDetailRow('ราคาสุดท้าย', '${Format.formatCurrency(auctionData['finalPrice'] ?? 0)}'),
+                        _buildDetailRow('ราคาเริ่มต้น', '${Format.formatCurrency(auctionData['startingPrice'] ?? 0)}'),
                         _buildDetailRow('จำนวนการประมูล', '${auctionData['bidCount'] ?? 0} รายการ'),
                         _buildDetailRow('ผู้ชนะการประมูล', auctionData['winner'] ?? 'ไม่ระบุ'),
                         _buildDetailRow('วันที่เสร็จสิ้น', auctionData['completedDate'] ?? 'ไม่ระบุ'),

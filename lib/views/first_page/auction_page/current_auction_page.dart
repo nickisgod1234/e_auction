@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/current_auction_card.dart';
 import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
+import 'package:intl/intl.dart';
+import 'package:e_auction/utils/format.dart';
 
 class CurrentAuctionPage extends StatelessWidget {
   CurrentAuctionPage({super.key});
@@ -10,7 +12,7 @@ class CurrentAuctionPage extends StatelessWidget {
   final List<Map<String, dynamic>> _currentAuctions = [
     {
       'id': 'rolex_submariner_001',
-      'title': 'Rolex Submariner',
+      'title': 'Rolex Submarinฟหดฟดer',
       'currentPrice': 850000,
       'startingPrice': 800000,
       'bidCount': 12,
@@ -109,6 +111,115 @@ class CurrentAuctionPage extends StatelessWidget {
       'category': 'bags'
     },
   ];
+
+  // เพิ่มเมธอดสำหรับแสดง dialog ลงประมูล
+  void _showBidDialog(BuildContext context, Map<String, dynamic> auctionData) {
+    final TextEditingController bidController = TextEditingController();
+    final currentPrice = auctionData['currentPrice'];
+    final minBid = currentPrice + 1000; // ราคาขั้นต่ำเพิ่มขึ้น 1,000 บาท
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Column(
+            children: [
+              Icon(Icons.gavel, color: Colors.green, size: 48),
+              SizedBox(height: 12),
+              Text(
+                'ลงประมูล',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                auctionData['title'],
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'ราคาปัจจุบัน: ${Format.formatCurrency(currentPrice)}',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'ราคาขั้นต่ำ: ${Format.formatCurrency(minBid)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 20),
+              TextField(
+                controller: bidController,
+                decoration: InputDecoration(
+                  labelText: 'ราคาที่ต้องการประมูล (บาท)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixText: '฿',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('ยกเลิก', style: TextStyle(color: Colors.white)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                final bidAmount = double.tryParse(bidController.text);
+                if (bidAmount == null || bidAmount < minBid) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('กรุณากรอกราคาที่ไม่ต่ำกว่า ${Format.formatCurrency(minBid)}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                
+                // จำลองการส่งข้อมูลไปยัง API
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('ลงประมูลสำเร็จ! ราคา ฿${bidAmount.toStringAsFixed(0)}'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: Text('ยืนยัน', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -255,7 +366,7 @@ class CurrentAuctionPage extends StatelessWidget {
                                           ),
                                         ),
                                         Text(
-                                          '฿${_currentAuctions[index]['currentPrice']}',
+                                          Format.formatCurrency(_currentAuctions[index]['currentPrice']),
                                           style: TextStyle(
                                             fontSize: 20,
                                             fontWeight: FontWeight.bold,
@@ -282,6 +393,24 @@ class CurrentAuctionPage extends StatelessWidget {
                                       ),
                                     ),
                                   ],
+                                ),
+                                SizedBox(height: 12),
+                                // เพิ่มปุ่มลงประมูล
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _showBidDialog(context, _currentAuctions[index]),
+                                    icon: Icon(Icons.gavel, color: Colors.white),
+                                    label: Text('ลงประมูล'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

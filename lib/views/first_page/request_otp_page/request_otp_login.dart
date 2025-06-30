@@ -7,7 +7,7 @@ import 'dart:ui';
 import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:e_auction/views/first_page/request_otp_page/auth_service/auth_service.dart';
+import 'package:e_auction/services/auth_service/auth_service.dart';
 import 'package:e_auction/views/first_page/home_screen.dart';
 import 'package:e_auction/theme/app_theme.dart';
 
@@ -28,6 +28,13 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
   int _countdown = 0; // ตัวนับเวลาขอ OTP ใหม่
   String _refno = ""; // เก็บ refno
   Timer? _timer;
+
+  // Helper function to safely get string values from userData
+  String _safeGetString(Map<String, dynamic> userData, String key) {
+    final value = userData[key];
+    if (value == null) return '';
+    return value.toString();
+  }
 
   void _startLoadingDialog(BuildContext context) {
     showDialog(
@@ -119,7 +126,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
     if (phoneNumber == '0001112345') {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('id', 'APPLE_TEST_ID');
-      await prefs.setString('mem_fullname', 'Apple Review Tester');
+      await prefs.setString('phone', '0001112345');
 
       setState(() {
         _refno = 'DEMO';
@@ -136,120 +143,87 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
     }
     _startLoadingDialog(context); // แสดงสถานะโหลด
     try {
-      // ดึงข้อมูลจาก checkPhoneNumber
       final userData = await _authService.checkPhoneNumber(phoneNumber);
 
-      if (userData != null) {
+      if (userData == null) {
+        _stopLoadingDialog(context);
+        _showRegistrationDialog(phoneNumber);
+        return;
+      }
 
-        final phone_number = userData['phone_number'];
-        final phone_id = userData['id'];
-        final userName = userData['name'];
-        final Emai = userData['email'];
-        final password = userData['password'];
-        final profilePicture = userData['profile_picture'];
-        final current_address = userData['current_address'];
+      final status = userData['status'];
+      if (status == 'deleted') {
+        _stopLoadingDialog(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เบอร์นี้ถูกลบไปแล้ว กรุณาติดต่อผู้ดูแลระบบ'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      if (status == 'not_found') {
+        _stopLoadingDialog(context);
+        _showRegistrationDialog(phoneNumber);
+        return;
+      }
 
-        // เก็บ id ใน SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('phone_number', phone_number);
-        await prefs.setString('id', phone_id);
-        await prefs.setString('email', Emai);
-        await prefs.setString('password', password);
-        await prefs.setString('current_address', current_address);
-        // เพิ่มการเก็บ user_id, username, user_password
-        if (userData['user_id'] != null) {
-          await prefs.setString('user_id', userData['user_id']);
-        }
-        if (userData['username'] != null) {
-          await prefs.setString('username', userData['username']);
-        }
-        if (userData['user_password'] != null) {
-          await prefs.setString('user_password', userData['user_password']);
-        }
-        // เพิ่มการเก็บ field อื่นๆ ตามตัวอย่าง login_screen_page.dart
-        await prefs.setString('firstname', userData['firstname'] ?? '');
-        await prefs.setString('lastname', userData['lastname'] ?? '');
-        await prefs.setString('role_id', userData['role_id'] ?? '');
-        await prefs.setString('role_name_th', userData['role_name_th'] ?? '');
-        await prefs.setString('statusflag', userData['statusflag'] ?? '');
-        await prefs.setString('role_type', userData['role_type'] ?? '');
-        await prefs.setString('branch_id', userData['branch_id'] ?? '');
-        await prefs.setString('department_id', userData['department_id'] ?? '');
-        await prefs.setString('position_id', userData['position_id'] ?? '');
-        await prefs.setString('level_id', userData['level_id'] ?? '');
-        await prefs.setString('leave_manage', userData['leave_manage'] ?? '0');
-        await prefs.setString('insurance_manage', userData['insurance_manage'] ?? '0');
-        await prefs.setString('person_id', userData['person_id'] ?? '');
-        await prefs.setString('mem_status', userData['mem_status'] ?? '');
-        await prefs.setString('mem_idcard', userData['mem_idcard'] ?? '');
-        await prefs.setString('mem_email', userData['mem_email'] ?? '');
-        await prefs.setString('mem_fullname', userData['mem_fullname'] ?? '');
-        await prefs.setString('mem_password', userData['mem_password'] ?? '');
-        await prefs.setString('mem_birthdate', userData['mem_birthdate'] ?? '');
-        await prefs.setString('mem_sex', userData['mem_sex'] ?? '');
-        await prefs.setString('mem_bloodgroup', userData['mem_bloodgroup'] ?? '');
-        await prefs.setString('mem_contactinformation', userData['mem_contactinformation'] ?? '');
-        await prefs.setString('mem_religion', userData['mem_religion'] ?? '');
-        await prefs.setString('mem_emergency_contact', userData['mem_emergency_contact'] ?? '');
-        await prefs.setString('mem_tel', userData['mem_tel'] ?? '');
-        await prefs.setString('mem_currentaddress', userData['mem_currentaddress'] ?? '');
-        await prefs.setString('mem_passport', userData['mem_passport'] ?? '');
-        await prefs.setString('mem_position', userData['mem_position'] ?? '');
-        await prefs.setString('line_user_id', userData['line_user_id'] ?? '');
-        await prefs.setString('mem_image', userData['mem_image'] ?? '');
-        await prefs.setString('mem_children', userData['children_count'] ?? '');
-        await prefs.setString('marital_status', userData['marital_status'] ?? '');
-        await prefs.setString('country_name', userData['country_name'] ?? '');
-        await prefs.setString('nationality_name', userData['nationality_name'] ?? '');
-        await prefs.setString('group_name', userData['group_name'] ?? '');
-        await prefs.setString('start_work', userData['start_work'] ?? '');
-        await prefs.setString('birthdate', userData['birthdate'] ?? '');
-        await prefs.setString('gender', userData['gender'] ?? '');
+      // ถ้า isdelete == 'f' หรือค่าว่าง/null ให้เข้าใช้งานได้ตามปกติ
+      final phone_number = _safeGetString(userData, 'phone_number');
+      final phone_id = _safeGetString(userData, 'id');
+      final userName = _safeGetString(userData, 'name');
+      final Emai = _safeGetString(userData, 'email');
+      final password = _safeGetString(userData, 'password');
 
-        print('User ID: $phone_number');
-        print('User Name: $userName');
-        print('Profile Picture: $profilePicture');
-        print('Profile current_address: $current_address');
-        _stopLoadingDialog(context); // ปิดสถานะโหลด
-        _showLoginSuccessDialog(phone_number);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('phone_number', phone_number);
+      await prefs.setString('id', phone_id);
+      await prefs.setString('email', Emai);
+      await prefs.setString('password', password);
+      // ... (บันทึก fields อื่นๆ เหมือนเดิม)
+      await prefs.setString('created_at', _safeGetString(userData, 'created_at'));
+      await prefs.setString('updated_at', _safeGetString(userData, 'updated_at'));
+      await prefs.setString('company_id', _safeGetString(userData, 'company_id'));
+      await prefs.setString('type', _safeGetString(userData, 'type'));
+      await prefs.setString('logo', _safeGetString(userData, 'logo'));
+      await prefs.setString('phone', _safeGetString(userData, 'phone'));
+      await prefs.setString('code', _safeGetString(userData, 'code'));
+      await prefs.setString('name', _safeGetString(userData, 'name'));
+      await prefs.setString('tax_number', _safeGetString(userData, 'tax_number'));
+      await prefs.setString('fullname', _safeGetString(userData, 'fullname'));
+      await prefs.setString('addr', _safeGetString(userData, 'addr'));
+      await prefs.setString('province_id', _safeGetString(userData, 'province_id'));
+      await prefs.setString('district_id', _safeGetString(userData, 'district_id'));
+      await prefs.setString('sub_district_id', _safeGetString(userData, 'sub_district_id'));
+      await prefs.setString('sub', _safeGetString(userData, 'sub'));
+      await prefs.setString('pass', _safeGetString(userData, 'pass'));
+      await prefs.setString('reset_key', _safeGetString(userData, 'reset_key'));
+      await prefs.setString('reset_key_exp', _safeGetString(userData, 'reset_key_exp'));
+      await prefs.setString('isdelete', userData['isdelete'] ?? '');
+
+      print('User ID: $phone_number');
+      print('User Name: $userName');
+      print('Status: $status');
+      // ส่ง OTP ทันทีเพื่อเข้าสู่ระบบ
+      final otpResponse = await _authService.sendOtp(phoneNumber);
+      _stopLoadingDialog(context); // ปิดสถานะโหลด
+      if (otpResponse != null) {
+        setState(() {
+          _refno = otpResponse['refno'];
+          _isPinVisible = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('OTP ถูกส่งไปยังเบอร์โทรของคุณแล้ว'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _startCountdown();
       } else {
-        _stopLoadingDialog(context); // ปิดสถานะโหลด
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Column(
-              children: [
-                Icon(Icons.error_outline, color: Colors.green, size: 48),
-                SizedBox(height: 12),
-                Text(
-                  'ไม่พบเบอร์โทรในระบบ',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
-            ),
-            content: Text(
-              'ไม่มีเบอร์โทรนี้ในระบบ\nกรุณาติดต่อ Admin',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16),
-            ),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ToolUtility.colorCompany,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: Icon(Icons.close, color: Colors.white),
-                label: Text('ปิด', style: TextStyle(color: Colors.white)),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ไม่สามารถส่ง OTP ได้ กรุณาลองอีกครั้ง'),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -260,6 +234,222 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
         SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
       );
     }
+  }
+
+  // เพิ่มเมธอดใหม่สำหรับแสดง popup ลงทะเบียน
+  void _showRegistrationDialog(String phoneNumber) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Column(
+          children: [
+            Icon(Icons.person_add, color: Colors.blue, size: 48),
+            SizedBox(height: 12),
+            Text(
+              'ไม่พบเบอร์โทรในระบบ',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'เบอร์โทรนี้ยังไม่ได้ลงทะเบียนในระบบ\nต้องการลงทะเบียนใหม่หรือไม่?',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: Icon(Icons.close, color: Colors.white),
+            label: Text('ยกเลิก', style: TextStyle(color: Colors.white)),
+            onPressed: () => Navigator.pop(context),
+          ),
+          SizedBox(width: 10),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: Icon(Icons.check, color: Colors.white),
+            label: Text('ตกลง', style: TextStyle(color: Colors.white)),
+            onPressed: () {
+              Navigator.pop(context);
+              _startRegistrationProcess(phoneNumber);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // เพิ่มเมธอดใหม่สำหรับเริ่มกระบวนการลงทะเบียน
+  void _startRegistrationProcess(String phoneNumber) async {
+    _startLoadingDialog(context);
+    
+    try {
+      // ส่ง OTP สำหรับลงทะเบียน
+      final otpResponse = await _authService.sendOtp(phoneNumber);
+      _stopLoadingDialog(context);
+      
+      if (otpResponse != null) {
+        setState(() {
+          _refno = otpResponse['refno'];
+          _isPinVisible = true;
+        });
+        
+        // เริ่ม countdown timer
+        _startCountdown();
+        
+        // แสดง dialog สำหรับกรอก OTP
+        _showRegistrationOtpDialog(phoneNumber);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ไม่สามารถส่ง OTP ได้ กรุณาลองอีกครั้ง')),
+        );
+      }
+    } catch (e) {
+      _stopLoadingDialog(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+      );
+    }
+  }
+
+  // เพิ่มเมธอดใหม่สำหรับแสดง dialog กรอก OTP ลงทะเบียน
+  void _showRegistrationOtpDialog(String phoneNumber) {
+    final TextEditingController otpController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Column(
+            children: [
+              Icon(Icons.verified_user, color: Colors.blue, size: 48),
+              SizedBox(height: 12),
+              Text(
+                'ยืนยันการลงทะเบียน',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'เราได้ส่ง OTP ไปยังหมายเลขโทรศัพท์ของคุณ\nกรุณายืนยันรหัส OTP เพื่อลงทะเบียน',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 20),
+              Text(
+                'REFNO: $_refno',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+              SizedBox(height: 20),
+              TextField(
+                controller: otpController,
+                decoration: InputDecoration(
+                  labelText: 'กรอกรหัส OTP',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('ยกเลิก', style: TextStyle(color: Colors.white)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                final pin = otpController.text;
+                
+                if (pin.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('กรุณากรอกรหัส OTP')),
+                  );
+                  return;
+                }
+                
+                _startLoadingDialog(context);
+                final response = await _authService.verifyOtp(phoneNumber, pin);
+                _stopLoadingDialog(context);
+                
+                if (response['success']) {
+                  Navigator.pop(context); // ปิด OTP dialog
+                  
+                  // บันทึกข้อมูลการลงทะเบียน
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('phone_number', phoneNumber);
+                  await prefs.setString('token_otp', response['token'] ?? '');
+                  await prefs.setString('id', response['id']?.toString() ?? '');
+                  
+                  // บันทึกข้อมูลอื่นๆ ที่ได้จาก response
+                  if (response['email'] != null) await prefs.setString('email', response['email']);
+                  if (response['password'] != null) await prefs.setString('password', response['password']);
+                  if (response['name'] != null) await prefs.setString('name', response['name']);
+                  
+                  // แสดงข้อความสำเร็จ
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('ลงทะเบียนสำเร็จ! ยินดีต้อนรับสู่ระบบ'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  
+                  // ไปยังหน้า HomeScreen
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HomeScreen(),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('ยืนยัน OTP ไม่สำเร็จ กรุณาลองอีกครั้ง'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: Text('ยืนยัน', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _startCountdown() {
@@ -292,7 +482,6 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
       await prefs.setString('phone_number', '0001112345');
       await prefs.setString('token_otp', 'demo_token');
       await prefs.setString('id', '999');
-      await prefs.setString('mem_fullname', 'Apple Review Tester');
       await prefs.setString('email', 'nick888@hmail.com');
       await prefs.setString('password', '12345');
       // เพิ่มข้อมูลจำลองอื่น ๆ ตามต้องการ
@@ -335,8 +524,6 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
         if (response['email'] != null) await prefs.setString('email', response['email']);
         if (response['password'] != null) await prefs.setString('password', response['password']);
         if (response['name'] != null) await prefs.setString('name', response['name']);
-        if (response['profile_picture'] != null) await prefs.setString('profile_picture', response['profile_picture']);
-        if (response['current_address'] != null) await prefs.setString('current_address', response['current_address']);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('ยืนยันสำเร็จ!')),
@@ -378,7 +565,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
 
     if (newRefno != null) {
       setState(() {
-        _refno = newRefno; // อัปเดต refno ใหม่จาก API
+        _refno = newRefno['refno']; // อัปเดต refno ใหม่จาก API
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -390,96 +577,6 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
         SnackBar(content: Text('ขอรหัสใหม่ไม่สำเร็จ กรุณาลองอีกครั้ง')),
       );
     }
-  }
-
-  void _showLoginSuccessDialog(String phoneNumber) async {
-    final refno = await _authService.sendOtp(phoneNumber);
-    if (refno == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('กรุณาติดต่อผู้ดูแลระบบ')),
-      );
-      return;
-    }
-
-    setState(() {
-      _refno = refno;
-      _isPinVisible = true;
-    });
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('เข้าสู่ระบบสำเร็จ'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('เบอร์โทรนี้ลงทะเบียนการใช้งานแล้ว'),
-              SizedBox(height: 10),
-              Text(
-                'เราได้ส่ง OTP ไปยังหมายเลขโทรศัพท์ของคุณ\nกรุณายืนยันรหัส OTP เพื่อเข้าสู่ระบบ',
-                textAlign: TextAlign.center,
-              ),
-              TextField(
-                controller: _pinController,
-                decoration: InputDecoration(
-                  labelText: 'กรอกรหัส OTP',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                final pin = _pinController.text;
-
-                if (pin.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('กรุณากรอกรหัส PIN')),
-                  );
-                  return;
-                }
-
-                _startLoadingDialog(context);
-                final response = await _authService.verifyOtp(phoneNumber, pin);
-                _stopLoadingDialog(context);
-
-                if (response['success']) {
-                  Navigator.pop(context); // ปิด Popup
-
-                  // บันทึกข้อมูลการล็อกอิน
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('phone_number', phoneNumber);
-                  await prefs.setString('token_otp', response['token'] ?? '');
-                  await prefs.setString('id', response['id']?.toString() ?? '');
-                  
-                  // บันทึกข้อมูลอื่นๆ ที่ได้จาก response
-                  if (response['email'] != null) await prefs.setString('email', response['email']);
-                  if (response['password'] != null) await prefs.setString('password', response['password']);
-                  if (response['name'] != null) await prefs.setString('name', response['name']);
-                  if (response['profile_picture'] != null) await prefs.setString('profile_picture', response['profile_picture']);
-                  if (response['current_address'] != null) await prefs.setString('current_address', response['current_address']);
-
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => HomeScreen(),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('ยืนยัน OTP ไม่สำเร็จ')),
-                  );
-                }
-              },
-              child: Text('ยืนยัน'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _resetToDefault() {
@@ -504,9 +601,23 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
     final phoneNumber = prefs.getString('phone_number');
     final token = prefs.getString('token_otp');
     final id = prefs.getString('id');
+    final isdelete = prefs.getString('isdelete');
+
+    // เช็คสถานะ isdelete ก่อน
+    if (isdelete == 'true') {
+      // ถ้าบัญชีถูกลบแล้ว ให้ล้างข้อมูลและไม่ให้เข้าสู่ระบบ
+      await prefs.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('บัญชีนี้ถูกลบแล้ว กรุณาติดต่อผู้ดูแลระบบ'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     if (phoneNumber != null && token != null && id != null) {
-      // ถ้ามีข้อมูลการล็อกอินที่บันทึกไว้ ให้ไปที่หน้า HomeScreenCM โดยตรง
+      // ถ้ามีข้อมูลการล็อกอินที่บันทึกไว้ และบัญชีไม่ถูกลบ ให้ไปที่หน้า HomeScreenCM โดยตรง
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

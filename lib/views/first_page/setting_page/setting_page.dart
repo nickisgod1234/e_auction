@@ -1,9 +1,9 @@
 import 'package:e_auction/views/first_page/request_otp_page/request_otp_login.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:e_auction/services/api_provider.dart';
+import 'package:e_auction/services/auth_service/auth_service.dart';
+import 'package:e_auction/views/config/config_prod.dart';
+
 
 class SettingPage extends StatefulWidget {
   @override
@@ -14,11 +14,13 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
   bool _isConsentGiven = false;
   String? _memFullName = '';
   bool _isLoggedIn = false;
+  late AuthService _authService;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _authService = AuthService(baseUrl: Config.apiUrlotpsever);
     _checkLoginAndLoadData();
   }
 
@@ -51,7 +53,7 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
 
     if (loggedIn) {
       // If logged in, get user data from SharedPreferences
-      fullName = prefs.getString('mem_fullname');
+      fullName = prefs.getString('fullname');
 
       print('FullName from prefs: $fullName');
     }
@@ -95,6 +97,7 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
   void _deleteAccount() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userId = prefs.getString('id');
+    String? phoneNumber = prefs.getString('phone');
 
     if (!_isLoggedIn || userId == null || userId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -103,9 +106,31 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
       return;
     }
 
-    final response = await _callDeleteApi(userId);
+    // สำหรับ Apple test account (demo) ให้ล้างข้อมูลและเด้งไปหน้า login โดยไม่เรียก API
+    if (userId == 'APPLE_TEST_ID' || phoneNumber == '0001112345') {
+      await prefs.clear(); // Clear all data in SharedPreferences
+      setState(() {
+        _isLoggedIn = false;
+        _memFullName = '';
+      });
 
-    if (response['status'] == 'success') {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('ออกจากระบบเรียบร้อยแล้ว'),
+        backgroundColor: Colors.green,
+      ));
+
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => RequestOtpLoginPage()),
+          (Route<dynamic> route) => false,
+        );
+      }
+      return;
+    }
+
+    final response = await _authService.deleteUser(customerId: userId);
+
+    if (response != null && response['success'] == true) {
       await prefs.clear(); // Clear all data in SharedPreferences
       setState(() {
         _isLoggedIn = false;
@@ -125,27 +150,9 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(response['message'] ?? 'ไม่สามารถลบบัญชีได้ กรุณาลองใหม่'),
+        content: Text(response?['message'] ?? 'ไม่สามารถลบบัญชีได้ กรุณาลองใหม่'),
         backgroundColor: Colors.red,
       ));
-    }
-  }
-
-  Future<Map<String, dynamic>> _callDeleteApi(String userId) async {
-    final String url =
-        'https://www.cm-mejobs.com/HR-API/personal/is_delete_user.php?id=$userId';
-      
-
-    try {
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        return {'status': 'error', 'message': 'เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์'};
-      }
-    } catch (e) {
-      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'};
     }
   }
 
@@ -210,143 +217,81 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('การตั้งค่า'),
-        backgroundColor: Colors.lightGreen,
+        title: Text('ตั้งค่าบัญชี', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            if (_isLoggedIn)
-              // Logged In View
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.person, color: Colors.green),
-                        SizedBox(width: 8),
-                        Text(
-                          'ข้อมูลผู้ใช้',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ListTile(
-                      leading: Icon(Icons.person_outline,
-                          color: Colors.grey.shade600),
-                      title: Text('ชื่อผู้ใช้'),
-                      subtitle: Text(_memFullName ?? 'ไม่พบข้อมูล'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const Divider(height: 24),
-                    ListTile(
-                      leading: Icon(Icons.delete_forever, color: Colors.red),
-                      title: Text('ลบบัญชี',
-                          style: TextStyle(color: Colors.red)),
-                      onTap: _showDeleteConfirmationDialog,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
-              )
-            else
-              // Logged Out View
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.shade200),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'คุณยังไม่ได้เข้าสู่ระบบ',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'กรุณาเข้าสู่ระบบเพื่อจัดการข้อมูลบัญชีของคุณ',
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                                builder: (context) => RequestOtpLoginPage()),
-                            (Route<dynamic> route) => false);
-                      },
-                      child: Text('ไปที่หน้าเข้าสู่ระบบ'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            const SizedBox(height: 16),
             // Consent Switch
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'ยินยอมในการเก็บข้อมูล',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          _isConsentGiven
-                              ? 'ยินยอมให้เก็บข้อมูลแล้ว'
-                              : 'ยังไม่ได้ให้ความยินยอม',
-                          style: TextStyle(
-                              fontSize: 14, color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: _isConsentGiven,
-                    onChanged: (bool newValue) {
-                      if (!newValue) {
-                        _showRevokeConsentDialog();
-                      } else {
-                        _saveConsentStatus(newValue);
-                      }
-                    },
-                    activeColor: Colors.green,
-                  ),
-                ],
+            Card(
+              color: Colors.white,
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: Icon(Icons.privacy_tip_outlined, color: Colors.black),
+                title: Text('ยินยอมในการเก็บข้อมูล', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+                subtitle: Text(_isConsentGiven ? 'ยินยอมให้เก็บข้อมูลแล้ว' : 'ยังไม่ได้ให้ความยินยอม', style: TextStyle(color: Colors.grey[700])),
+                trailing: Switch(
+                  value: _isConsentGiven,
+                  onChanged: (bool newValue) {
+                    if (!newValue) {
+                      _showRevokeConsentDialog();
+                    } else {
+                      _saveConsentStatus(newValue);
+                    }
+                  },
+                  activeColor: Colors.black,
+                  inactiveThumbColor: Colors.grey.shade400,
+                  inactiveTrackColor: Colors.grey.shade300,
+                ),
               ),
             ),
+            SizedBox(height: 16),
+            // Delete Account
+            Card(
+              color: Colors.white,
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: Icon(Icons.delete_forever, color: Colors.red.shade700),
+                title: Text('ลบบัญชี', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
+                subtitle: Text('ลบบัญชีและข้อมูลทั้งหมดอย่างถาวร', style: TextStyle(color: Colors.grey[700])),
+                onTap: _showDeleteConfirmationDialog,
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+            ),
+            SizedBox(height: 16),
+            // Logout (optional)
+            if (_isLoggedIn)
+              Card(
+                color: Colors.white,
+                elevation: 1,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: ListTile(
+                  leading: Icon(Icons.logout, color: Colors.black),
+                  title: Text('ออกจากระบบ', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  onTap: () async {
+                    SharedPreferences prefs = await SharedPreferences.getInstance();
+                    await prefs.clear();
+                    if (mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (context) => RequestOtpLoginPage()),
+                        (Route<dynamic> route) => false,
+                      );
+                    }
+                  },
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
           ],
         ),
       ),
+      backgroundColor: Colors.white,
     );
   }
 }
