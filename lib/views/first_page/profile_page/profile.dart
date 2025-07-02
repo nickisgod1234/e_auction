@@ -126,7 +126,7 @@ class _ProfilePageState extends State<ProfilePage> {
         'mem_fullname': prefs.getString('mem_fullname') ?? '',
         'mem_idcard': prefs.getString('mem_idcard') ?? '',
         'mem_tel': prefs.getString('mem_tel') ?? '',
-        'mem_currentaddress': prefs.getString('mem_currentaddress') ?? '',            
+        'mem_currentaddress': prefs.getString('mem_currentaddress') ?? '',
         'mem_bloodgroup': prefs.getString('mem_bloodgroup') ?? '',
         'mem_religion': prefs.getString('mem_religion') ?? '',
         'marital_status': prefs.getString('marital_status') ?? '',

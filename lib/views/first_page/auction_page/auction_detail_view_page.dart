@@ -7,6 +7,7 @@ import 'package:e_auction/services/product_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:e_auction/views/config/config_prod.dart';
 
 class AuctionDetailViewPage extends StatefulWidget {
   final Map<String, dynamic> auctionData;
@@ -185,12 +186,12 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
       builder: (_) => Center(child: CircularProgressIndicator()),
     );
 
-    final productService = ProductService(baseUrl: 'http://localhost');
+    final productService = ProductService(baseUrl: Config.apiUrllocal);
     final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? widget.auctionData['id'].toString();
     
     try {
       final response = await http.get(
-        Uri.parse('http://localhost/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId'),
+        Uri.parse('${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId'),
       );
 
       Navigator.pop(context); // ปิด loading
@@ -585,7 +586,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
             // Realtime Auction Price
             RealtimeAuctionPriceWidget(
               quotationId: widget.auctionData['quotation_more_information_id']?.toString() ?? widget.auctionData['id'].toString(),
-              baseUrl: 'http://localhost',
+              baseUrl: Config.apiUrllocal,
             ),
             
             // Product Details
