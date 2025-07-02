@@ -25,6 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 

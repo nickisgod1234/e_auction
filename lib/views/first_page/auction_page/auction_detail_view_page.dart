@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:e_auction/views/config/config_prod.dart';
+import 'package:http/http.dart' as http;
 import 'package:e_auction/services/winner_service.dart';
 
 class AuctionDetailViewPage extends StatefulWidget {
@@ -25,6 +26,13 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 
   // Add a static variable to track the disclaimer popup state
   static bool _hideDisclaimer = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+
 
   // Helper method to get current price as int
   int _getCurrentPriceAsInt() {
@@ -1352,56 +1360,6 @@ bool isAuctionEnded(Map<String, dynamic> auction) {
   }
 }
 
-Future<void> showWinnerInfoDialog(BuildContext context, String userId, String auctionId) async {
-  // 1. ดึงข้อมูลผู้ชนะจาก API
-  final winnerResult = await WinnerService.getWinnersByUserId(userId);
-  Map<String, dynamic>? winnerData;
 
-  if (winnerResult['status'] == 'success' && winnerResult['data'] != null) {
-    // หาเฉพาะรายการที่ตรงกับ auctionId
-    final winners = winnerResult['data'] as List;
-    winnerData = winners.firstWhere(
-      (w) => w['quotation_more_information_id'].toString() == auctionId,
-      orElse: () => null,
-    );
-  }
 
-  // 2. เตรียม controller สำหรับฟอร์ม
-  final firstnameController = TextEditingController(text: winnerData?['winner_firstname'] ?? '');
-  final lastnameController = TextEditingController(text: winnerData?['winner_lastname'] ?? '');
-  final phoneController = TextEditingController(text: winnerData?['winner_phone'] ?? '');
-  final emailController = TextEditingController(text: winnerData?['winner_email'] ?? '');
-  final addressController = TextEditingController(text: winnerData?['winner_address'] ?? '');
-
-  // 3. แสดง dialog ฟอร์ม
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('กรอกข้อมูลผู้ชนะ'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(controller: firstnameController, decoration: InputDecoration(labelText: 'ชื่อ')),
-          TextField(controller: lastnameController, decoration: InputDecoration(labelText: 'นามสกุล')),
-          TextField(controller: phoneController, decoration: InputDecoration(labelText: 'เบอร์โทร')),
-          TextField(controller: emailController, decoration: InputDecoration(labelText: 'อีเมล')),
-          TextField(controller: addressController, decoration: InputDecoration(labelText: 'ที่อยู่')),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('ยกเลิก'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            // ส่งข้อมูลกลับไปบันทึก
-            // WinnerService.saveWinnerInfo(...);
-            Navigator.pop(context);
-          },
-          child: Text('บันทึก'),
-        ),
-      ],
-    ),
-  );
-} 
+ 

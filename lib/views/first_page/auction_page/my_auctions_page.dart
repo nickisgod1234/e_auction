@@ -194,6 +194,9 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
             _activeBids = uniqueBids;
             _isLoadingActiveBids = false;
           });
+
+          // เช็คและประกาศผู้ชนะสำหรับ auction ที่หมดเวลาแล้ว
+          await _checkAndAnnounceWinners(uniqueBids, userId);
         } else {
           setState(() {
             _activeBids = [];
@@ -211,6 +214,113 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         _activeBids = [];
         _isLoadingActiveBids = false;
       });
+    }
+  }
+
+  // เช็คและประกาศผู้ชนะสำหรับ auction ที่หมดเวลาแล้ว
+  Future<void> _checkAndAnnounceWinners(List<Map<String, dynamic>> auctions, String userId) async {
+    try {
+      print('📱 MY_AUCTIONS: Starting winner check for ${auctions.length} auctions...');
+      
+      for (final auction in auctions) {
+        final endDate = auction['auction_end_date'];
+        final endTime = auction['auction_end_time'];
+        final auctionId = auction['id'];
+        final title = auction['title'];
+        
+        print('📱 MY_AUCTIONS: Checking auction "$title" (ID: $auctionId)');
+        print('📱 MY_AUCTIONS: End date: $endDate, End time: $endTime');
+        
+        // เช็คว่า auction หมดเวลาหรือยัง
+        bool isEnded = false;
+        if (endDate != null && endDate.isNotEmpty) {
+          isEnded = isAuctionEnded(endDate, endTime);
+        } else {
+          print('📱 MY_AUCTIONS: No end date in auction data, will check via API...');
+          // ถ้าไม่มี end date ในข้อมูล ให้ใช้ API เช็คแทน
+          isEnded = true; // ให้ API เป็นตัวตัดสินใจ
+        }
+        
+        if (isEnded) {
+          print('📱 MY_AUCTIONS: Auction "$title" has ended! Getting user info...');
+          
+          // ดึงข้อมูลผู้ใช้สำหรับประกาศผู้ชนะ
+          final userInfo = await _getUserInfoForWinner(userId);
+          
+          if (userInfo.isNotEmpty) {
+            print('📱 MY_AUCTIONS: User info obtained, triggering winner announcement...');
+            // เรียกใช้ trigger ประกาศผู้ชนะโดยตรง
+            try {
+              final result = await WinnerService.triggerAnnounceWinner(auctionId, userInfo);
+              print('📱 MY_AUCTIONS: Trigger result: ${result['status']} - ${result['message']}');
+              
+              // ถ้าประกาศสำเร็จ ให้ refresh ข้อมูล
+              if (result['status'] == 'success') {
+                print('📱 MY_AUCTIONS: Winner announced successfully! Refreshing data...');
+                // รีเฟรชข้อมูลหลังจากประกาศผู้ชนะสำเร็จ
+                await _loadUserWonAuctions();
+              }
+            } catch (e) {
+              print('❌ MY_AUCTIONS: Error triggering winner announcement: $e');
+            }
+          } else {
+            print('❌ MY_AUCTIONS: Failed to get user info for winner announcement');
+          }
+        } else {
+          print('⏰ MY_AUCTIONS: Auction "$title" not ended yet');
+        }
+      }
+      
+      print('📱 MY_AUCTIONS: Winner check completed for all auctions');
+    } catch (e) {
+      print('❌ MY_AUCTIONS: Error in winner check: $e');
+      // ไม่แสดง error ให้ user เห็น เพราะเป็น background process
+    }
+  }
+
+  // ดึงข้อมูลผู้ใช้สำหรับประกาศผู้ชนะ (ปรับปรุงให้ครบถ้วน)
+  Future<Map<String, String>> _getUserInfoForWinner(String userId) async {
+    try {
+      print('📱 MY_AUCTIONS: Getting user info for winner announcement...');
+      final profile = await _authService.getProfile(userId);
+      if (profile != null) {
+        // แยกชื่อและนามสกุลจาก fullname
+        final fullname = profile['fullname'] ?? '';
+        final nameParts = fullname.split(' ');
+        final firstname = nameParts.isNotEmpty ? nameParts.first : '';
+        final lastname = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+        
+        final userInfo = <String, String>{
+          'firstname': firstname,
+          'lastname': lastname,
+          'phone': profile['phone'] ?? '',
+          'email': profile['email'] ?? '',
+          'address': profile['address'] ?? '',
+        };
+        
+        print('📱 MY_AUCTIONS: User info obtained: $userInfo');
+        
+        // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่
+        final missingFields = <String>[];
+        if (userInfo['firstname']!.isEmpty) missingFields.add('firstname');
+        if (userInfo['lastname']!.isEmpty) missingFields.add('lastname');
+        if (userInfo['phone']!.isEmpty) missingFields.add('phone');
+        if (userInfo['email']!.isEmpty) missingFields.add('email');
+        if (userInfo['address']!.isEmpty) missingFields.add('address');
+        
+        if (missingFields.isNotEmpty) {
+          print('❌ MY_AUCTIONS: Missing user info fields: $missingFields');
+          return {};
+        }
+        
+        return userInfo;
+      } else {
+        print('❌ MY_AUCTIONS: Failed to get user profile');
+        return {};
+      }
+    } catch (e) {
+      print('❌ MY_AUCTIONS: Error getting user info: $e');
+      return {};
     }
   }
 
@@ -393,17 +503,30 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     );
   }
 
-  // Utility: Check if auction has ended
+  // Utility: Check if auction has ended (ปรับปรุงให้ถูกต้อง)
   bool isAuctionEnded(String? endDate, [String? endTime]) {
-    String? dateToCheck = endDate;
-    if ((dateToCheck == null || dateToCheck.isEmpty) && endTime != null && endTime.isNotEmpty) {
-      dateToCheck = endTime;
-    }
-    if (dateToCheck == null || dateToCheck.isEmpty) return false;
     try {
-      final end = DateTime.parse(dateToCheck);
-      return DateTime.now().isAfter(end);
-    } catch (_) {
+      String? dateToCheck = endDate;
+      if ((dateToCheck == null || dateToCheck.isEmpty) && endTime != null && endTime.isNotEmpty) {
+        dateToCheck = endTime;
+      }
+      if (dateToCheck == null || dateToCheck.isEmpty) return false;
+      
+      String dateTimeString = dateToCheck;
+      if (endTime != null && endTime.isNotEmpty && !dateToCheck.contains(' ')) {
+        dateTimeString = '$dateToCheck $endTime';
+      }
+      
+      final end = DateTime.parse(dateTimeString);
+      final now = DateTime.now();
+      
+      print('📱 MY_AUCTIONS: Current time: ${now.toString()}');
+      print('📱 MY_AUCTIONS: End time: ${end.toString()}');
+      print('📱 MY_AUCTIONS: Is auction ended? ${now.isAfter(end)}');
+      
+      return now.isAfter(end);
+    } catch (e) {
+      print('❌ MY_AUCTIONS: Error parsing date: $e');
       return false;
     }
   }
