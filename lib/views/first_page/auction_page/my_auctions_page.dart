@@ -8,6 +8,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/views/first_page/widgets/my_auctions_widget.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/services/user_bid_history_service.dart';
+import 'package:e_auction/services/winner_service.dart';
 import 'dart:async';
 
 class MyAuctionsPage extends StatefulWidget {
@@ -46,44 +47,9 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   List<Map<String, dynamic>> _activeBids = [];
   bool _isLoadingActiveBids = true;
 
-  final List<Map<String, dynamic>> _wonAuctions = [
-    {
-      'id': 'cartier_santos_010',
-      'title': 'Cartier Santos',
-      'finalPrice': 680000,
-      'myBid': 680000,
-      'completedDate': '2 วันที่แล้ว',
-      'image': 'assets/images/wssa0063-cartier-santos-de-cartier-medium-model-car0356037.png',
-      'status': 'won',
-      'sellerName': 'Luxury Timepieces',
-      'paymentStatus': 'paid', // paid, pending, overdue
-      'auctionId': 'AUCT-2025-010',
-    },
-    {
-      'id': 'apple_watch_ultra_011',
-      'title': 'Apple Watch Ultra',
-      'finalPrice': 32000,
-      'myBid': 32000,
-      'completedDate': '1 วันที่แล้ว',
-      'image': 'assets/images/noimage.jpg',
-      'status': 'won',
-      'sellerName': 'Apple Store Thailand',
-      'paymentStatus': 'pending',
-      'auctionId': 'AUCT-2025-011',
-    },
-    {
-      'id': 'rolex_daytona_012',
-      'title': 'Rolex Daytona',
-      'finalPrice': 1200000,
-      'myBid': 1200000,
-      'completedDate': '3 ชั่วโมงที่แล้ว',
-      'image': 'assets/images/The-ultimative-Patek-Philippe-Nautilus-Guide.jpg',
-      'status': 'won',
-      'sellerName': 'Luxury Watches Collection',
-      'paymentStatus': 'pending',
-      'auctionId': 'AUCT-2025-012',
-    },
-  ];
+  // User's won auctions from API
+  List<Map<String, dynamic>> _wonAuctions = [];
+  bool _isLoadingWonAuctions = true;
 
   final List<Map<String, dynamic>> _lostAuctions = [
     {
@@ -122,6 +88,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     _authService = AuthService(baseUrl: Config.apiUrlotpsever);
     _loadAddressData();
     _loadUserBidHistory();
+    _loadUserWonAuctions();
   }
 
   Future<void> _loadAddressData() async {
@@ -137,6 +104,58 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     }
   }
 
+  // โหลดข้อมูลผู้ชนะของผู้ใช้จาก API
+  Future<void> _loadUserWonAuctions() async {
+    try {
+      setState(() {
+        _isLoadingWonAuctions = true;
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('id') ?? '';
+      
+      if (userId.isEmpty) {
+        setState(() {
+          _wonAuctions = [];
+          _isLoadingWonAuctions = false;
+        });
+        return;
+      }
+      
+      // ดึงข้อมูลผู้ชนะตาม user_id
+      final result = await WinnerService.getWinnersByUserId(userId);
+      
+      if (result['status'] == 'success' && result['data'] != null) {
+        final winners = result['data'] as List;
+        
+        if (winners.isNotEmpty) {
+          // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
+          final convertedWinners = WinnerService.convertWinnersToAppFormat(winners);
+          
+          setState(() {
+            _wonAuctions = convertedWinners;
+            _isLoadingWonAuctions = false;
+          });
+        } else {
+          setState(() {
+            _wonAuctions = [];
+            _isLoadingWonAuctions = false;
+          });
+        }
+      } else {
+        setState(() {
+          _wonAuctions = [];
+          _isLoadingWonAuctions = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _wonAuctions = [];
+        _isLoadingWonAuctions = false;
+      });
+    }
+  }
+
   // โหลดประวัติการประมูลของผู้ใช้จาก API
   Future<void> _loadUserBidHistory() async {
     try {
@@ -148,22 +167,18 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       final userId = prefs.getString('id') ?? '';
       
       if (userId.isEmpty) {
-        print('DEBUG: User ID is empty');
         setState(() {
           _activeBids = [];
           _isLoadingActiveBids = false;
         });
         return;
       }
-
-      print('DEBUG: Loading bid history for user: $userId');
       
       // ดึงประวัติการประมูลจาก API
       final result = await UserBidHistoryService.getUserBidHistory(userId);
       
       if (result['status'] == 'success' && result['data'] != null) {
         final bidHistory = result['data']['bid_history'] as List;
-        print('DEBUG: Found ${bidHistory.length} bid records');
         
         if (bidHistory.isNotEmpty) {
           // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
@@ -175,28 +190,23 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
           // แปลงเป็น List
           final uniqueBids = highestBids.values.toList();
           
-          print('DEBUG: Converted to ${uniqueBids.length} unique auctions');
-          
           setState(() {
             _activeBids = uniqueBids;
             _isLoadingActiveBids = false;
           });
         } else {
-          print('DEBUG: No bid history found');
           setState(() {
             _activeBids = [];
             _isLoadingActiveBids = false;
           });
         }
       } else {
-        print('DEBUG: API returned error: ${result['message']}');
         setState(() {
           _activeBids = [];
           _isLoadingActiveBids = false;
         });
       }
     } catch (e) {
-      print('DEBUG: Error loading user bid history: $e');
       setState(() {
         _activeBids = [];
         _isLoadingActiveBids = false;
@@ -383,8 +393,36 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     );
   }
 
+  // Utility: Check if auction has ended
+  bool isAuctionEnded(String? endDate, [String? endTime]) {
+    String? dateToCheck = endDate;
+    if ((dateToCheck == null || dateToCheck.isEmpty) && endTime != null && endTime.isNotEmpty) {
+      dateToCheck = endTime;
+    }
+    if (dateToCheck == null || dateToCheck.isEmpty) return false;
+    try {
+      final end = DateTime.parse(dateToCheck);
+      return DateTime.now().isAfter(end);
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Filter lists for each tab using 'auction_end_date' or fallback to 'auction_end_time'
+    final List<Map<String, dynamic>> filteredActiveBids = _activeBids.where((auction) {
+      final endDate = auction['auction_end_date'];
+      final endTime = auction['auction_end_time'];
+      return !isAuctionEnded(endDate, endTime);
+    }).toList();
+    // For won tab, use only _wonAuctions from WinnerService
+    final List<Map<String, dynamic>> filteredWonAuctions = _wonAuctions.where((auction) {
+      final endDate = auction['auction_end_date'];
+      final endTime = auction['auction_end_time'];
+      return isAuctionEnded(endDate, endTime);
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -405,12 +443,13 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
           onPressed: () => Navigator.pop(context),
         ),
                 actions: [
-          IconButton(
-            icon: Icon(Icons.refresh, color: Colors.black, size: 20),
-            onPressed: () {
-              _loadUserBidHistory();
-            },
-          ),
+                      IconButton(
+              icon: Icon(Icons.refresh, color: Colors.black, size: 20),
+              onPressed: () {
+                _loadUserBidHistory();
+                _loadUserWonAuctions();
+              },
+            ),
         ],
       ),
       body: Column(
@@ -444,7 +483,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     child: Text(
-                      'กำลังประมูล\n${_activeBids.length}',
+                      'กำลังประมูล\n${filteredActiveBids.length}',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
@@ -454,7 +493,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     child: Text(
-                      'ชนะ\n${_wonAuctions.length}',
+                      'ชนะ\n${filteredWonAuctions.length}',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
@@ -480,7 +519,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                 // Active Bids Tab
                 _isLoadingActiveBids
                     ? Center(child: CircularProgressIndicator())
-                    : _activeBids.isEmpty
+                    : filteredActiveBids.isEmpty
                         ? buildEmptyState(
                             icon: Icons.gavel,
                             title: 'ไม่มีรายการที่กำลังประมูล',
@@ -488,15 +527,15 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                           )
                         : ListView.builder(
                             padding: EdgeInsets.symmetric(horizontal: 8),
-                            itemCount: _activeBids.length,
+                            itemCount: filteredActiveBids.length,
                             itemBuilder: (context, index) {
                               return ActiveBidCard(
-                                auction: _activeBids[index],
+                                auction: filteredActiveBids[index],
                                 onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => AuctionDetailViewPage(auctionData: _activeBids[index]),
+                                      builder: (context) => AuctionDetailViewPage(auctionData: filteredActiveBids[index]),
                                     ),
                                   );
                                 },
@@ -508,19 +547,21 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                           ),
                 
                 // Won Auctions Tab
-                _wonAuctions.isEmpty
-                    ? buildEmptyState(
-                        icon: Icons.emoji_events,
-                        title: 'ยังไม่มีรายการที่ชนะ',
-                        subtitle: 'เข้าร่วมการประมูลเพื่อมีโอกาสชนะ',
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        itemCount: _wonAuctions.length,
-                        itemBuilder: (context, index) {
-                          return buildWonAuctionCard(context, _wonAuctions[index], _hasWinnerInfo, _loadProfileAndShowDialog);
-                        },
-                      ),
+                _isLoadingWonAuctions
+                    ? Center(child: CircularProgressIndicator())
+                    : filteredWonAuctions.isEmpty
+                        ? buildEmptyState(
+                            icon: Icons.emoji_events,
+                            title: 'ยังไม่มีรายการที่ชนะ',
+                            subtitle: 'เข้าร่วมการประมูลเพื่อมีโอกาสชนะ',
+                          )
+                        : ListView.builder(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            itemCount: filteredWonAuctions.length,
+                            itemBuilder: (context, index) {
+                              return buildWonAuctionCard(context, filteredWonAuctions[index], _hasWinnerInfo, _loadProfileAndShowDialog);
+                            },
+                          ),
                 
                 // Lost Auctions Tab
                 _lostAuctions.isEmpty

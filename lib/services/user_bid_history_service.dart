@@ -90,6 +90,7 @@ class UserBidHistoryService {
         'description': bid['short_text'] ?? bid['quotation_description'] ?? 'ไม่มีคำอธิบาย',
         'sellerName': 'CloudmateTH', // จะต้องดึงจาก API อื่น
         'sellerRating': '4.5', // จะต้องดึงจาก API อื่น
+        'auction_end_date': bid['auction_end_date'] ?? bid['auction_end_time'] ?? '',
       };
     }).toList();
   }
