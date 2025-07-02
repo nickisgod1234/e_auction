@@ -7,6 +7,7 @@ import 'package:e_auction/services/auth_service/auth_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/views/first_page/widgets/my_auctions_widget.dart';
 import 'package:e_auction/utils/format.dart';
+import 'package:e_auction/services/user_bid_history_service.dart';
 import 'dart:async';
 
 class MyAuctionsPage extends StatefulWidget {
@@ -41,75 +42,9 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     'zipCode': TextEditingController(),
   };
 
-  // Mock data for user's auction history
-  final List<Map<String, dynamic>> _activeBids = [
-    {
-      'id': 'rolex_submariner_001',
-      'title': 'Rolex Submariner',
-      'myBid': 850000,
-      'currentPrice': 860000,
-      'timeRemaining': 'เหลือ 2:30:45',
-      'image': 'assets/images/m126618lb-0002.png',
-      'status': 'active', // active, outbid, winning
-      'bidCount': 12,
-      'myBidRank': 2, // ตำแหน่งการประมูลของฉัน
-      'startingPrice': 800000,
-      'description': 'นาฬิกา Rolex Submariner รุ่นคลาสสิก วัสดุคุณภาพสูง มาพร้อมกับกล่องและเอกสารรับประกัน อยู่ในสภาพดีมาก',
-      'brand': 'Rolex',
-      'model': 'Submariner',
-      'material': 'สแตนเลสสตีล',
-      'size': '40mm',
-      'color': 'ดำ',
-      'condition': 'ดีมาก',
-      'sellerName': 'ผู้ขายมืออาชีพ',
-      'sellerRating': '4.8',
-      'category': 'watches'
-    },
-    {
-      'id': 'iphone_15_pro_max_002',
-      'title': 'iPhone 15 Pro Max',
-      'myBid': 45000,
-      'currentPrice': 45000,
-      'timeRemaining': 'เหลือ 1:15:30',
-      'image': 'assets/images/4ebcdc_032401a646044297adbcf3438498a19b~mv2.png',
-      'status': 'winning',
-      'bidCount': 8,
-      'myBidRank': 1,
-      'startingPrice': 40000,
-      'description': 'iPhone 15 Pro Max สี Titanium Natural 256GB สภาพใหม่',
-      'brand': 'Apple',
-      'model': 'iPhone 15 Pro Max',
-      'material': 'Titanium',
-      'size': '6.7 นิ้ว',
-      'color': 'Titanium Natural',
-      'condition': 'ใหม่',
-      'sellerName': 'Apple Store Thailand',
-      'sellerRating': '4.9',
-      'category': 'phones'
-    },
-    {
-      'id': 'hermes_birkin_005',
-      'title': 'Hermès Birkin Bag',
-      'myBid': 250000,
-      'currentPrice': 255000,
-      'timeRemaining': 'เหลือ 4:20:10',
-      'image': 'assets/images/db10cd_5d78534c69064ecebbef175602c6bfe0~mv2.png',
-      'status': 'outbid',
-      'bidCount': 20,
-      'myBidRank': 3,
-      'startingPrice': 200000,
-      'description': 'กระเป๋า Hermès Birkin 30cm สี Black Togo Leather อยู่ในสภาพดีมาก',
-      'brand': 'Hermès',
-      'model': 'Birkin 30',
-      'material': 'Togo Leather',
-      'size': '30cm',
-      'color': 'ดำ',
-      'condition': 'ดีมาก',
-      'sellerName': 'Luxury Collection',
-      'sellerRating': '4.9',
-      'category': 'bags'
-    },
-  ];
+  // User's auction history from API
+  List<Map<String, dynamic>> _activeBids = [];
+  bool _isLoadingActiveBids = true;
 
   final List<Map<String, dynamic>> _wonAuctions = [
     {
@@ -186,6 +121,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     });
     _authService = AuthService(baseUrl: Config.apiUrlotpsever);
     _loadAddressData();
+    _loadUserBidHistory();
   }
 
   Future<void> _loadAddressData() async {
@@ -198,6 +134,73 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       }
     } catch (e) {
       // fallback: do nothing, addressData will be empty
+    }
+  }
+
+  // โหลดประวัติการประมูลของผู้ใช้จาก API
+  Future<void> _loadUserBidHistory() async {
+    try {
+      setState(() {
+        _isLoadingActiveBids = true;
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('id') ?? '';
+      
+      if (userId.isEmpty) {
+        print('DEBUG: User ID is empty');
+        setState(() {
+          _activeBids = [];
+          _isLoadingActiveBids = false;
+        });
+        return;
+      }
+
+      print('DEBUG: Loading bid history for user: $userId');
+      
+      // ดึงประวัติการประมูลจาก API
+      final result = await UserBidHistoryService.getUserBidHistory(userId);
+      
+      if (result['status'] == 'success' && result['data'] != null) {
+        final bidHistory = result['data']['bid_history'] as List;
+        print('DEBUG: Found ${bidHistory.length} bid records');
+        
+        if (bidHistory.isNotEmpty) {
+          // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
+          final convertedBids = UserBidHistoryService.convertBidHistoryToAppFormat(bidHistory);
+          
+          // จัดกลุ่มตาม quotation และหา bid สูงสุด
+          final highestBids = UserBidHistoryService.getHighestBidsByQuotation(convertedBids);
+          
+          // แปลงเป็น List
+          final uniqueBids = highestBids.values.toList();
+          
+          print('DEBUG: Converted to ${uniqueBids.length} unique auctions');
+          
+          setState(() {
+            _activeBids = uniqueBids;
+            _isLoadingActiveBids = false;
+          });
+        } else {
+          print('DEBUG: No bid history found');
+          setState(() {
+            _activeBids = [];
+            _isLoadingActiveBids = false;
+          });
+        }
+      } else {
+        print('DEBUG: API returned error: ${result['message']}');
+        setState(() {
+          _activeBids = [];
+          _isLoadingActiveBids = false;
+        });
+      }
+    } catch (e) {
+      print('DEBUG: Error loading user bid history: $e');
+      setState(() {
+        _activeBids = [];
+        _isLoadingActiveBids = false;
+      });
     }
   }
 
@@ -312,6 +315,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         return Colors.green;
       case 'lost':
         return Colors.red;
+      case 'unknown':
+        return Colors.grey;
       default:
         return Colors.grey;
     }
@@ -329,6 +334,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         return 'ชนะการประมูล';
       case 'lost':
         return 'ไม่ชนะการประมูล';
+      case 'unknown':
+        return 'ไม่ทราบสถานะ';
       default:
         return 'ไม่ทราบสถานะ';
     }
@@ -397,13 +404,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
           icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
+                actions: [
           IconButton(
             icon: Icon(Icons.refresh, color: Colors.black, size: 20),
             onPressed: () {
-              setState(() {
-                // Refresh data
-              });
+              _loadUserBidHistory();
             },
           ),
         ],
@@ -473,32 +478,34 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
               controller: _tabController,
               children: [
                 // Active Bids Tab
-                _activeBids.isEmpty
-                    ? buildEmptyState(
-                        icon: Icons.gavel,
-                        title: 'ไม่มีรายการที่กำลังประมูล',
-                        subtitle: 'คุณยังไม่ได้เข้าร่วมการประมูลใดๆ',
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        itemCount: _activeBids.length,
-                        itemBuilder: (context, index) {
-                          return ActiveBidCard(
-                            auction: _activeBids[index],
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AuctionDetailViewPage(auctionData: _activeBids[index]),
-                                ),
+                _isLoadingActiveBids
+                    ? Center(child: CircularProgressIndicator())
+                    : _activeBids.isEmpty
+                        ? buildEmptyState(
+                            icon: Icons.gavel,
+                            title: 'ไม่มีรายการที่กำลังประมูล',
+                            subtitle: 'คุณยังไม่ได้เข้าร่วมการประมูลใดๆ',
+                          )
+                        : ListView.builder(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            itemCount: _activeBids.length,
+                            itemBuilder: (context, index) {
+                              return ActiveBidCard(
+                                auction: _activeBids[index],
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AuctionDetailViewPage(auctionData: _activeBids[index]),
+                                    ),
+                                  );
+                                },
+                                getStatusColor: _getStatusColor,
+                                getStatusText: _getStatusText,
+                                small: true,
                               );
                             },
-                            getStatusColor: _getStatusColor,
-                            getStatusText: _getStatusText,
-                            small: true,
-                          );
-                        },
-                      ),
+                          ),
                 
                 // Won Auctions Tab
                 _wonAuctions.isEmpty

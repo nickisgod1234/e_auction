@@ -502,11 +502,11 @@ class ActiveBidCard extends StatelessWidget {
         trailing: Container(
           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: getStatusColor(auction['status']),
+            color: getStatusColor(auction['status'] ?? 'unknown'),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            getStatusText(auction['status']),
+            getStatusText(auction['status'] ?? 'unknown'),
             style: TextStyle(color: Colors.white, fontSize: small ? 10 : 12, fontWeight: FontWeight.bold),
           ),
         ),
