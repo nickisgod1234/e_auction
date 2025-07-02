@@ -115,7 +115,16 @@ class CurrentAuctionPage extends StatelessWidget {
   // เพิ่มเมธอดสำหรับแสดง dialog ลงประมูล
   void _showBidDialog(BuildContext context, Map<String, dynamic> auctionData) {
     final TextEditingController bidController = TextEditingController();
-    final currentPrice = auctionData['currentPrice'];
+    
+    // แก้ไข type casting เพื่อรองรับทั้ง int และ double จาก API
+    final currentPriceRaw = auctionData['currentPrice'];
+    int currentPrice = 0;
+    if (currentPriceRaw is double) {
+      currentPrice = currentPriceRaw.round();
+    } else if (currentPriceRaw is int) {
+      currentPrice = currentPriceRaw;
+    }
+    
     final minBid = currentPrice + 1000; // ราคาขั้นต่ำเพิ่มขึ้น 1,000 บาท
     
     showDialog(

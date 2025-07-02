@@ -2,27 +2,132 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/utils/format.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:e_auction/services/product_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:async';
 
-class AuctionDetailViewPage extends StatelessWidget {
+class AuctionDetailViewPage extends StatefulWidget {
   final Map<String, dynamic> auctionData;
 
-  const AuctionDetailViewPage({super.key, required this.auctionData});
+  AuctionDetailViewPage({super.key, required this.auctionData});
+
+  @override
+  _AuctionDetailViewPageState createState() => _AuctionDetailViewPageState();
+}
+
+class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
+  final GlobalKey<_RealtimeAuctionPriceWidgetState> realtimePriceKey = GlobalKey<_RealtimeAuctionPriceWidgetState>();
+  Map<String, dynamic>? _latestAuctionData;
 
   // Add a static variable to track the disclaimer popup state
   static bool _hideDisclaimer = false;
 
-  // เพิ่มเมธอดสำหรับแสดง dialog ลงประมูล
-  void _showBidDialog(BuildContext context) {
-    final TextEditingController bidController = TextEditingController();
-    final currentPrice = auctionData['currentPrice'] ?? 0;
-    final minBid = currentPrice + 1000; // ราคาขั้นต่ำเพิ่มขึ้น 1,000 บาท
+  // Helper method to get current price as int
+  int _getCurrentPriceAsInt() {
+    // ใช้ข้อมูลจาก real-time ถ้ามี หรือใช้ข้อมูลเดิม
+    if (_latestAuctionData != null) {
+      return int.tryParse(_latestAuctionData!['current_price']?.toString() ?? '0') ?? 0;
+    }
     
+    final currentPriceRaw = widget.auctionData['currentPrice'];
+    if (currentPriceRaw is double) {
+      return currentPriceRaw.round();
+    } else if (currentPriceRaw is int) {
+      return currentPriceRaw;
+    }
+    return 0;
+  }
+
+  // Helper method to get starting price as int
+  int _getStartingPriceAsInt() {
+    // ใช้ข้อมูลจาก real-time ถ้ามี หรือใช้ข้อมูลเดิม
+    if (_latestAuctionData != null) {
+      return int.tryParse(_latestAuctionData!['star_price']?.toString() ?? '0') ?? 0;
+    }
+    
+    final startingPriceRaw = widget.auctionData['startingPrice'];
+    if (startingPriceRaw is double) {
+      return startingPriceRaw.round();
+    } else if (startingPriceRaw is int) {
+      return startingPriceRaw;
+    }
+    return 0;
+  }
+
+  // แสดง Custom Toast Message
+  void _showCustomToast(BuildContext context, String message, {bool isSuccess = true}) {
+    final overlay = Overlay.of(context);
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 20,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: isSuccess ? Colors.green : Colors.red,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    isSuccess ? Icons.check_circle : Icons.error,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+    Future.delayed(Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
+  }
+
+  // แสดง Custom Success Dialog
+  void _showSuccessDialog(BuildContext context, String message) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Column(
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 padding: EdgeInsets.all(16),
@@ -30,249 +135,338 @@ class AuctionDetailViewPage extends StatelessWidget {
                   color: Colors.green.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.gavel, color: Colors.green, size: 48),
+                child: Icon(Icons.check_circle, color: Colors.green, size: 48),
               ),
               SizedBox(height: 16),
               Text(
-                'ลงประมูลสินค้า',
+                'สำเร็จ!',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                message,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  color: Colors.green,
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                ),
+              ),
+              SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('ตกลง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Row(
+        ),
+      ),
+    );
+  }
+
+  // เพิ่มเมธอดสำหรับแสดง dialog ลงประมูล
+  void _showBidDialog(BuildContext context) async {
+    // Loading ก่อนดึงข้อมูลล่าสุด
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(child: CircularProgressIndicator()),
+    );
+
+    final productService = ProductService(baseUrl: 'http://localhost');
+    final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? widget.auctionData['id'].toString();
+    
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId'),
+      );
+
+      Navigator.pop(context); // ปิด loading
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (data['status'] == 'success' && data['data'] != null) {
+          final latestData = data['data'];
+          
+          final TextEditingController bidController = TextEditingController();
+          final currentPrice = int.tryParse(latestData['current_price']?.toString() ?? '0') ?? 0;
+          final minimumIncrease = int.tryParse(latestData['minimum_increase']?.toString() ?? '0') ?? 0;
+          final minBid = currentPrice + minimumIncrease;
+
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: Column(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        auctionData['image'],
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 60,
-                            height: 60,
-                            color: Colors.grey[200],
-                            child: Icon(Icons.image_not_supported, color: Colors.grey),
-                          );
-                        },
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.gavel, color: Colors.green, size: 48),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'ลงประมูลสินค้า',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.green,
                       ),
                     ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            auctionData['title'],
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.asset(
+                              widget.auctionData['image'],
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 60,
+                                  height: 60,
+                                  color: Colors.grey[200],
+                                  child: Icon(Icons.image_not_supported, color: Colors.grey),
+                                );
+                              },
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            'แบรนด์: ${auctionData['brand'] ?? 'ไม่ระบุ'}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.auctionData['title'],
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'แบรนด์: ${widget.auctionData['brand'] ?? 'ไม่ระบุ'}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 20),
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.green.withOpacity(0.1), Colors.blue.withOpacity(0.1)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'ราคาปัจจุบัน:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
+                    SizedBox(height: 20),
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.green.withOpacity(0.1), Colors.blue.withOpacity(0.1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        Text(
-                          Format.formatCurrency(currentPrice),
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'ราคาขั้นต่ำ:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Text(
-                          Format.formatCurrency(minBid),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 20),
-              TextField(
-                controller: bidController,
-                decoration: InputDecoration(
-                  labelText: 'ราคาที่ต้องการประมูล (บาท)',
-                  hintText: 'กรุณากรอกราคาที่ไม่ต่ำกว่า ${Format.formatCurrency(minBid)}',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.green, width: 2),
-                  ),
-                  prefixIcon: Icon(Icons.attach_money, color: Colors.green),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-                keyboardType: TextInputType.number,
-                style: TextStyle(fontSize: 16),
-              ),
-            ],
-          ),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[300],
-                      foregroundColor: Colors.grey[700],
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.close, size: 20),
-                        SizedBox(width: 8),
-                        Text('ยกเลิก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      elevation: 2,
-                    ),
-                    onPressed: () {
-                      final bidAmount = double.tryParse(bidController.text);
-                      if (bidAmount == null || bidAmount < minBid) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(Icons.error_outline, color: Colors.white),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text('กรุณากรอกราคาที่ไม่ต่ำกว่า ${Format.formatCurrency(minBid)}'),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: Colors.red,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        );
-                        return;
-                      }
-                      
-                      // จำลองการส่งข้อมูลไปยัง API
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(Icons.check_circle, color: Colors.white),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text('ลงประมูลสำเร็จ! ราคา ${Format.formatCurrency(bidAmount)}'),
+                              Text(
+                                'ราคาปัจจุบัน:',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Text(
+                                Format.formatCurrency(currentPrice),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
                               ),
                             ],
                           ),
-                          backgroundColor: Colors.green,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          duration: Duration(seconds: 3),
-                        ),
-                      );
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.gavel, size: 20),
-                        SizedBox(width: 8),
-                        Text('ยืนยัน', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      ],
+                          SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'ราคาขั้นต่ำ:',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              Text(
+                                Format.formatCurrency(minBid),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    SizedBox(height: 20),
+                    TextField(
+                      controller: bidController,
+                      decoration: InputDecoration(
+                        labelText: 'ราคาที่ต้องการประมูล (บาท)',
+                        hintText: 'กรุณากรอกราคาที่มากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.green, width: 2),
+                        ),
+                        prefixIcon: Icon(Icons.attach_money, color: Colors.green),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                      ),
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
+                actions: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey[300],
+                            foregroundColor: Colors.grey[700],
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.close, size: 20),
+                              SizedBox(width: 8),
+                              Text('ยกเลิก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            elevation: 2,
+                          ),
+                          onPressed: () async {
+                            final bidAmount = int.tryParse(bidController.text);
+                            if (bidAmount == null || bidAmount < minBid) {
+                              _showCustomToast(context, 'กรุณากรอกราคาที่มากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}', isSuccess: false);
+                              return;
+                            }
+
+                            // Loading
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => Center(child: CircularProgressIndicator()),
+                            );
+
+                            final prefs = await SharedPreferences.getInstance();
+                            final bidderId = prefs.getString('id') ?? '';
+                            final bidderName = prefs.getString('phone_number') ?? '';
+
+                            final result = await productService.placeBid(
+                              quotationId: quotationId,
+                              minimumIncrease: minimumIncrease.toString(),
+                              bidAmount: bidAmount.toString(),
+                              bidderId: bidderId,
+                              bidderName: bidderName,
+                            );
+
+                            Navigator.pop(context); // ปิด loading
+                            Navigator.pop(context); // ปิด dialog
+
+                            if (result != null && result['status'] == 'success') {
+                              _showSuccessDialog(context, 'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}');
+                              // อัปเดต widget realtime ทันที
+                              realtimePriceKey.currentState?.updateAuctionData(result['data']);
+                            } else {
+                              _showCustomToast(context, 'เกิดข้อผิดพลาดในการประมูล', isSuccess: false);
+                            }
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.gavel, size: 20),
+                              SizedBox(width: 8),
+                              Text('ยืนยัน', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          );
+        } else {
+          _showCustomToast(context, 'ไม่สามารถโหลดข้อมูลล่าสุดได้', isSuccess: false);
+        }
+      } else {
+        _showCustomToast(context, 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', isSuccess: false);
+      }
+    } catch (e) {
+      Navigator.pop(context); // ปิด loading
+      _showCustomToast(context, 'เกิดข้อผิดพลาด: $e', isSuccess: false);
+    }
   }
 
   void _showDisclaimerDialog(BuildContext context, VoidCallback onAccept) {
@@ -388,11 +582,17 @@ class AuctionDetailViewPage extends StatelessWidget {
             // Product Info
             _buildProductInfo(context),
             
-            // Auction Status
-            _buildAuctionStatus(context),
+            // Realtime Auction Price
+            RealtimeAuctionPriceWidget(
+              quotationId: widget.auctionData['quotation_more_information_id']?.toString() ?? widget.auctionData['id'].toString(),
+              baseUrl: 'http://localhost',
+            ),
             
             // Product Details
             _buildProductDetails(context),
+            
+            // Item Notes
+            _buildItemNotes(context),
             
             // Seller Info
             _buildSellerInfo(context),
@@ -423,7 +623,7 @@ class AuctionDetailViewPage extends StatelessWidget {
                 ],
               ),
               child: Text(
-                'ขั้นต่ำ: ${Format.formatCurrency((auctionData['currentPrice'] ?? 0) + 1000)}',
+                'ขั้นต่ำ: ${Format.formatCurrency(widget.auctionData['minimum_increase'] ?? 5)}',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -499,7 +699,7 @@ class AuctionDetailViewPage extends StatelessWidget {
       width: double.infinity,
       height: 300,
       child: Image.asset(
-        auctionData['image'],
+        widget.auctionData['image'],
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Container(
@@ -520,7 +720,7 @@ class AuctionDetailViewPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            auctionData['title'],
+            widget.auctionData['title'],
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -528,161 +728,12 @@ class AuctionDetailViewPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            auctionData['description'] ?? 'ไม่มีคำอธิบาย',
+            widget.auctionData['description'] ?? 'ไม่มีคำอธิบาย',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
               height: 1.5,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAuctionStatus(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.gavel, color: Colors.black, size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'สถานะการประมูล',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatusItem(
-                  'เวลาที่เหลือ',
-                  auctionData['timeRemaining'] ?? 'เหลือ 2:30:45',
-                  Icons.timer,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatusItem(
-                  'ราคาปัจจุบัน',
-                  Format.formatCurrency(auctionData['currentPrice']),
-                  Icons.attach_money,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatusItem(
-                  'จำนวนผู้เสนอราคา',
-                  '${auctionData['bidCount'] ?? 12} คน',
-                  Icons.people,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatusItem(
-                  'ราคาเริ่มต้น',
-                  Format.formatCurrency(auctionData['startingPrice']),
-                  Icons.trending_up,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusItem(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: Colors.black, size: 18),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -712,12 +763,12 @@ class AuctionDetailViewPage extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _buildDetailRow('แบรนด์', auctionData['brand'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('รุ่น', auctionData['model'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('วัสดุ', auctionData['material'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('ขนาด', auctionData['size'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('สี', auctionData['color'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('สภาพ', auctionData['condition'] ?? 'ไม่ระบุ'),
+                _buildDetailRow('แบรนด์', widget.auctionData['brand'] ?? 'ไม่ระบุ'),
+                _buildDetailRow('รุ่น', widget.auctionData['model'] ?? 'ไม่ระบุ'),
+                _buildDetailRow('วัสดุ', widget.auctionData['material'] ?? 'ไม่ระบุ'),
+                _buildDetailRow('ขนาด', widget.auctionData['size'] ?? 'ไม่ระบุ'),
+                _buildDetailRow('สี', widget.auctionData['color'] ?? 'ไม่ระบุ'),
+                _buildDetailRow('สภาพ', widget.auctionData['condition'] ?? 'ไม่ระบุ'),
               ],
             ),
           ),
@@ -753,7 +804,7 @@ class AuctionDetailViewPage extends StatelessWidget {
                   radius: 25,
                   backgroundColor: context.customTheme.primaryColor,
                   child: Text(
-                    auctionData['sellerName']?.substring(0, 2) ?? 'ผู้',
+                    widget.auctionData['sellerName']?.substring(0, 2) ?? 'CM',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -767,7 +818,7 @@ class AuctionDetailViewPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        auctionData['sellerName'] ?? 'ผู้ขายมืออาชีพ',
+                        widget.auctionData['sellerName'] ?? 'CloudmateTH',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -779,7 +830,7 @@ class AuctionDetailViewPage extends StatelessWidget {
                           Icon(Icons.star, color: Colors.amber, size: 16),
                           const SizedBox(width: 4),
                           Text(
-                            '${auctionData['sellerRating'] ?? '4.5'}',
+                            '${widget.auctionData['sellerRating'] ?? '4.5'}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -824,6 +875,464 @@ class AuctionDetailViewPage extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemNotes(BuildContext context) {
+    final itemNote = widget.auctionData['item_note'];
+    if (itemNote == null || itemNote.toString().isEmpty) {
+      return SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.note, color: Colors.orange, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'หมายเหตุ',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withOpacity(0.2)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.orange,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    itemNote.toString(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class RealtimeAuctionPriceWidget extends StatefulWidget {
+  final String quotationId;
+  final String baseUrl;
+  
+  const RealtimeAuctionPriceWidget({
+    Key? key, 
+    required this.quotationId,
+    required this.baseUrl,
+  }) : super(key: key);
+
+  @override
+  _RealtimeAuctionPriceWidgetState createState() => _RealtimeAuctionPriceWidgetState();
+}
+
+class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget> {
+  Timer? _timer;
+  Map<String, dynamic>? _auctionData;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAuctionData();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 3), (timer) {
+      _loadAuctionData();
+    });
+  }
+
+  Future<void> _loadAuctionData() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${widget.baseUrl}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${widget.quotationId}'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          if (data is Map<String, dynamic> && data['status'] == 'success' && data['data'] != null) {
+            _auctionData = data['data'];
+          } else {
+            _auctionData = null;
+          }
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  String _formatTime(String? timestamp) {
+    if (timestamp == null) return '-';
+    try {
+      final dateTime = DateTime.parse(timestamp).toLocal();
+      return dateTime.toString().substring(0, 19);
+    } catch (e) {
+      return '-';
+    }
+  }
+
+  String _maskPhoneNumber(String? phoneNumber) {
+    if (phoneNumber == null || phoneNumber.isEmpty) return 'ไม่ระบุ';
+    
+    // ถ้าเป็นเบอร์โทรศัพท์ (มีตัวเลข 10 หลัก)
+    if (phoneNumber.length >= 10 && RegExp(r'^\d+$').hasMatch(phoneNumber)) {
+      if (phoneNumber.length >= 4) {
+        return '${phoneNumber.substring(0, phoneNumber.length - 4)}****';
+      } else {
+        return '****';
+      }
+    }
+    
+    // ถ้าไม่ใช่เบอร์โทรศัพท์ ให้แสดงตามปกติ
+    return phoneNumber;
+  }
+
+  void updateAuctionData(Map<String, dynamic> newData) {
+    setState(() {
+      _auctionData = newData;
+      isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Container(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.green.withOpacity(0.1), Colors.blue.withOpacity(0.1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.trending_up, color: Colors.green, size: 20),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'ราคาปัจจุบัน (Real-time)',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[800],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          // สรุปข้อมูลการประมูล
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ราคาปัจจุบัน', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                    SizedBox(height: 4),
+                    Text(
+                      '฿${_auctionData?['current_price'] ?? '0'}',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green[700]),
+                    ),
+                    if (_auctionData?['remaining_time'] != null && (_auctionData?['remaining_time'] as String).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6.0),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.timer, size: 16, color: Colors.orange),
+                              SizedBox(width: 6),
+                              Text(
+                                _auctionData?['remaining_time'] ?? '-',
+                                style: TextStyle(fontSize: 14, color: Colors.orange[800], fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                Container(width: 1, height: 40, color: Colors.grey[300]),
+                Column(
+                  children: [
+                    Text('ราคาเริ่มต้น', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    SizedBox(height: 4),
+                    Text(
+                      '฿${_auctionData?['star_price'] ?? '0'}',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.orange[700]),
+                    ),
+                  ],
+                ),
+                Container(width: 1, height: 40, color: Colors.grey[300]),
+                Column(
+                  children: [
+                    Text('ขั้นต่ำ', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    SizedBox(height: 4),
+                    Text(
+                      '฿${_auctionData?['minimum_increase'] ?? '0'}',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blue[700]),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 12),
+          // สถิติการประมูล
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.people, size: 16, color: Colors.blue),
+                        SizedBox(width: 6),
+                        Text(
+                          'ผู้ประมูล: ${_auctionData?['number_bidders'] ?? '0'} คน',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.gavel, size: 16, color: Colors.orange),
+                        SizedBox(width: 6),
+                        Text(
+                          'จำนวนครั้ง: ${_auctionData?['total_bids'] ?? '0'} ครั้ง',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.access_time, size: 16, color: Colors.green),
+                        SizedBox(width: 6),
+                        Text(
+                          'อัปเดตล่าสุด: ${_formatTime(_auctionData?['last_updated']).substring(11, 19)}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'Live',
+                        style: TextStyle(fontSize: 10, color: Colors.green[700], fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16),
+          if (_auctionData?['bid_history'] != null && (_auctionData?['bid_history'] as List).isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('ประวัติการประมูล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(
+                      '${(_auctionData?['bid_history'] as List).length} รายการ',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Container(
+                  height: 120,
+                  child: ListView.builder(
+                    itemCount: (_auctionData?['bid_history'] as List).length,
+                    itemBuilder: (context, index) {
+                      // Reverse index เพื่อให้รายการล่าสุดอยู่บนสุด
+                      final reversedIndex = (_auctionData?['bid_history'] as List).length - 1 - index;
+                      final bid = (_auctionData?['bid_history'] as List)[reversedIndex];
+                      final isLatestBid = index == 0; // รายการล่าสุด (ตอนนี้ index 0 จะเป็นรายการล่าสุด)
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 4),
+                        decoration: BoxDecoration(
+                          color: isLatestBid ? Colors.green.withOpacity(0.1) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: isLatestBid ? Border.all(color: Colors.green.withOpacity(0.3)) : null,
+                        ),
+                        child: ListTile(
+                          dense: true,
+                          leading: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: isLatestBid ? Colors.green : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Icon(
+                              Icons.person,
+                              size: 16,
+                              color: isLatestBid ? Colors.white : Colors.grey[600],
+                            ),
+                          ),
+                          title: Row(
+                            children: [
+                              Text(
+                                '฿${bid['bid_amount']}',
+                                style: TextStyle(
+                                  fontWeight: isLatestBid ? FontWeight.bold : FontWeight.normal,
+                                  color: isLatestBid ? Colors.green[700] : Colors.black,
+                                ),
+                              ),
+                              if (isLatestBid) ...[
+                                SizedBox(width: 8),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    'ล่าสุด',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          subtitle: Text('โดย: ${_maskPhoneNumber(bid['bidder_name'])}'),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                _formatTime(bid['bid_time']).substring(11, 19), // แสดงเฉพาะเวลา
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              Text(
+                                _formatTime(bid['bid_time']).substring(0, 10), // แสดงเฉพาะวันที่
+                                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );

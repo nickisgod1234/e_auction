@@ -10,6 +10,28 @@ class DetailCompleted extends StatelessWidget {
     required this.auctionData,
   });
 
+  // Helper method to get final price as int
+  int _getFinalPriceAsInt() {
+    final finalPriceRaw = auctionData['finalPrice'];
+    if (finalPriceRaw is double) {
+      return finalPriceRaw.round();
+    } else if (finalPriceRaw is int) {
+      return finalPriceRaw;
+    }
+    return 0; // default value
+  }
+
+  // Helper method to get starting price as int
+  int _getStartingPriceAsInt() {
+    final startingPriceRaw = auctionData['startingPrice'];
+    if (startingPriceRaw is double) {
+      return startingPriceRaw.round();
+    } else if (startingPriceRaw is int) {
+      return startingPriceRaw;
+    }
+    return 0; // default value
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,8 +87,8 @@ class DetailCompleted extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: 12),
-                        _buildDetailRow('ราคาสุดท้าย', '${Format.formatCurrency(auctionData['finalPrice'] ?? 0)}'),
-                        _buildDetailRow('ราคาเริ่มต้น', '${Format.formatCurrency(auctionData['startingPrice'] ?? 0)}'),
+                        _buildDetailRow('ราคาสุดท้าย', '${Format.formatCurrency(_getFinalPriceAsInt())}'),
+                        _buildDetailRow('ราคาเริ่มต้น', '${Format.formatCurrency(_getStartingPriceAsInt())}'),
                         _buildDetailRow('จำนวนการประมูล', '${auctionData['bidCount'] ?? 0} รายการ'),
                         _buildDetailRow('ผู้ชนะการประมูล', auctionData['winner'] ?? 'ไม่ระบุ'),
                         _buildDetailRow('วันที่เสร็จสิ้น', auctionData['completedDate'] ?? 'ไม่ระบุ'),

@@ -8,6 +8,28 @@ class AuctionResultPage extends StatelessWidget {
 
   const AuctionResultPage({super.key, required this.auctionData});
 
+  // Helper method to get starting price as int
+  int _getStartingPriceAsInt() {
+    final startingPriceRaw = auctionData['startingPrice'];
+    if (startingPriceRaw is double) {
+      return startingPriceRaw.round();
+    } else if (startingPriceRaw is int) {
+      return startingPriceRaw;
+    }
+    return 0; // default value
+  }
+
+  // Helper method to get final price as int
+  int _getFinalPriceAsInt() {
+    final finalPriceRaw = auctionData['finalPrice'];
+    if (finalPriceRaw is double) {
+      return finalPriceRaw.round();
+    } else if (finalPriceRaw is int) {
+      return finalPriceRaw;
+    }
+    return 0; // default value
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -493,8 +515,8 @@ class AuctionResultPage extends StatelessWidget {
               children: [
                 _buildDetailRow('วันที่เริ่มประมูล', '${auctionData['startDate'] ?? '15 มกราคม 2024'}'),
                 _buildDetailRow('วันที่สิ้นสุดประมูล', '${auctionData['endDate'] ?? '22 มกราคม 2024'}'),
-                _buildDetailRow('ราคาเริ่มต้น', '${Format.formatCurrency(auctionData['startingPrice'] ?? auctionData['finalPrice']! - 50000)}'),
-                _buildDetailRow('ราคาปิดประมูล', '${Format.formatCurrency(auctionData['finalPrice'])}'),
+                _buildDetailRow('ราคาเริ่มต้น', '${Format.formatCurrency(_getStartingPriceAsInt())}'),
+                _buildDetailRow('ราคาปิดประมูล', '${Format.formatCurrency(_getFinalPriceAsInt())}'),
                 _buildDetailRow('ผู้ขาย', '${auctionData['sellerName'] ?? 'ผู้ขายมืออาชีพ'}'),
                 _buildDetailRow('หมวดหมู่', '${_getCategoryName(auctionData['category'])}'),
               ],

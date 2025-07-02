@@ -26,10 +26,26 @@ class _DetailPageState extends State<DetailPage> {
   @override
   void initState() {
     super.initState();
-    _currentBid = widget.auctionData['currentPrice'] ?? 0;
-    final startingPrice = widget.auctionData['startingPrice'] ?? 0;
+    // แก้ไข type casting เพื่อรองรับทั้ง int และ double จาก API
+    final currentPrice = widget.auctionData['currentPrice'];
+    if (currentPrice is double) {
+      _currentBid = currentPrice.round();
+    } else if (currentPrice is int) {
+      _currentBid = currentPrice;
+    } else {
+      _currentBid = 0;
+    }
+    
+    final startingPrice = widget.auctionData['startingPrice'];
+    int startingPriceInt = 0;
+    if (startingPrice is double) {
+      startingPriceInt = startingPrice.round();
+    } else if (startingPrice is int) {
+      startingPriceInt = startingPrice;
+    }
+    
     // คำนวณจำนวนเงินขั้นต่ำที่ต้องเพิ่ม (3% ของราคาเริ่มต้น)
-    _minBidIncrement = (startingPrice * 0.03).round();
+    _minBidIncrement = (startingPriceInt * 0.03).round();
     // ตั้งค่าเริ่มต้นให้กับ text field เป็นราคาปัจจุบัน + ขั้นต่ำที่ต้องเพิ่ม
     _bidController.text = (_currentBid + _minBidIncrement).toString();
   }
@@ -38,6 +54,17 @@ class _DetailPageState extends State<DetailPage> {
   void dispose() {
     _bidController.dispose();
     super.dispose();
+  }
+
+  // Helper method to get starting price as int
+  int _getStartingPriceAsInt() {
+    final startingPriceRaw = widget.auctionData['startingPrice'];
+    if (startingPriceRaw is double) {
+      return startingPriceRaw.round();
+    } else if (startingPriceRaw is int) {
+      return startingPriceRaw;
+    }
+    return 850000; // default value
   }
 
   void _placeBid() async {
@@ -154,7 +181,7 @@ class _DetailPageState extends State<DetailPage> {
                         ),
                         SizedBox(height: 8),
                         Text(
-                          '• การประมูลสินค้าชิ้นนี้จะเพิ่มครั้งละ 3% จากยอดเริ่มต้น\n• ราคาเริ่มต้น: ${Format.formatCurrency(widget.auctionData['startingPrice'] ?? 850000)}\n• เพิ่มขั้นต่ำ: ${Format.formatCurrency(_minBidIncrement)}',
+                          '• การประมูลสินค้าชิ้นนี้จะเพิ่มครั้งละ 3% จากยอดเริ่มต้น\n• ราคาเริ่มต้น: ${Format.formatCurrency(_getStartingPriceAsInt())}\n• เพิ่มขั้นต่ำ: ${Format.formatCurrency(_minBidIncrement)}',
                           style: TextStyle(fontSize: 14),
                         ),
                       ],
@@ -404,7 +431,7 @@ class _DetailPageState extends State<DetailPage> {
 
                   // Starting Price
                   Text(
-                    'ราคาเริ่มต้น: ${Format.formatCurrency(widget.auctionData['startingPrice'] ?? 850000)}',
+                    'ราคาเริ่มต้น: ${Format.formatCurrency(_getStartingPriceAsInt())}',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -414,7 +441,7 @@ class _DetailPageState extends State<DetailPage> {
 
                   // Minimum Bid Increment
                   Text(
-                    'เพิ่มขั้นต่ำ: ${Format.formatCurrency(_minBidIncrement)} (3% ของราคาเริ่มต้น)',
+                  'ขั้นต่ำ: ${Format.formatCurrency(widget.auctionData['minimumIncrease'] ?? 100)}',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -443,7 +470,7 @@ class _DetailPageState extends State<DetailPage> {
                     'รายละเอียดสินค้า',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      
                     ),
                   ),
                   SizedBox(height: 8),
@@ -463,7 +490,7 @@ class _DetailPageState extends State<DetailPage> {
                     'ข้อมูลจำเพาะ',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                     
                     ),
                   ),
                   SizedBox(height: 8),
@@ -473,6 +500,10 @@ class _DetailPageState extends State<DetailPage> {
                   _buildSpecificationItem('ขนาด', widget.auctionData['size'] ?? '40mm'),
                   _buildSpecificationItem('สี', widget.auctionData['color'] ?? 'ดำ'),
                   _buildSpecificationItem('สภาพ', widget.auctionData['condition'] ?? 'ดีมาก'),
+                  SizedBox(height: 24),
+
+                  // Item Notes
+                  _buildItemNotes(),
                   SizedBox(height: 24),
 
                   // Seller Information
@@ -489,7 +520,7 @@ class _DetailPageState extends State<DetailPage> {
                           'ข้อมูลผู้ขาย',
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                           
                           ),
                         ),
                         SizedBox(height: 8),
@@ -505,10 +536,10 @@ class _DetailPageState extends State<DetailPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  widget.auctionData['sellerName'] ?? 'ผู้ขายมืออาชีพ',
+                                  widget.auctionData['sellerName'] ?? 'CloudmateTH',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                    
                                   ),
                                 ),
                                 Text(
@@ -597,7 +628,7 @@ class _DetailPageState extends State<DetailPage> {
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+             
               ),
             ),
           ),
@@ -607,12 +638,102 @@ class _DetailPageState extends State<DetailPage> {
               value,
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
+               
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildItemNotes() {
+    final itemNote = widget.auctionData['item_note'];   
+    if (itemNote == null || itemNote.toString().isEmpty) {
+      // แสดงหมายเหตุทดสอบเพื่อดูว่า section ทำงานหรือไม่
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.note, color: Colors.orange, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'หมายเหตุ',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+         
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.note, color: Colors.orange, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'หมายเหตุ',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.orange.withOpacity(0.2)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Colors.orange,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  itemNote.toString(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 } 

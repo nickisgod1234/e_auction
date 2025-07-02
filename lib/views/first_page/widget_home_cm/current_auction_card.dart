@@ -11,8 +11,46 @@ class CurrentAuctionCard extends StatelessWidget {
     required this.auctionData,
   });
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'current':
+        return Colors.green;
+      case 'upcoming':
+        return Colors.orange;
+      case 'completed':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'current':
+        return 'กำลังประมูล';
+      case 'upcoming':
+        return 'ยังไม่เริ่ม';
+      case 'completed':
+        return 'สิ้นสุดแล้ว';
+      default:
+        return 'ไม่ทราบสถานะ';
+    }
+  }
+
+  // Helper method to get current price as int
+  int _getCurrentPriceAsInt() {
+    final currentPriceRaw = auctionData['currentPrice'];
+    if (currentPriceRaw is double) {
+      return currentPriceRaw.round();
+    } else if (currentPriceRaw is int) {
+      return currentPriceRaw;
+    }
+    return 850000; // default value
+  }
+
   @override
   Widget build(BuildContext context) {
+    final status = auctionData['status'] ?? 'unknown';
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -69,7 +107,7 @@ class CurrentAuctionCard extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: _getStatusColor(status),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -81,7 +119,36 @@ class CurrentAuctionCard extends StatelessWidget {
                     ),
                     SizedBox(width: 4),
                     Text(
-                      auctionData['timeRemaining'] ?? 'เหลือ 2:30:45',
+                      _getStatusText(status),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      auctionData['timeRemaining'] ?? '-',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -127,7 +194,7 @@ class CurrentAuctionCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'ราคาปัจจุบัน: ${Format.formatCurrency(auctionData['currentPrice'] ?? 850000)}',
+                          'ราคาปัจจุบัน: ${Format.formatCurrency(_getCurrentPriceAsInt())}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.white,

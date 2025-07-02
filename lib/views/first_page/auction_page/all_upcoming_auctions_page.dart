@@ -8,6 +8,17 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
 
   const AllUpcomingAuctionsPage({super.key, required this.upcomingAuctions});
 
+  // Helper method to get starting price as int
+  int _getStartingPriceAsInt(Map<String, dynamic> auction) {
+    final startingPriceRaw = auction['startingPrice'];
+    if (startingPriceRaw is double) {
+      return startingPriceRaw.round();
+    } else if (startingPriceRaw is int) {
+      return startingPriceRaw;
+    }
+    return 0; // default value
+  }
+
   Widget _buildAuctionListItem(
       BuildContext context, Map<String, dynamic> auction) {
     return Card(
@@ -60,7 +71,7 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'ราคาเริ่มต้น: ${Format.formatCurrency(auction['startingPrice'])}',
+                      'ราคาเริ่มต้น: ${Format.formatCurrency(_getStartingPriceAsInt(auction))}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[800],
@@ -68,7 +79,7 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'เริ่มใน: ${auction['timeUntilStart']}',
+                      'จะเริ่มในอีก: ${auction['timeUntilStart'] ?? 'ไม่ระบุ'}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.blue,
