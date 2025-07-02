@@ -290,9 +290,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         final firstname = nameParts.isNotEmpty ? nameParts.first : '';
         final lastname = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
         
+        // ถ้า lastname ว่าง ให้ใช้ firstname แทน
+        final finalLastname = lastname.isNotEmpty ? lastname : firstname;
+        
         final userInfo = <String, String>{
           'firstname': firstname,
-          'lastname': lastname,
+          'lastname': finalLastname,
           'phone': profile['phone'] ?? '',
           'email': profile['email'] ?? '',
           'address': profile['address'] ?? '',
@@ -308,9 +311,23 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         if (userInfo['email']!.isEmpty) missingFields.add('email');
         if (userInfo['address']!.isEmpty) missingFields.add('address');
         
+        print('📱 MY_AUCTIONS: User info validation - firstname: "${userInfo['firstname']}", lastname: "${userInfo['lastname']}"');
+        
         if (missingFields.isNotEmpty) {
           print('❌ MY_AUCTIONS: Missing user info fields: $missingFields');
-          return {};
+          
+          // ถ้า lastname ว่าง ให้ใช้ firstname แทน
+          if (missingFields.contains('lastname') && firstname.isNotEmpty) {
+            print('📱 MY_AUCTIONS: Using firstname as lastname for missing lastname');
+            userInfo['lastname'] = firstname;
+            missingFields.remove('lastname');
+          }
+          
+          // ถ้ายังมี missing fields อื่นๆ ให้ return empty
+          if (missingFields.isNotEmpty) {
+            print('❌ MY_AUCTIONS: Still missing fields: $missingFields');
+            return {};
+          }
         }
         
         return userInfo;
