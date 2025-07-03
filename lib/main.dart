@@ -45,7 +45,20 @@ Future<void> _setupNotifications() async {
     initializationSettings,
     onDidReceiveNotificationResponse: (NotificationResponse response) {
       // จัดการเมื่อผู้ใช้แตะที่แจ้งเตือน
-      print('Notification tapped: ${response.payload}');
+      print('🔔 MAIN: Notification tapped!');
+      print('🔔 MAIN: Payload: ${response.payload}');
+      print('🔔 MAIN: ID: ${response.id}');
+      print('🔔 MAIN: Action ID: ${response.actionId}');
+      
+      // เช็คว่าเป็น scheduled notification สำหรับประกาศผู้ชนะหรือไม่
+      if (response.payload == 'announce_winners') {
+        print('🔔 MAIN: Received scheduled winner announcement notification');
+        print('🔔 MAIN: Calling announceWinnersAtScheduledTime...');
+        // เรียกใช้ฟังก์ชันประกาศผู้ชนะ
+        announceWinnersAtScheduledTime(flutterLocalNotificationsPlugin);
+      } else {
+        print('🔔 MAIN: Not a winner announcement notification, payload: ${response.payload}');
+      }
     },
   );
 
@@ -53,6 +66,9 @@ Future<void> _setupNotifications() async {
   await setupIOSAuctionNotification(flutterLocalNotificationsPlugin);
   await setupIOSNewAuctionNotification(flutterLocalNotificationsPlugin);
   await setupIOSAuctionResultNotification(flutterLocalNotificationsPlugin);
+  
+  // ตั้งค่า background task สำหรับประกาศผู้ชนะ
+  await setupBackgroundWinnerAnnouncement();
 }
 
 class MyApp extends StatelessWidget {

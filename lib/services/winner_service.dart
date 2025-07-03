@@ -4,6 +4,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 
 class WinnerService {
   static const String baseUrl = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+  static const String logsBaseUrl = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/auction_announcement_logs_controller.php';
   
   // ดึงข้อมูลผู้ชนะของแต่ละการประมูล
   static Future<Map<String, dynamic>> getWinnerByAuctionId(String auctionId) async {
@@ -112,6 +113,8 @@ class WinnerService {
         'countUnitId': winner['count_unit_id'] ?? '',
         'description': winner['short_text'] ?? winner['quotation_description'] ?? 'ไม่มีคำอธิบาย',
         'auction_end_date': winner['auction_end_date'] ?? winner['auction_end_time'] ?? '',
+        'announcedBy': winner['announced_by']?.toString() ?? '',
+        'announcedAt': winner['announced_at'] ?? '',
       };
     }).toList();
   }
@@ -153,24 +156,25 @@ class WinnerService {
     return allWinners.where((winner) => isUserWinner(winner, userId)).toList();
   }
 
-  // ประกาศผู้ชนะ
-  static Future<Map<String, dynamic>> announceWinner(String auctionId, Map<String, String> winnerInfo) async {
+  // ประกาศผู้ชนะ (เรียบง่าย - ส่งแค่ user_id)
+  static Future<Map<String, dynamic>> announceWinner(String auctionId, String userId) async {
     try {
       print('🚀 ANNOUNCE: Starting winner announcement for auction: $auctionId');
-      print('🚀 ANNOUNCE: Winner info: $winnerInfo');
+      print('🚀 ANNOUNCE: Announced by user: $userId');
+      
+      // ส่งแค่ user_id อย่างเดียว
+      final Map<String, dynamic> requestBody = {
+        'user_id': int.tryParse(userId) ?? 0,
+      };
+      
+      print('🚀 ANNOUNCE: Request body: $requestBody');
       
       final response = await http.post(
         Uri.parse('$baseUrl?id=$auctionId&action=announce_winner'),
         headers: {
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'winner_firstname': winnerInfo['firstname'] ?? '',
-          'winner_lastname': winnerInfo['lastname'] ?? '',
-          'winner_phone': winnerInfo['phone'] ?? '',
-          'winner_email': winnerInfo['email'] ?? '',
-          'winner_address': winnerInfo['address'] ?? '',
-        }),
+        body: jsonEncode(requestBody),
       );
 
       print('🚀 ANNOUNCE: API Response Status: ${response.statusCode}');
@@ -193,10 +197,11 @@ class WinnerService {
     }
   }
 
-  // เช็คและประกาศผู้ชนะอัตโนมัติ
-  static Future<void> checkAndAnnounceWinner(String auctionId, Map<String, String> winnerInfo) async {
+  // เช็คและประกาศผู้ชนะอัตโนมัติ (เรียบง่าย)
+  static Future<void> checkAndAnnounceWinner(String auctionId, String userId) async {
     try {
       print('🔍 TRIGGER: Checking auction $auctionId for winner announcement...');
+      print('🔍 TRIGGER: Announced by user: $userId');
       
       // 1. ดึงข้อมูล auction details จาก API
       final auctionResponse = await http.get(
@@ -231,9 +236,9 @@ class WinnerService {
                 // ถ้ายังไม่มีผู้ชนะ
                 if (winnerData['status'] != 'success' || winnerData['data'] == null) {
                   print('🎉 TRIGGER: No winner found! Announcing winner...');
-                  print('🎉 TRIGGER: Winner info: $winnerInfo');
+                  print('🎉 TRIGGER: Announced by user: $userId');
                   
-                  final result = await announceWinner(auctionId, winnerInfo);
+                  final result = await announceWinner(auctionId, userId);
                   print('🎉 TRIGGER: Announce result: ${result['status']} - ${result['message']}');
                 } else {
                   print('ℹ️ TRIGGER: Winner already announced for auction: $auctionId');
@@ -249,7 +254,7 @@ class WinnerService {
             print('🔍 TRIGGER: Trying alternative API to get auction details...');
             
             // ลองดึงข้อมูลจาก API อื่น
-            await _tryAlternativeAuctionDetails(auctionId, winnerInfo);
+            await _tryAlternativeAuctionDetails(auctionId, userId);
           }
         } else {
           print('❌ TRIGGER: Failed to get auction details: ${auctionData['message']}');
@@ -262,8 +267,8 @@ class WinnerService {
     }
   }
 
-  // ลองดึงข้อมูล auction จาก API อื่น
-  static Future<void> _tryAlternativeAuctionDetails(String auctionId, Map<String, String> winnerInfo) async {
+  // ลองดึงข้อมูล auction จาก API อื่น (เรียบง่าย)
+  static Future<void> _tryAlternativeAuctionDetails(String auctionId, String userId) async {
     try {
       // ลองดึงข้อมูลจาก quotation API
       final quotationResponse = await http.get(
@@ -294,7 +299,7 @@ class WinnerService {
                 
                 if (winnerData['status'] != 'success' || winnerData['data'] == null) {
                   print('🎉 TRIGGER: No winner found! Announcing winner...');
-                  final result = await announceWinner(auctionId, winnerInfo);
+                  final result = await announceWinner(auctionId, userId);
                   print('🎉 TRIGGER: Announce result: ${result['status']} - ${result['message']}');
                 } else {
                   print('ℹ️ TRIGGER: Winner already announced for auction: $auctionId');
@@ -338,28 +343,26 @@ class WinnerService {
     }
   }
 
-  // ฟังก์ชัน trigger ประกาศผู้ชนะโดยตรง (ตามที่คุณต้องการ)
-  static Future<Map<String, dynamic>> triggerAnnounceWinner(String auctionId, Map<String, String> winnerInfo) async {
+  // ฟังก์ชัน trigger ประกาศผู้ชนะโดยตรง (เรียบง่าย - ส่งแค่ user_id)
+  static Future<Map<String, dynamic>> triggerAnnounceWinner(String auctionId, String userId) async {
     try {
       print('🚀 TRIGGER_DIRECT: Starting direct winner announcement for auction: $auctionId');
-      print('🚀 TRIGGER_DIRECT: Winner info: $winnerInfo');
+      print('🚀 TRIGGER_DIRECT: Announced by user: $userId');
       
       final url = '$baseUrl?id=$auctionId&action=announce_winner';
       print('🚀 TRIGGER_DIRECT: API URL: $url');
       
-      // เพิ่ม debug: เช็คว่า auction หมดเวลาหรือยังก่อนเรียก API
-      print('🔍 TRIGGER_DIRECT: Checking if auction $auctionId has ended...');
+      // ส่งแค่ user_id อย่างเดียว
+      final Map<String, dynamic> requestBody = {
+        'user_id': int.tryParse(userId) ?? 0,
+      };
+      
+      print('🚀 TRIGGER_DIRECT: Request body: $requestBody');
       
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'winner_firstname': winnerInfo['firstname'] ?? '',
-          'winner_lastname': winnerInfo['lastname'] ?? '',
-          'winner_phone': winnerInfo['phone'] ?? '',
-          'winner_email': winnerInfo['email'] ?? '',
-          'winner_address': winnerInfo['address'] ?? '',
-        }),
+        body: jsonEncode(requestBody),
       );
 
       print('🚀 TRIGGER_DIRECT: API Response Status: ${response.statusCode}');
@@ -382,6 +385,113 @@ class WinnerService {
     } catch (e) {
       print('❌ TRIGGER_DIRECT: Error announcing winner: $e');
       throw Exception('Error announcing winner: $e');
+    }
+  }
+
+  // ฟังก์ชันใหม่: ดึง log การประกาศผู้ชนะ
+  static Future<List<dynamic>> getAnnouncementLogs({
+    String? quotationMoreInformationId,
+    String? announcedBy,
+    String? status,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    try {
+      print('📋 LOGS: Fetching announcement logs...');
+      
+      final queryParams = <String, String>{};
+      if (quotationMoreInformationId != null) {
+        queryParams['quotation_more_information_id'] = quotationMoreInformationId;
+      }
+      if (announcedBy != null) {
+        queryParams['announced_by'] = announcedBy;
+      }
+      if (status != null) {
+        queryParams['status'] = status;
+      }
+      if (dateFrom != null) {
+        queryParams['date_from'] = dateFrom;
+      }
+      if (dateTo != null) {
+        queryParams['date_to'] = dateTo;
+      }
+
+      final uri = Uri.parse(logsBaseUrl).replace(queryParameters: queryParams);
+      print('📋 LOGS: API URL: $uri');
+
+      final response = await http.get(uri);
+      
+      print('📋 LOGS: API Response Status: ${response.statusCode}');
+      print('📋 LOGS: API Response Body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final logs = data['data'] ?? [];
+        print('📋 LOGS: Found ${logs.length} log entries');
+        return logs;
+      } else {
+        print('❌ LOGS: Failed to get announcement logs: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('❌ LOGS: Error getting announcement logs: $e');
+      return [];
+    }
+  }
+
+  // ฟังก์ชันใหม่: ตรวจสอบว่าประกาศผู้ชนะแล้วหรือยัง
+  static Future<bool> isWinnerAnnounced(String quotationMoreInformationId) async {
+    try {
+      print('🔍 CHECK: Checking if winner is announced for auction: $quotationMoreInformationId');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl?id=$quotationMoreInformationId&action=get_winner'),
+      );
+      
+      print('🔍 CHECK: API Response Status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final isAnnounced = data['status'] == 'success' && data['data'] != null;
+        print('🔍 CHECK: Winner announced: $isAnnounced');
+        return isAnnounced;
+      } else {
+        print('🔍 CHECK: Failed to check winner status: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ CHECK: Error checking winner announcement: $e');
+      return false;
+    }
+  }
+
+  // ฟังก์ชันใหม่: ดึงข้อมูลผู้ชนะ
+  static Future<Map<String, dynamic>?> getWinnerData(String quotationMoreInformationId) async {
+    try {
+      print('📊 WINNER: Fetching winner data for auction: $quotationMoreInformationId');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl?id=$quotationMoreInformationId&action=get_winner'),
+      );
+      
+      print('📊 WINNER: API Response Status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          print('📊 WINNER: Winner data found');
+          return data['data'];
+        } else {
+          print('📊 WINNER: No winner data found');
+          return null;
+        }
+      } else {
+        print('❌ WINNER: Failed to get winner data: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('❌ WINNER: Error getting winner data: $e');
+      return null;
     }
   }
 } 
