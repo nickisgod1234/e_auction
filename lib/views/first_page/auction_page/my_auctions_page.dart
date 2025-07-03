@@ -249,6 +249,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
           
           if (userInfo.isNotEmpty) {
             print('📱 MY_AUCTIONS: User info obtained, triggering winner announcement...');
+            print('📱 MY_AUCTIONS: Sending user info: $userInfo');
+            
             // เรียกใช้ trigger ประกาศผู้ชนะโดยตรง
             try {
               final result = await WinnerService.triggerAnnounceWinner(auctionId, userInfo);
@@ -259,12 +261,42 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                 print('📱 MY_AUCTIONS: Winner announced successfully! Refreshing data...');
                 // รีเฟรชข้อมูลหลังจากประกาศผู้ชนะสำเร็จ
                 await _loadUserWonAuctions();
+              } else {
+                print('⚠️ MY_AUCTIONS: Winner announcement failed: ${result['message']}');
+                // ลองใหม่ด้วยเบอร์โทรอย่างเดียวถ้าล้มเหลว
+                if (userInfo.length > 1) {
+                  print('📱 MY_AUCTIONS: Retrying with phone number only...');
+                  final phoneOnly = {'phone': userInfo['phone']!};
+                  try {
+                    final retryResult = await WinnerService.triggerAnnounceWinner(auctionId, phoneOnly);
+                    print('📱 MY_AUCTIONS: Retry result: ${retryResult['status']} - ${retryResult['message']}');
+                    if (retryResult['status'] == 'success') {
+                      await _loadUserWonAuctions();
+                    }
+                  } catch (retryError) {
+                    print('❌ MY_AUCTIONS: Retry failed: $retryError');
+                  }
+                }
               }
             } catch (e) {
               print('❌ MY_AUCTIONS: Error triggering winner announcement: $e');
+              // ลองใหม่ด้วยเบอร์โทรอย่างเดียวถ้าเกิด error
+              if (userInfo.length > 1) {
+                print('📱 MY_AUCTIONS: Retrying with phone number only after error...');
+                final phoneOnly = {'phone': userInfo['phone']!};
+                try {
+                  final retryResult = await WinnerService.triggerAnnounceWinner(auctionId, phoneOnly);
+                  print('📱 MY_AUCTIONS: Error retry result: ${retryResult['status']} - ${retryResult['message']}');
+                  if (retryResult['status'] == 'success') {
+                    await _loadUserWonAuctions();
+                  }
+                } catch (retryError) {
+                  print('❌ MY_AUCTIONS: Error retry failed: $retryError');
+                }
+              }
             }
           } else {
-            print('❌ MY_AUCTIONS: Failed to get user info for winner announcement');
+            print('❌ MY_AUCTIONS: Failed to get user info for winner announcement - no phone number available');
           }
         } else {
           print('⏰ MY_AUCTIONS: Auction "$title" not ended yet');
@@ -278,67 +310,131 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     }
   }
 
-  // ดึงข้อมูลผู้ใช้สำหรับประกาศผู้ชนะ (ปรับปรุงให้ครบถ้วน)
+  // ดึงข้อมูลผู้ใช้สำหรับประกาศผู้ชนะ (รองรับการส่งข้อมูลทั้งหมดหรือเบอร์โทรอย่างเดียว)
   Future<Map<String, String>> _getUserInfoForWinner(String userId) async {
     try {
       print('📱 MY_AUCTIONS: Getting user info for winner announcement...');
       final profile = await _authService.getProfile(userId);
+      
       if (profile != null) {
-        // แยกชื่อและนามสกุลจาก fullname
-        final fullname = profile['fullname'] ?? '';
-        final nameParts = fullname.split(' ');
-        final firstname = nameParts.isNotEmpty ? nameParts.first : '';
-        final lastname = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+        // ดึงเบอร์โทรศัพท์ (จำเป็น) - ลองจาก profile ก่อน
+        String phone = profile['phone'] ?? '';
         
-        // ถ้า lastname ว่าง ให้ใช้ firstname แทน
-        final finalLastname = lastname.isNotEmpty ? lastname : firstname;
+        // ถ้าไม่มีเบอร์โทรใน profile ให้ลองจาก SharedPreferences
+        if (phone.isEmpty) {
+          print('📱 MY_AUCTIONS: Phone not found in profile, trying SharedPreferences...');
+          phone = await _getPhoneFromSharedPreferences();
+        }
         
-        final userInfo = <String, String>{
-          'firstname': firstname,
-          'lastname': finalLastname,
-          'phone': profile['phone'] ?? '',
-          'email': profile['email'] ?? '',
-          'address': profile['address'] ?? '',
-        };
+        if (phone.isEmpty) {
+          print('❌ MY_AUCTIONS: Phone number is required but missing from both profile and SharedPreferences');
+          return {};
+        }
+        
+        // สร้าง userInfo แบบยืดหยุ่น
+        final userInfo = _createFlexibleUserInfo(profile, phone);
         
         print('📱 MY_AUCTIONS: User info obtained: $userInfo');
+        print('📱 MY_AUCTIONS: User info validation - phone: "${userInfo['phone']}"');
+        print('📱 MY_AUCTIONS: Additional fields - firstname: "${userInfo['firstname'] ?? 'N/A'}", lastname: "${userInfo['lastname'] ?? 'N/A'}", email: "${userInfo['email'] ?? 'N/A'}", address: "${userInfo['address'] ?? 'N/A'}"');
         
-        // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่
-        final missingFields = <String>[];
-        if (userInfo['firstname']!.isEmpty) missingFields.add('firstname');
-        if (userInfo['lastname']!.isEmpty) missingFields.add('lastname');
-        if (userInfo['phone']!.isEmpty) missingFields.add('phone');
-        if (userInfo['email']!.isEmpty) missingFields.add('email');
-        if (userInfo['address']!.isEmpty) missingFields.add('address');
+        // ตรวจสอบว่ามีข้อมูลครบถ้วนหรือไม่
+        final hasCompleteInfo = userInfo['firstname'] != null && 
+                               userInfo['lastname'] != null && 
+                               userInfo['email'] != null && 
+                               userInfo['address'] != null;
         
-        print('📱 MY_AUCTIONS: User info validation - firstname: "${userInfo['firstname']}", lastname: "${userInfo['lastname']}"');
-        
-        if (missingFields.isNotEmpty) {
-          print('❌ MY_AUCTIONS: Missing user info fields: $missingFields');
-          
-          // ถ้า lastname ว่าง ให้ใช้ firstname แทน
-          if (missingFields.contains('lastname') && firstname.isNotEmpty) {
-            print('📱 MY_AUCTIONS: Using firstname as lastname for missing lastname');
-            userInfo['lastname'] = firstname;
-            missingFields.remove('lastname');
-          }
-          
-          // ถ้ายังมี missing fields อื่นๆ ให้ return empty
-          if (missingFields.isNotEmpty) {
-            print('❌ MY_AUCTIONS: Still missing fields: $missingFields');
+        if (hasCompleteInfo) {
+          print('📱 MY_AUCTIONS: Sending complete user info');
+          return userInfo;
+        } else {
+          // ถ้ามีแค่เบอร์โทร ให้ส่งเบอร์โทรอย่างเดียว
+          print('📱 MY_AUCTIONS: Sending phone number only (incomplete profile)');
+          return {'phone': phone};
+        }
+              } else {
+          print('❌ MY_AUCTIONS: Failed to get user profile, trying SharedPreferences only...');
+          // ลองดึงเบอร์โทรจาก SharedPreferences อย่างเดียว
+          final phone = await _getPhoneFromSharedPreferences();
+          if (phone.isNotEmpty) {
+            print('📱 MY_AUCTIONS: Using phone from SharedPreferences only: $phone');
+            return {'phone': phone};
+          } else {
+            print('❌ MY_AUCTIONS: No phone number available from any source');
             return {};
           }
         }
-        
-        return userInfo;
-      } else {
-        print('❌ MY_AUCTIONS: Failed to get user profile');
-        return {};
-      }
     } catch (e) {
       print('❌ MY_AUCTIONS: Error getting user info: $e');
+      // ลองดึงเบอร์โทรจาก SharedPreferences เป็น fallback
+      try {
+        final phone = await _getPhoneFromSharedPreferences();
+        if (phone.isNotEmpty) {
+          print('📱 MY_AUCTIONS: Using phone from SharedPreferences as fallback: $phone');
+          return {'phone': phone};
+        }
+      } catch (fallbackError) {
+        print('❌ MY_AUCTIONS: Fallback also failed: $fallbackError');
+      }
       return {};
     }
+  }
+
+  // ฟังก์ชันเสริม: ดึงเบอร์โทรจาก SharedPreferences ถ้าไม่มีใน profile
+  Future<String> _getPhoneFromSharedPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // ลองดึงเบอร์โทรจากหลาย key ที่อาจมี
+      String phone = prefs.getString('phone') ?? '';
+      if (phone.isEmpty) {
+        phone = prefs.getString('user_phone') ?? '';
+      }
+      if (phone.isEmpty) {
+        phone = prefs.getString('mobile') ?? '';
+      }
+      if (phone.isEmpty) {
+        phone = prefs.getString('tel') ?? '';
+      }
+      
+      print('📱 MY_AUCTIONS: Phone from SharedPreferences: $phone');
+      return phone;
+    } catch (e) {
+      print('❌ MY_AUCTIONS: Error getting phone from SharedPreferences: $e');
+      return '';
+    }
+  }
+
+  // ฟังก์ชันเสริม: สร้าง userInfo แบบยืดหยุ่น
+  Map<String, String> _createFlexibleUserInfo(Map<String, dynamic> profile, String phone) {
+    final userInfo = <String, String>{
+      'phone': phone,
+    };
+    
+    // เพิ่มข้อมูลอื่นๆ ถ้ามี
+    final fullname = profile['fullname'] ?? '';
+    if (fullname.isNotEmpty) {
+      final nameParts = fullname.split(' ');
+      final firstname = nameParts.isNotEmpty ? nameParts.first : '';
+      final lastname = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+      
+      if (firstname.isNotEmpty) {
+        userInfo['firstname'] = firstname;
+      }
+      if (lastname.isNotEmpty) {
+        userInfo['lastname'] = lastname;
+      } else if (firstname.isNotEmpty) {
+        userInfo['lastname'] = firstname; // ใช้ firstname แทน lastname ถ้าไม่มี
+      }
+    }
+    
+    if (profile['email']?.isNotEmpty == true) {
+      userInfo['email'] = profile['email']!;
+    }
+    if (profile['address']?.isNotEmpty == true) {
+      userInfo['address'] = profile['address']!;
+    }
+    
+    return userInfo;
   }
 
   @override

@@ -55,6 +55,8 @@ dependencies:
   another_flushbar: ^1.12.30
   provider: ^6.1.2
   marquee: ^2.2.3
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.2
 
 
 flutter_icons:

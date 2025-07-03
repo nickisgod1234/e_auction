@@ -58,6 +58,12 @@
 	<string>E-Auction needs access to your microphone to enable voice features within the app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>E-Auction needs access to your photo library to allow you to choose a photo for your profile picture.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-processing</string>
+		<string>background-fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -79,5 +85,7 @@
 	</array>
 	<key>com.google.android.geo.API_KEY</key>
 	<string>AIzaSyCA8xOljgqkqVA_DQmjSockld3podZHLrM</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>E-Auction needs to send you notifications about auction updates, bidding status, and important events.</string>
 </dict>
 </plist>
