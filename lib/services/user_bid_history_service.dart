@@ -71,6 +71,31 @@ class UserBidHistoryService {
     }
   }
 
+  /// ดึงข้อมูล user bid ranking สำหรับ auction เฉพาะรายการ
+  static Future<List<dynamic>> getUserBidRanking(String auctionId) async {
+    try {
+      final url = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$auctionId&action=user_bid_ranking';
+      print('DEBUG: Fetching user bid ranking: $url');
+      final response = await http.get(Uri.parse(url));
+      print('DEBUG: User bid ranking response: ${response.body}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return data;
+        } else {
+          print('DEBUG: Unexpected user bid ranking response format');
+          return [];
+        }
+      } else {
+        print('DEBUG: Failed to fetch user bid ranking: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('DEBUG: Error fetching user bid ranking: $e');
+      return [];
+    }
+  }
+
   // แปลงข้อมูล bid history เป็นรูปแบบที่ใช้ในแอป
   static List<Map<String, dynamic>> convertBidHistoryToAppFormat(List<dynamic> bidHistory) {
     return bidHistory.map((bid) {

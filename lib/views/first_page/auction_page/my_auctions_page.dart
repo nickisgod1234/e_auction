@@ -516,6 +516,14 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     }
   }
 
+  // เพิ่มฟังก์ชันคำนวณอันดับ
+  int getUserBidRank(List<dynamic> bidHistory, String userId) {
+    final sorted = List<Map<String, dynamic>>.from(bidHistory)
+      ..sort((a, b) => (b['bid_amount'] as num).compareTo(a['bid_amount'] as num));
+    final idx = sorted.indexWhere((bid) => bid['bidder_id'].toString() == userId);
+    return idx >= 0 ? idx + 1 : -1;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Filter lists for each tab using 'auction_end_date' or fallback to 'auction_end_time'
@@ -628,19 +636,68 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                             padding: EdgeInsets.symmetric(horizontal: 8),
                             itemCount: filteredActiveBids.length,
                             itemBuilder: (context, index) {
-                              return ActiveBidCard(
-                                auction: filteredActiveBids[index],
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => AuctionDetailViewPage(auctionData: filteredActiveBids[index]),
-                                    ),
+                              final auction = Map<String, dynamic>.from(filteredActiveBids[index]);
+                              final prefs = SharedPreferences.getInstance();
+                              return FutureBuilder<SharedPreferences>(
+                                future: prefs,
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData) {
+                                    auction['myBidRank'] = '-';
+                                    return ActiveBidCard(
+                                      auction: auction,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => AuctionDetailViewPage(auctionData: auction),
+                                          ),
+                                        );
+                                      },
+                                      getStatusColor: _getStatusColor,
+                                      getStatusText: _getStatusText,
+                                      small: true,
+                                    );
+                                  }
+                                  final userId = snapshot.data!.getString('id') ?? '';
+                                  return FutureBuilder<List<dynamic>>(
+                                    future: UserBidHistoryService.getUserBidRanking(auction['id'].toString()),
+                                    builder: (context, rankSnapshot) {
+                                      if (rankSnapshot.connectionState == ConnectionState.waiting) {
+                                        auction['myBidRank'] = '-';
+                                      } else if (rankSnapshot.hasData) {
+                                        print('DEBUG: userId type = ${userId.runtimeType}, value = $userId');
+                                        for (var e in rankSnapshot.data!) {
+                                          print('DEBUG: bidder_id type = ${e['bidder_id'].runtimeType}, value = ${e['bidder_id']}');
+                                        }
+                                        final userRanks = rankSnapshot.data!
+                                            .where((e) => e['bidder_id'].toString() == userId.toString())
+                                            .toList();
+                                        if (userRanks.isNotEmpty) {
+                                          final latest = userRanks.first;
+                                          auction['myBidRank'] = latest['rank']?.toString() ?? '-';
+                                        } else {
+                                          auction['myBidRank'] = '-';
+                                        }
+                                      } else {
+                                        auction['myBidRank'] = '-';
+                                      }
+                                      return ActiveBidCard(
+                                        auction: auction,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => AuctionDetailViewPage(auctionData: auction),
+                                            ),
+                                          );
+                                        },
+                                        getStatusColor: _getStatusColor,
+                                        getStatusText: _getStatusText,
+                                        small: true,
+                                      );
+                                    },
                                   );
                                 },
-                                getStatusColor: _getStatusColor,
-                                getStatusText: _getStatusText,
-                                small: true,
                               );
                             },
                           ),
