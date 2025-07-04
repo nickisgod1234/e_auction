@@ -126,7 +126,9 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       }
       
       // ดึงข้อมูลผู้ชนะตาม user_id
+      print('🐞 DEBUG: เริ่มเรียก WinnerService.getWinnersByUserId($userId)');
       final result = await WinnerService.getWinnersByUserId(userId);
+      print('🐞 DEBUG: WinnerService.getWinnersByUserId($userId) result = ' + result.toString());
       
       if (result['status'] == 'success' && result['data'] != null) {
         final winners = result['data'] as List;
@@ -265,6 +267,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                 await _loadUserWonAuctions();
               } else {
                 print('⚠️ MY_AUCTIONS: Winner announcement failed: ${result['message']}');
+                // ไม่ throw error เพราะอาจเป็นเพราะประกาศไปแล้ว
               }
             } else {
               print('📱 MY_AUCTIONS: Auction "$title" already announced, skipping...');
@@ -278,9 +281,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
               print('📱 MY_AUCTIONS: Fallback trigger result: ${result['status']} - ${result['message']}');
               if (result['status'] == 'success') {
                 await _loadUserWonAuctions();
+              } else {
+                print('⚠️ MY_AUCTIONS: Fallback announcement failed: ${result['message']}');
               }
             } catch (fallbackError) {
-              print('❌ MY_AUCTIONS: Fallback announcement also failed: $fallbackError');
+              print('⚠️ MY_AUCTIONS: Fallback announcement also failed: $fallbackError');
+              // ไม่ throw error ออกไป
             }
           }
         } else {
@@ -310,10 +316,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         await _loadUserWonAuctions();
         await _loadUserBidHistory();
       } else {
-        print('❌ MANUAL: Winner announcement failed: ${result['message']}');
+        print('⚠️ MANUAL: Winner announcement failed: ${result['message']}');
+        // ไม่ throw error เพราะอาจเป็นเพราะประกาศไปแล้ว
       }
     } catch (e) {
-      print('❌ MANUAL: Error in manual winner announcement: $e');
+      print('⚠️ MANUAL: Error in manual winner announcement: $e');
+      // ไม่ throw error ออกไป เพราะอาจเป็นเพราะประกาศไปแล้ว
     }
   }
 
@@ -333,7 +341,13 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       print('🚀 AUTO: Announcing winners for user: $userId');
       
       // ประกาศผู้ชนะสำหรับ auction ID 8 (ตามตัวอย่าง)
-      await _manualTriggerWinnerAnnouncement('8', userId);
+      // เปลี่ยนเป็น try-catch เพื่อไม่ให้ error หยุดการทำงาน
+      try {
+        await _manualTriggerWinnerAnnouncement('8', userId);
+      } catch (e) {
+        print('⚠️ AUTO: Failed to announce winner for auction 8: $e');
+        // ไม่ throw error ออกไป เพราะอาจเป็นเพราะประกาศไปแล้ว
+      }
       
       // สามารถเพิ่ม auction ID อื่นๆ ได้ที่นี่
       // await _manualTriggerWinnerAnnouncement('9', userId);

@@ -6,57 +6,20 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/winner_service.dart';
 import 'package:e_auction/services/user_bid_history_service.dart';
+import 'package:e_auction/views/config/config_prod.dart';
 import 'dart:isolate';
 import 'dart:async';
-
-/// แจ้งเตือนการประมูลที่กำลังจะหมดเวลา (ทุก 30 นาที)
-Future<void> setupIOSAuctionNotification(FlutterLocalNotificationsPlugin plugin) async {
-  final iOSPlugin = plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-  if (iOSPlugin != null) {
-    await iOSPlugin.requestPermissions(alert: true, badge: true, sound: true);
-
-    String auctionTitle = 'การประมูลใกล้หมดเวลา';
-    String auctionBody = 'มีการประมูลที่กำลังจะหมดเวลาในอีก 30 นาที อย่าลืมตรวจสอบและประมูลต่อนะคะ';
-
-    final now = DateTime.now();
-    var scheduledTime = DateTime(now.year, now.month, now.day, now.hour, now.minute + 30);
-    if (scheduledTime.minute >= 60) {
-      scheduledTime = DateTime(now.year, now.month, now.day, now.hour + 1, scheduledTime.minute - 60);
-    }
-
-    await plugin.zonedSchedule(
-        1,
-        auctionTitle,
-        auctionBody,
-        tz.TZDateTime.from(scheduledTime, tz.local),
-        NotificationDetails(
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-            sound: 'default',
-            interruptionLevel: InterruptionLevel.active,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-  }
-}
-
 /// แจ้งเตือนการประมูลใหม่ (ทุกวันตอน 09:00) - ประกาศผู้ชนะด้วย
 Future<void> setupIOSNewAuctionNotification(FlutterLocalNotificationsPlugin plugin) async {
   final iOSPlugin = plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
   if (iOSPlugin != null) {
     await iOSPlugin.requestPermissions(alert: true, badge: true, sound: true);
 
-    String newAuctionTitle = 'ประกาศผู้ชนะการประมูล';
-    String newAuctionBody = 'ระบบกำลังประกาศผู้ชนะการประมูลที่หมดเวลาแล้ว อย่าลืมเข้าไปดูผลการประมูลกันนะคะ';
+    String newAuctionTitle = 'แจ้งเตือนการประมูล';
+    String newAuctionBody = 'อย่าลืมเข้าไปดูการประมูลกันนะคะ';
 
     final now = DateTime.now();
-    var scheduledTime = DateTime(now.year, now.month, now.day, 15, 40); // 09:00
+    var scheduledTime = DateTime(now.year, now.month, now.day, 12, 32); // 09:00
     if (now.isAfter(scheduledTime)) {
       scheduledTime = scheduledTime.add(Duration(days: 1));
     }
@@ -88,42 +51,7 @@ Future<void> setupIOSNewAuctionNotification(FlutterLocalNotificationsPlugin plug
   }
 }
 
-/// แจ้งเตือนผลการประมูล (ทุกวันตอน 18:00)
-Future<void> setupIOSAuctionResultNotification(FlutterLocalNotificationsPlugin plugin) async {
-  final iOSPlugin = plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-  if (iOSPlugin != null) {
-    await iOSPlugin.requestPermissions(alert: true, badge: true, sound: true);
 
-    String resultTitle = 'ผลการประมูล';
-    String resultBody = 'มีการประมูลที่สิ้นสุดแล้ว อย่าลืมตรวจสอบผลการประมูลกันนะคะ';
-
-    final now = DateTime.now();
-    var scheduledTime = DateTime(now.year, now.month, now.day, 18, 0);
-    if (now.isAfter(scheduledTime)) {
-      scheduledTime = scheduledTime.add(Duration(days: 1));
-    }
-
-    await plugin.zonedSchedule(
-      3,
-      resultTitle,
-      resultBody,
-      tz.TZDateTime.from(scheduledTime, tz.local),
-      NotificationDetails(
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-          sound: 'default',
-          interruptionLevel: InterruptionLevel.active,
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
-  }
-}
 
 /// ส่งแจ้งเตือนแบบ immediate (สำหรับการประมูลที่กำลังจะหมดเวลา)
 Future<void> sendImmediateAuctionNotification(
@@ -275,7 +203,7 @@ Future<void> announceWinnersAtScheduledTime(FlutterLocalNotificationsPlugin plug
     print('🔔 SCHEDULED: Starting scheduled winner announcement...');
     
     // ส่ง API call ไปตรงๆ โดยไม่ต้องส่ง body
-    final url = Uri.parse('http://192.168.1.39/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=8&action=announce_winner');
+    final url = Uri.parse('${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=8&action=announce_winner');
     
     print('🔔 SCHEDULED: Sending API call to: $url');
     
@@ -302,7 +230,7 @@ Future<void> triggerWinnerAnnouncementInBackground() async {
     print('🔄 BACKGROUND: Starting background winner announcement...');
     
     // ส่ง API call ไปตรงๆ โดยไม่ต้องส่ง body
-    final url = Uri.parse('http://192.168.1.39/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=8&action=announce_winner');
+    final url = Uri.parse('${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=8&action=announce_winner');
     
     print('🔄 BACKGROUND: Sending API call to: $url');
     
@@ -328,7 +256,7 @@ Future<void> setupBackgroundWinnerAnnouncement() async {
     
     // คำนวณเวลาถัดไปที่จะเป็น 09:00
     final now = DateTime.now();
-    var nextScheduledTime = DateTime(now.year, now.month, now.day, 15, 40); // 09:00
+    var nextScheduledTime = DateTime(now.year, now.month, now.day, 12, 32); // 09:00
     
     if (now.isAfter(nextScheduledTime)) {
       nextScheduledTime = nextScheduledTime.add(Duration(days: 1));
@@ -352,6 +280,42 @@ Future<void> setupBackgroundWinnerAnnouncement() async {
     
   } catch (e) {
     print('❌ BACKGROUND: Error setting up background task: $e');
+  }
+}
+
+Future<void> checkAndNotifyExpiredAuctions(FlutterLocalNotificationsPlugin plugin) async {
+  final url = Uri.parse('${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/auction_expiry_controller.php?action=expired');
+  print('[Workmanager] เริ่มตรวจสอบสินค้าหมดเวลา...');
+  try {
+    final response = await http.get(url);
+    print('[Workmanager] API Response Status: ${response.statusCode}');
+    print('[Workmanager] API Response Body: ${response.body}');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['status'] == 'success' && data['data'] != null && data['data']['auctions'] != null) {
+        final auctions = data['data']['auctions'] as List;
+        print('[Workmanager] พบสินค้าหมดเวลา ${auctions.length} รายการ');
+        for (final auction in auctions) {
+          print('[Workmanager] ตรวจสอบ auction: ${auction['short_text']} (noti=${auction['noti']})');
+          if (auction['noti'] == "0") {
+            print('[Workmanager] -> แจ้งเตือน: ${auction['short_text']}');
+            await sendImmediateAuctionNotification(
+              plugin,
+              'หมดเวลาประมูล: ${auction['short_text']}',
+              auction['expired_text'] ?? 'หมดเวลาแล้ว',
+              payload: 'expired_auction_${auction['quotation_more_information_id']}',
+            );
+            // TODO: อัพเดท noti=1 ฝั่ง server ถ้ามี endpoint
+          }
+        }
+      } else {
+        print('[Workmanager] ไม่พบข้อมูล auction ที่หมดเวลา');
+      }
+    } else {
+      print('[Workmanager] API Error: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('[Workmanager] Error: $e');
   }
 }
 

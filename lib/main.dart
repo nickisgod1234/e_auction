@@ -63,9 +63,9 @@ Future<void> _setupNotifications() async {
   );
 
   // ตั้งค่าแจ้งเตือนสำหรับ iOS
-  await setupIOSAuctionNotification(flutterLocalNotificationsPlugin);
+
   await setupIOSNewAuctionNotification(flutterLocalNotificationsPlugin);
-  await setupIOSAuctionResultNotification(flutterLocalNotificationsPlugin);
+
   
   // ตั้งค่า background task สำหรับประกาศผู้ชนะ
   await setupBackgroundWinnerAnnouncement();

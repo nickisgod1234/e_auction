@@ -195,21 +195,30 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
       builder: (_) => Center(child: CircularProgressIndicator()),
     );
 
-    final productService = ProductService(baseUrl: Config.apiUrllocal);
+    final productService = ProductService(baseUrl: Config.apiUrlAuction);
     final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? widget.auctionData['id'].toString();
     
+    print('🔍 BID_DIALOG: Starting bid dialog for quotation ID: $quotationId');
+    print('🔍 BID_DIALOG: Using base URL: ${Config.apiUrlAuction}');
+    
     try {
-      final response = await http.get(
-        Uri.parse('${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId'),
-      );
+      final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
+      print('🔍 BID_DIALOG: Making API call to: $url');
+      
+      final response = await http.get(Uri.parse(url));
+
+      print('🔍 BID_DIALOG: API Response Status: ${response.statusCode}');
+      print('🔍 BID_DIALOG: API Response Body: ${response.body}');
 
       Navigator.pop(context); // ปิด loading
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('🔍 BID_DIALOG: Parsed data: $data');
         
-        if (data['status'] == 'success' && data['data'] != null) {
-          final latestData = data['data'];
+        if (data != null && data['quotation_more_information_id'] != null) {
+          final latestData = data;
+          print('🔍 BID_DIALOG: Latest data: $latestData');
           
           final TextEditingController bidController = TextEditingController();
           final currentPrice = int.tryParse(latestData['current_price']?.toString() ?? '0') ?? 0;
@@ -445,8 +454,27 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 
                             if (result != null && result['status'] == 'success') {
                               _showSuccessDialog(context, 'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}');
-                              // อัปเดต widget realtime ทันที
-                              realtimePriceKey.currentState?.updateAuctionData(result['data']);
+                              
+                              // ดึงข้อมูลล่าสุดและอัปเดต real-time
+                              try {
+                                final latestUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
+                                final latestResponse = await http.get(Uri.parse(latestUrl));
+                                
+                                if (latestResponse.statusCode == 200) {
+                                  final latestData = jsonDecode(latestResponse.body);
+                                  if (latestData != null && latestData['quotation_more_information_id'] != null) {
+                                    // อัปเดตข้อมูลใน state
+                                    setState(() {
+                                      _latestAuctionData = latestData;
+                                    });
+                                    // อัปเดต widget realtime
+                                    realtimePriceKey.currentState?.updateAuctionData(latestData);
+                                    print('✅ BID_SUCCESS: Updated real-time data after successful bid');
+                                  }
+                                }
+                              } catch (e) {
+                                print('⚠️ BID_SUCCESS: Failed to update real-time data: $e');
+                              }
                             } else {
                               _showCustomToast(context, 'เกิดข้อผิดพลาดในการประมูล', isSuccess: false);
                             }
@@ -595,7 +623,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
             // Realtime Auction Price
             RealtimeAuctionPriceWidget(
               quotationId: widget.auctionData['quotation_more_information_id']?.toString() ?? widget.auctionData['id'].toString(),
-              baseUrl: Config.apiUrllocal,
+              baseUrl: Config.apiUrlAuction,
             ),
             
             // Product Details
@@ -814,7 +842,9 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                   radius: 25,
                   backgroundColor: context.customTheme.primaryColor,
                   child: Text(
-                    widget.auctionData['sellerName']?.substring(0, 2) ?? 'CM',
+                    (widget.auctionData['sellerName']?.length ?? 0) >= 2 
+                      ? widget.auctionData['sellerName']!.substring(0, 2) 
+                      : (widget.auctionData['sellerName'] ?? 'CM'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1004,8 +1034,8 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          if (data is Map<String, dynamic> && data['status'] == 'success' && data['data'] != null) {
-            _auctionData = data['data'];
+          if (data is Map<String, dynamic> && data['quotation_more_information_id'] != null) {
+            _auctionData = data;
           } else {
             _auctionData = null;
           }
@@ -1027,7 +1057,8 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
     if (timestamp == null) return '-';
     try {
       final dateTime = DateTime.parse(timestamp).toLocal();
-      return dateTime.toString().substring(0, 19);
+      final formattedString = dateTime.toString().substring(0, 19);
+      return formattedString;
     } catch (e) {
       return '-';
     }
@@ -1225,7 +1256,7 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                         Icon(Icons.access_time, size: 16, color: Colors.green),
                         SizedBox(width: 6),
                         Text(
-                          'อัปเดตล่าสุด: ${_formatTime(_auctionData?['last_updated']).substring(11, 19)}',
+                          'อัปเดตล่าสุด: ${_formatTime(_auctionData?['last_updated']).length >= 19 ? _formatTime(_auctionData?['last_updated']).substring(11, 19) : _formatTime(_auctionData?['last_updated'])}',
                           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                         ),
                       ],
@@ -1327,11 +1358,15 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                _formatTime(bid['bid_time']).substring(11, 19), // แสดงเฉพาะเวลา
+                                _formatTime(bid['bid_time']).length >= 19 
+                                  ? _formatTime(bid['bid_time']).substring(11, 19) 
+                                  : _formatTime(bid['bid_time']), // แสดงเฉพาะเวลา
                                 style: TextStyle(fontSize: 12),
                               ),
                               Text(
-                                _formatTime(bid['bid_time']).substring(0, 10), // แสดงเฉพาะวันที่
+                                _formatTime(bid['bid_time']).length >= 10 
+                                  ? _formatTime(bid['bid_time']).substring(0, 10) 
+                                  : _formatTime(bid['bid_time']), // แสดงเฉพาะวันที่
                                 style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                               ),
                             ],

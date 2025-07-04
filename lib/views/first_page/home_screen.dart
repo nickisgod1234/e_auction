@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _productService = ProductService(baseUrl: Config.apiUrllocal);
+    _productService = ProductService(baseUrl: Config.apiUrlAuction);
     _checkAndShowPdpaDialog();
     _loadAuctionData();
   }

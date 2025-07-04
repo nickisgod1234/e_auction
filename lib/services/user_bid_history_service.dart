@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:e_auction/views/config/config_prod.dart';
 
 class UserBidHistoryService {
-  static const String baseUrl = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+  static const String baseUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
   
   // ดึงประวัติการประมูลของผู้ใช้
   static Future<Map<String, dynamic>> getUserBidHistory(String bidderId) async {
@@ -19,7 +19,25 @@ class UserBidHistoryService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('DEBUG: Parsed data: $data');
-        return data;
+        
+        // Handle case where API returns List instead of Map
+        if (data is List) {
+          return {
+            'status': 'success',
+            'data': {
+              'bid_history': data,
+            },
+          };
+        } else if (data is Map<String, dynamic>) {
+          return data;
+        } else {
+          return {
+            'status': 'success',
+            'data': {
+              'bid_history': [],
+            },
+          };
+        }
       } else {
         throw Exception('Failed to get user bid history: ${response.statusCode}');
       }

@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:e_auction/views/config/config_prod.dart';
 
 class WinnerService {
-  static const String baseUrl = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
-  static const String logsBaseUrl = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/auction_announcement_logs_controller.php';
+  static const String baseUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+  static const String logsBaseUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/auction_announcement_logs_controller.php';
   
   // ดึงข้อมูลผู้ชนะของแต่ละการประมูล
   static Future<Map<String, dynamic>> getWinnerByAuctionId(String auctionId) async {
@@ -44,13 +44,32 @@ class WinnerService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('DEBUG: Parsed user winners data: $data');
-        return data;
+        // ถ้า API ส่งกลับมาเป็น List ให้ wrap เป็น Map
+        if (data is List) {
+          return {
+            'status': 'success',
+            'data': data,
+          };
+        }
+        if (data is Map<String, dynamic>) {
+          return data;
+        }
+        // กรณีอื่นๆ
+        return {
+          'status': 'error',
+          'message': 'Unknown response format',
+          'data': null,
+        };
       } else {
         throw Exception('Failed to get user winners: ${response.statusCode}');
       }
     } catch (e) {
       print('DEBUG: Error getting user winners: $e');
-      throw Exception('Error getting user winners: $e');
+      return {
+        'status': 'error',
+        'message': e.toString(),
+        'data': null,
+      };
     }
   }
 
@@ -509,7 +528,7 @@ class WinnerService {
         winnerInfo['phone'] = cleanPhone;
       }
       
-      final url = '${Config.apiUrllocal}/HR-API-morket/login_phone_auction/save_user.php';
+      final url = '${Config.apiUrl}/HR-API-morket/login_phone_auction/save_user.php';
       print('💾 SAVE: API URL: $url');
       
       final response = await http.post(
