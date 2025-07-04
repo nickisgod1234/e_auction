@@ -51,35 +51,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   List<Map<String, dynamic>> _wonAuctions = [];
   bool _isLoadingWonAuctions = true;
 
-  final List<Map<String, dynamic>> _lostAuctions = [
-    {
-      'id': 'patek_nautilus_006',
-      'title': 'Patek Philippe Nautilus',
-      'finalPrice': 1500000,
-      'myBid': 1450000,
-      'completedDate': '3 วันที่แล้ว',
-      'image': 'assets/images/The-ultimative-Patek-Philippe-Nautilus-Guide.jpg',
-      'status': 'lost',
-      'winnerBid': 1500000,
-      'sellerName': 'Luxury Watches',
-    },
-    {
-      'id': 'tesla_model_s_007',
-      'title': 'Tesla Model S',
-      'finalPrice': 3500000,
-      'myBid': 3400000,
-      'completedDate': '5 วันที่แล้ว',
-      'image': 'assets/images/testlamodels.png',
-      'status': 'lost',
-      'winnerBid': 3500000,
-      'sellerName': 'Tesla Thailand',
-    },
-  ];
+ 
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {
         _selectedTabIndex = _tabController.index;
@@ -91,7 +68,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     _loadUserWonAuctions();
     
     // ประกาศผู้ชนะอัตโนมัติเมื่อเข้ามาหน้านี้
-    _autoTriggerWinnerAnnouncement();
+    // _autoTriggerWinnerAnnouncement();
   }
 
   Future<void> _loadAddressData() async {
@@ -326,37 +303,37 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   }
 
   // ฟังก์ชันใหม่: ประกาศผู้ชนะอัตโนมัติเมื่อเข้ามาหน้านี้
-  Future<void> _autoTriggerWinnerAnnouncement() async {
-    try {
-      print('🚀 AUTO: Auto winner announcement triggered when entering page...');
+  // Future<void> _autoTriggerWinnerAnnouncement() async {
+  //   try {
+  //     print('🚀 AUTO: Auto winner announcement triggered when entering page...');
       
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('id') ?? '';
+  //     final prefs = await SharedPreferences.getInstance();
+  //     final userId = prefs.getString('id') ?? '';
       
-      if (userId.isEmpty) {
-        print('❌ AUTO: No user ID found, skipping auto announcement');
-        return;
-      }
+  //     if (userId.isEmpty) {
+  //       print('❌ AUTO: No user ID found, skipping auto announcement');
+  //       return;
+  //     }
       
-      print('🚀 AUTO: Announcing winners for user: $userId');
+  //     print('🚀 AUTO: Announcing winners for user: $userId');
       
-      // ประกาศผู้ชนะสำหรับ auction ID 8 (ตามตัวอย่าง)
-      // เปลี่ยนเป็น try-catch เพื่อไม่ให้ error หยุดการทำงาน
-      try {
-        await _manualTriggerWinnerAnnouncement('8', userId);
-      } catch (e) {
-        print('⚠️ AUTO: Failed to announce winner for auction 8: $e');
-        // ไม่ throw error ออกไป เพราะอาจเป็นเพราะประกาศไปแล้ว
-      }
+  //     // ประกาศผู้ชนะสำหรับ auction ID 8 (ตามตัวอย่าง)
+  //     // เปลี่ยนเป็น try-catch เพื่อไม่ให้ error หยุดการทำงาน
+  //     try {
+  //       await _manualTriggerWinnerAnnouncement('8', userId);
+  //     } catch (e) {
+  //       print('⚠️ AUTO: Failed to announce winner for auction 8: $e');
+  //       // ไม่ throw error ออกไป เพราะอาจเป็นเพราะประกาศไปแล้ว
+  //     }
       
-      // สามารถเพิ่ม auction ID อื่นๆ ได้ที่นี่
-      // await _manualTriggerWinnerAnnouncement('9', userId);
-      // await _manualTriggerWinnerAnnouncement('10', userId);
+  //     // สามารถเพิ่ม auction ID อื่นๆ ได้ที่นี่
+  //     // await _manualTriggerWinnerAnnouncement('9', userId);
+  //     // await _manualTriggerWinnerAnnouncement('10', userId);
       
-    } catch (e) {
-      print('❌ AUTO: Error in auto winner announcement: $e');
-    }
-  }
+  //   } catch (e) {
+  //     print('❌ AUTO: Error in auto winner announcement: $e');
+  //   }
+  // }
 
   @override
   void dispose() {
@@ -631,16 +608,6 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                     ),
                   ),
                 ),
-                Tab(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Text(
-                      'ไม่ชนะ\n${_lostAuctions.length}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -677,7 +644,6 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                               );
                             },
                           ),
-                
                 // Won Auctions Tab
                 _isLoadingWonAuctions
                     ? Center(child: CircularProgressIndicator())
@@ -694,24 +660,6 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                               return buildWonAuctionCard(context, filteredWonAuctions[index], _hasWinnerInfo, _loadProfileAndShowDialog);
                             },
                           ),
-                
-                // Lost Auctions Tab
-                _lostAuctions.isEmpty
-                    ? buildEmptyState(
-                        icon: Icons.sentiment_dissatisfied,
-                        title: 'ยังไม่มีรายการที่แพ้',
-                        subtitle: 'นี่เป็นสัญญาณที่ดี!',
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        itemCount: _lostAuctions.length,
-                        itemBuilder: (context, index) {
-                          return LostAuctionCard(
-                            auction: _lostAuctions[index],
-                            small: true,
-                          );
-                        },
-                      ),
               ],
             ),
           ),

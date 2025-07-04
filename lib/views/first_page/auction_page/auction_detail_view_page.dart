@@ -661,7 +661,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                 ],
               ),
               child: Text(
-                'ขั้นต่ำ: ${Format.formatCurrency(widget.auctionData['minimum_increase'] ?? 5)}',
+                'ขั้นต่ำ: ${Format.formatCurrency(_latestAuctionData?['minimum_increase'] ?? widget.auctionData['minimum_increase'] ?? 0)}',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,

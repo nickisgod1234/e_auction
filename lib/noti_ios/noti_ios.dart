@@ -19,7 +19,7 @@ Future<void> setupIOSNewAuctionNotification(FlutterLocalNotificationsPlugin plug
     String newAuctionBody = 'อย่าลืมเข้าไปดูการประมูลกันนะคะ';
 
     final now = DateTime.now();
-    var scheduledTime = DateTime(now.year, now.month, now.day, 12, 32); // 09:00
+    var scheduledTime = DateTime(now.year, now.month, now.day, 12, 48); // 09:00
     if (now.isAfter(scheduledTime)) {
       scheduledTime = scheduledTime.add(Duration(days: 1));
     }
@@ -230,11 +230,15 @@ Future<void> triggerWinnerAnnouncementInBackground() async {
     print('🔄 BACKGROUND: Starting background winner announcement...');
     
     // ส่ง API call ไปตรงๆ โดยไม่ต้องส่ง body
-    final url = Uri.parse('${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=8&action=announce_winner');
+    final url = Uri.parse('${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?&action=announce_all_winners');
     
     print('🔄 BACKGROUND: Sending API call to: $url');
     
-    final response = await http.post(url);
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: '{}',
+    );
     
     print('🔄 BACKGROUND: API Response Status: ${response.statusCode}');
     print('🔄 BACKGROUND: API Response Body: ${response.body}');
@@ -256,7 +260,7 @@ Future<void> setupBackgroundWinnerAnnouncement() async {
     
     // คำนวณเวลาถัดไปที่จะเป็น 09:00
     final now = DateTime.now();
-    var nextScheduledTime = DateTime(now.year, now.month, now.day, 12, 32); // 09:00
+    var nextScheduledTime = DateTime(now.year, now.month, now.day, 13, 15); // 09:00
     
     if (now.isAfter(nextScheduledTime)) {
       nextScheduledTime = nextScheduledTime.add(Duration(days: 1));
