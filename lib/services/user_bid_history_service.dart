@@ -74,7 +74,7 @@ class UserBidHistoryService {
   /// ดึงข้อมูล user bid ranking สำหรับ auction เฉพาะรายการ
   static Future<List<dynamic>> getUserBidRanking(String auctionId) async {
     try {
-      final url = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$auctionId&action=user_bid_ranking';
+      final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$auctionId&action=user_bid_ranking';
       print('DEBUG: Fetching user bid ranking: $url');
       final response = await http.get(Uri.parse(url));
       print('DEBUG: User bid ranking response: ${response.body}');

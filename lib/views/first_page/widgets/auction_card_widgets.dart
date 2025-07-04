@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/views/first_page/widgets/auction_dialogs.dart';
+import 'dart:async';
 
 // Auction Card Widgets
 class ActiveBidCard extends StatelessWidget {
@@ -254,6 +255,53 @@ class LostAuctionCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// CountdownTimerWidget: แสดงเวลานับถอยหลังแบบ real-time
+class CountdownTimerWidget extends StatefulWidget {
+  final DateTime endTime;
+  final TextStyle? style;
+  const CountdownTimerWidget({Key? key, required this.endTime, this.style}) : super(key: key);
+
+  @override
+  State<CountdownTimerWidget> createState() => _CountdownTimerWidgetState();
+}
+
+class _CountdownTimerWidgetState extends State<CountdownTimerWidget> {
+  late Duration _remaining;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    _timer = Timer.periodic(Duration(seconds: 1), (_) => _updateRemaining());
+  }
+
+  void _updateRemaining() {
+    final now = DateTime.now();
+    setState(() {
+      _remaining = widget.endTime.difference(now);
+      if (_remaining.isNegative) _remaining = Duration.zero;
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hours = _remaining.inHours;
+    final minutes = _remaining.inMinutes % 60;
+    final seconds = _remaining.inSeconds % 60;
+    return Text(
+      '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+      style: widget.style ?? TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
     );
   }
 }

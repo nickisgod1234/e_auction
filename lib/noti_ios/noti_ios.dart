@@ -19,7 +19,7 @@ Future<void> setupIOSNewAuctionNotification(FlutterLocalNotificationsPlugin plug
     String newAuctionBody = 'อย่าลืมเข้าไปดูการประมูลกันนะคะ';
 
     final now = DateTime.now();
-    var scheduledTime = DateTime(now.year, now.month, now.day, 12, 48); // 09:00
+    var scheduledTime = DateTime(now.year, now.month, now.day, 18, 00); // 09:00
     if (now.isAfter(scheduledTime)) {
       scheduledTime = scheduledTime.add(Duration(days: 1));
     }
@@ -260,7 +260,7 @@ Future<void> setupBackgroundWinnerAnnouncement() async {
     
     // คำนวณเวลาถัดไปที่จะเป็น 09:00
     final now = DateTime.now();
-    var nextScheduledTime = DateTime(now.year, now.month, now.day, 13, 15); // 09:00
+    var nextScheduledTime = DateTime(now.year, now.month, now.day, 18, 00); // 09:00
     
     if (now.isAfter(nextScheduledTime)) {
       nextScheduledTime = nextScheduledTime.add(Duration(days: 1));
