@@ -400,13 +400,45 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     );
   }
 
-  // Check if winner information exists (simplified)
+  // Check if winner information exists
   Future<bool> _hasWinnerInfo() async {
-    // Since we're only sending user_id now, always return true
-    return true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final firstname = prefs.getString('winner_firstname') ?? '';
+      final lastname = prefs.getString('winner_lastname') ?? '';
+      final phone = prefs.getString('winner_phone') ?? '';
+      final address = prefs.getString('winner_address') ?? '';
+      final provinceId = prefs.getString('winner_province_id') ?? '';
+      final districtId = prefs.getString('winner_district_id') ?? '';
+      final subDistrictId = prefs.getString('winner_sub_district_id') ?? '';
+      
+      // ตรวจสอบข้อมูลที่จำเป็น
+      final hasRequiredInfo = firstname.isNotEmpty && 
+                             lastname.isNotEmpty && 
+                             phone.isNotEmpty && 
+                             address.isNotEmpty && 
+                             provinceId.isNotEmpty && 
+                             districtId.isNotEmpty && 
+                             subDistrictId.isNotEmpty;
+      
+      print('🔍 HAS_WINNER_INFO: Checking winner info...');
+      print('🔍 HAS_WINNER_INFO: firstname: ${firstname.isNotEmpty ? "✓" : "✗"}');
+      print('🔍 HAS_WINNER_INFO: lastname: ${lastname.isNotEmpty ? "✓" : "✗"}');
+      print('🔍 HAS_WINNER_INFO: phone: ${phone.isNotEmpty ? "✓" : "✗"}');
+      print('🔍 HAS_WINNER_INFO: address: ${address.isNotEmpty ? "✓" : "✗"}');
+      print('🔍 HAS_WINNER_INFO: provinceId: ${provinceId.isNotEmpty ? "✓" : "✗"}');
+      print('🔍 HAS_WINNER_INFO: districtId: ${districtId.isNotEmpty ? "✓" : "✗"}');
+      print('🔍 HAS_WINNER_INFO: subDistrictId: ${subDistrictId.isNotEmpty ? "✓" : "✗"}');
+      print('🔍 HAS_WINNER_INFO: Has complete info: $hasRequiredInfo');
+      
+      return hasRequiredInfo;
+    } catch (e) {
+      print('❌ HAS_WINNER_INFO: Error checking winner info: $e');
+      return false;
+    }
   }
 
-  // Save winner information using auth service (simplified)
+  // Save winner information using WinnerService
   Future<void> _saveWinnerInfoToServer() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -416,8 +448,44 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         throw Exception('ไม่พบข้อมูล ID ผู้ใช้');
       }
 
-      // Since we only need user_id, just show success message
-      print('บันทึกข้อมูลผู้ชนะเรียบร้อยแล้ว');
+      // สร้างข้อมูลผู้ชนะจาก form controllers
+      final winnerInfo = WinnerService.createWinnerInfo(
+        customerId: userId,
+        fullname: '${_controllers['firstname']!.text} ${_controllers['lastname']!.text}'.trim(),
+        email: _controllers['email']!.text,
+        phone: _controllers['phone']!.text,
+        addr: _controllers['address']!.text,
+        provinceId: _controllers['provinceId']!.text,
+        districtId: _controllers['districtId']!.text,
+        subDistrictId: _controllers['subDistrictId']!.text,
+        sub: _controllers['sub']!.text,
+        taxNumber: _controllers['taxNumber']!.text,
+      );
+
+      // บันทึกข้อมูลผู้ชนะ
+      final result = await WinnerService.saveWinnerInfo(winnerInfo);
+      
+      if (result['success'] == true) {
+        print('✅ บันทึกข้อมูลผู้ชนะเรียบร้อยแล้ว');
+        print('✅ ข้อมูลที่บันทึก: ${result['data']}');
+        
+        // บันทึกข้อมูลลง SharedPreferences ด้วย prefix winner_ เพื่อให้ validateWinnerInfo ใช้งานได้
+        await prefs.setString('winner_firstname', _controllers['firstname']!.text);
+        await prefs.setString('winner_lastname', _controllers['lastname']!.text);
+        await prefs.setString('winner_phone', _controllers['phone']!.text);
+        await prefs.setString('winner_address', _controllers['address']!.text);
+        await prefs.setString('winner_tax_number', _controllers['taxNumber']!.text);
+        await prefs.setString('winner_email', _controllers['email']!.text);
+        await prefs.setString('winner_province_id', _controllers['provinceId']!.text);
+        await prefs.setString('winner_district_id', _controllers['districtId']!.text);
+        await prefs.setString('winner_sub_district_id', _controllers['subDistrictId']!.text);
+        await prefs.setString('winner_sub', _controllers['sub']!.text);
+        await prefs.setString('winner_zip_code', _controllers['zipCode']!.text);
+        
+        print('✅ บันทึกข้อมูลลง SharedPreferences เรียบร้อยแล้ว');
+      } else {
+        throw Exception('บันทึกข้อมูลไม่สำเร็จ: ${result['message']}');
+      }
     } catch (e) {
       print('Error saving winner info: $e');
       rethrow;
@@ -681,7 +749,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
           _showProfileSummaryDialog(auction, profile);
         } else {
           // มีข้อมูลขาดหายไป แสดงฟอร์มให้กรอกข้อมูลที่ขาด
-          _showMissingFieldsDialog(auction, profile, missingFields);
+          await _showMissingFieldsDialog(auction, profile, missingFields);
         }
       } else {
         _showValidationError('ไม่สามารถดึงข้อมูลโปรไฟล์ได้');
@@ -723,16 +791,20 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   }
 
   // เติมข้อมูลจาก profile ลงใน controllers
-  void _fillControllersWithProfile(Map<String, dynamic> profile) {
+  Future<void> _fillControllersWithProfile(Map<String, dynamic> profile) async {
     // แยกชื่อและนามสกุลจาก fullname
     final fullname = profile['fullname'] ?? '';
     final nameParts = fullname.split(' ');
     final firstname = nameParts.isNotEmpty ? nameParts.first : '';
     final lastname = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
     
+    // ปรับเบอร์โทรให้ขึ้นต้นด้วย 0 ถ้าข้อมูลมี 9 หลักและไม่ขึ้นต้นด้วย 0
+    final rawPhone = profile['phone'] ?? '';
+    final phone = (rawPhone.length == 9 && !rawPhone.startsWith('0')) ? '0$rawPhone' : rawPhone;
+
     _controllers['firstname']!.text = firstname;
     _controllers['lastname']!.text = lastname;
-    _controllers['phone']!.text = profile['phone'] ?? '';
+    _controllers['phone']!.text = phone;
     _controllers['address']!.text = profile['address'] ?? '';
     _controllers['taxNumber']!.text = profile['tax_number'] ?? '';
     _controllers['email']!.text = profile['email'] ?? '';
@@ -741,6 +813,26 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     _controllers['subDistrictId']!.text = profile['sub_district_id'] ?? '';
     _controllers['sub']!.text = profile['sub'] ?? '';
     // zip code จะถูกเติมอัตโนมัติเมื่อเลือก sub-district
+    
+    // บันทึกข้อมูลลง SharedPreferences ด้วย prefix winner_ เพื่อให้ validateWinnerInfo ใช้งานได้
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('winner_firstname', firstname);
+      await prefs.setString('winner_lastname', lastname);
+      await prefs.setString('winner_phone', phone);
+      await prefs.setString('winner_address', profile['address'] ?? '');
+      await prefs.setString('winner_tax_number', profile['tax_number'] ?? '');
+      await prefs.setString('winner_email', profile['email'] ?? '');
+      await prefs.setString('winner_province_id', profile['province_id'] ?? '');
+      await prefs.setString('winner_district_id', profile['district_id'] ?? '');
+      await prefs.setString('winner_sub_district_id', profile['sub_district_id'] ?? '');
+      await prefs.setString('winner_sub', profile['sub'] ?? '');
+      await prefs.setString('winner_zip_code', profile['zip_code'] ?? '');
+      
+      print('✅ บันทึกข้อมูลโปรไฟล์ลง SharedPreferences เรียบร้อยแล้ว');
+    } catch (e) {
+      print('❌ Error saving profile to SharedPreferences: $e');
+    }
   }
 
   // แปลงชื่อ field เป็นชื่อที่แสดง
@@ -921,35 +1013,54 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
             ),
           ),
           actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      await _fillControllersWithProfile(profile);
+                      AuctionDialogs.showWinnerInfoDialog(
+                        context,
+                        auction,
+                        _controllers,
+                        _saveWinnerInfoToServer,
+                        _validateForm,
+                        _showValidationError,
+                      );
+                    },
+                    icon: Icon(Icons.edit, color: Colors.blue),
+                    label: Text('แก้ไขข้อมูล', style: TextStyle(color: Colors.blue)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.blue),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      AuctionDialogs.showPaymentDialog(context, auction);
+                    },
+                    icon: Icon(Icons.payment, color: Colors.white),
+                    label: Text('ติดต่อชำระเงิน', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      elevation: 2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('ปิด'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // เติมข้อมูลใน controllers และแสดงฟอร์มแก้ไข
-                _fillControllersWithProfile(profile);
-                AuctionDialogs.showWinnerInfoDialog(
-                  context,
-                  auction,
-                  _controllers,
-                  _saveWinnerInfoToServer,
-                  _validateForm,
-                  _showValidationError,
-                );
-              },
-              icon: const Icon(Icons.edit, size: 10),
-              label: const Text('แก้ไขข้อมูล'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                // แสดง payment dialog
-                AuctionDialogs.showPaymentDialog(context, auction);
-              },
-              icon: const Icon(Icons.payment, size: 10),
-              label: const Text('ติดต่อชำระเงิน'),
             ),
           ],
         );
@@ -975,9 +1086,9 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     return full;
   }
 
-  void _showMissingFieldsDialog(Map<String, dynamic> auction, Map<String, dynamic> profile, List<String> missingFields) {
+  Future<void> _showMissingFieldsDialog(Map<String, dynamic> auction, Map<String, dynamic> profile, List<String> missingFields) async {
     // เติมข้อมูลที่มีอยู่แล้วใน controllers
-    _fillControllersWithProfile(profile);
+    await _fillControllersWithProfile(profile);
     
     // แสดง dialog แจ้งเตือนข้อมูลที่ขาด
     showDialog(
@@ -1019,8 +1130,10 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
               child: const Text('ยกเลิก'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
+                // เติมข้อมูลที่มีอยู่แล้วใน controllers ก่อนแสดงฟอร์ม
+                await _fillControllersWithProfile(profile);
                 // แสดงฟอร์มกรอกข้อมูลที่ขาด
                 AuctionDialogs.showWinnerInfoDialog(
                   context,

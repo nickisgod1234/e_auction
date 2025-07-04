@@ -494,4 +494,90 @@ class WinnerService {
       return null;
     }
   }
+
+  // ฟังก์ชันใหม่: บันทึกข้อมูลผู้ชนะ
+  static Future<Map<String, dynamic>> saveWinnerInfo(Map<String, dynamic> winnerInfo) async {
+    try {
+      print('💾 SAVE: Saving winner information...');
+      print('💾 SAVE: Winner info: $winnerInfo');
+      
+      // แสดงเบอร์โทรศัพท์ที่ทำความสะอาดแล้ว
+      final originalPhone = winnerInfo['phone'];
+      final cleanPhone = originalPhone.toString().replaceAll(RegExp(r'[^0-9]'), '');
+      if (originalPhone != cleanPhone) {
+        print('💾 SAVE: Phone number cleaned: "$originalPhone" -> "$cleanPhone"');
+        winnerInfo['phone'] = cleanPhone;
+      }
+      
+      final url = '${Config.apiUrllocal}/HR-API-morket/login_phone_auction/save_user.php';
+      print('💾 SAVE: API URL: $url');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(winnerInfo),
+      );
+
+      print('💾 SAVE: API Response Status: ${response.statusCode}');
+      print('💾 SAVE: API Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          print('✅ SAVE: Winner information saved successfully!');
+          print('✅ SAVE: Saved data: ${data['data']}');
+          return data;
+        } else {
+          print('❌ SAVE: Failed to save winner information: ${data['message']}');
+          return data;
+        }
+      } else {
+        print('❌ SAVE: HTTP Error: ${response.statusCode}');
+        throw Exception('HTTP Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ SAVE: Error saving winner information: $e');
+      throw Exception('Error saving winner information: $e');
+    }
+  }
+
+  // ฟังก์ชันใหม่: สร้างข้อมูลผู้ชนะจาก form
+  static Map<String, dynamic> createWinnerInfo({
+    required String customerId,
+    required String fullname,
+    required String email,
+    required String phone,
+    required String addr,
+    required String provinceId,
+    required String districtId,
+    required String subDistrictId,
+    required String sub,
+    String type = 'individual',
+    String companyId = '1',
+    String taxNumber = '',
+    String name = '',
+    String code = '',
+  }) {
+    // ทำความสะอาดเบอร์โทรศัพท์ - ลบเครื่องหมายที่ไม่ใช่ตัวเลข
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    
+    return {
+      'customer_id': customerId,
+      'fullname': fullname,
+      'email': email,
+      'phone': cleanPhone,
+      'addr': addr,
+      'province_id': provinceId,
+      'district_id': districtId,
+      'sub_district_id': subDistrictId,
+      'sub': sub,
+      'type': type,
+      'company_id': companyId,
+      'tax_number': taxNumber,
+      'name': name.isNotEmpty ? name : fullname.split(' ').first,
+      'code': code.isNotEmpty ? code : 'CUST$customerId',
+    };
+  }
 } 

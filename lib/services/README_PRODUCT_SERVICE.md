@@ -301,3 +301,205 @@ await ProductServiceExample.getProductById('46');
 2. **Batch Processing**: สำหรับ quotation จำนวนมาก ควรใช้ batch processing
 3. **Pagination**: หากมี quotation จำนวนมาก ควรเพิ่ม pagination
 4. **Background Processing**: ใช้ background processing สำหรับการดึงข้อมูลรายละเอียด
+
+# Product Service Documentation
+
+## Overview
+บริการจัดการข้อมูลสินค้าและการประมูลสำหรับแอป E-Auction
+
+## Services
+
+### 1. ProductService
+จัดการข้อมูลสินค้าและการประมูล
+
+### 2. UserBidHistoryService  
+จัดการประวัติการประมูลของผู้ใช้
+
+### 3. WinnerService
+จัดการข้อมูลผู้ชนะการประมูล
+
+## WinnerService Functions
+
+### Save Winner Information
+```dart
+// บันทึกข้อมูลผู้ชนะ
+Future<Map<String, dynamic>> saveWinnerInfo(Map<String, dynamic> winnerInfo)
+
+// สร้างข้อมูลผู้ชนะจาก form
+Map<String, dynamic> createWinnerInfo({
+  required String customerId,
+  required String fullname,
+  required String email,
+  required String phone,
+  required String addr,
+  required String provinceId,
+  required String districtId,
+  required String subDistrictId,
+  required String sub,
+  String type = 'individual',
+  String companyId = '1',
+  String taxNumber = '',
+  String name = '',
+  String code = '',
+})
+```
+
+### API Endpoint
+- **URL**: `http://192.168.1.39/HR-API-morket/login_phone_auction/save_user.php`
+- **Method**: POST
+- **Content-Type**: application/json
+
+### Request Body Example
+```json
+{
+  "customer_id": "13",
+  "fullname": "สมชาย ใจดี",
+  "email": "somchai@example.com",
+  "phone": "0616590324",
+  "addr": "123 ถนนสุขุมวิท",
+  "province_id": "1",
+  "district_id": "1001",
+  "sub_district_id": "100101",
+  "sub": "แขวงคลองเตย",
+  "type": "individual",
+  "company_id": "1",
+  "tax_number": "1234567890123",
+  "name": "สมชาย",
+  "code": "CUST001"
+}
+```
+
+### Response Example
+```json
+{
+  "success": true,
+  "message": "Customer data updated successfully",
+  "data": {
+    "id": "13",
+    "fullname": "สมชาย ใจดี",
+    "email": "somchai@example.com",
+    "phone": "616590324",
+    "addr": "123 ถนนสุขุมวิท",
+    "logo": null,
+    "type": "individual",
+    "company_id": "1",
+    "tax_number": "1234567890123",
+    "name": "สมชาย",
+    "code": "CUST001",
+    "province_id": "1",
+    "district_id": "1001",
+    "sub_district_id": "100101",
+    "sub": "แขวงคลองเตย"
+  }
+}
+```
+
+### Usage Example
+```dart
+// สร้างข้อมูลผู้ชนะ
+final winnerInfo = WinnerService.createWinnerInfo(
+  customerId: '13',
+  fullname: 'สมชาย ใจดี',
+  email: 'somchai@example.com',
+  phone: '061-659-0324', // จะถูกทำความสะอาดเป็น '0616590324'
+  addr: '123 ถนนสุขุมวิท',
+  provinceId: '1',
+  districtId: '1001',
+  subDistrictId: '100101',
+  sub: 'แขวงคลองเตย',
+  taxNumber: '1234567890123',
+);
+
+// บันทึกข้อมูล
+final result = await WinnerService.saveWinnerInfo(winnerInfo);
+
+if (result['success'] == true) {
+  print('บันทึกข้อมูลสำเร็จ: ${result['data']}');
+} else {
+  print('บันทึกข้อมูลล้มเหลว: ${result['message']}');
+}
+```
+
+### Phone Number Cleaning
+ระบบจะทำความสะอาดเบอร์โทรศัพท์โดยอัตโนมัติ:
+- ลบเครื่องหมาย `-`, `(`, `)`, ` ` (space)
+- เหลือเฉพาะตัวเลข
+- ตัวอย่าง: `061-659-0324` → `0616590324`
+
+## Other WinnerService Functions
+
+### Get Winner Data
+```dart
+// ดึงข้อมูลผู้ชนะตาม auction ID
+Future<Map<String, dynamic>> getWinnerByAuctionId(String auctionId)
+
+// ดึงข้อมูลผู้ชนะตาม user ID
+Future<Map<String, dynamic>> getWinnersByUserId(String userId)
+
+// ดึงข้อมูลผู้ชนะทั้งหมด
+Future<Map<String, dynamic>> getAllWinners()
+```
+
+### Announce Winner
+```dart
+// ประกาศผู้ชนะ
+Future<Map<String, dynamic>> announceWinner(String auctionId, String userId)
+
+// Trigger ประกาศผู้ชนะโดยตรง
+Future<Map<String, dynamic>> triggerAnnounceWinner(String auctionId, String userId)
+
+// เช็คและประกาศผู้ชนะอัตโนมัติ
+Future<void> checkAndAnnounceWinner(String auctionId, String userId)
+```
+
+### Check Winner Status
+```dart
+// ตรวจสอบว่าประกาศผู้ชนะแล้วหรือยัง
+Future<bool> isWinnerAnnounced(String quotationMoreInformationId)
+
+// ดึงข้อมูลผู้ชนะ
+Future<Map<String, dynamic>?> getWinnerData(String quotationMoreInformationId)
+```
+
+### Get Announcement Logs
+```dart
+// ดึง log การประกาศผู้ชนะ
+Future<List<dynamic>> getAnnouncementLogs({
+  String? quotationMoreInformationId,
+  String? announcedBy,
+  String? status,
+  String? dateFrom,
+  String? dateTo,
+})
+```
+
+## Data Conversion
+
+### Convert Winners to App Format
+```dart
+// แปลงข้อมูลผู้ชนะเป็นรูปแบบที่ใช้ในแอป
+List<Map<String, dynamic>> convertWinnersToAppFormat(List<dynamic> winners)
+```
+
+### Filter User Winners
+```dart
+// กรองเฉพาะผู้ชนะของผู้ใช้
+List<Map<String, dynamic>> filterUserWinners(List<Map<String, dynamic>> allWinners, String userId)
+
+// ตรวจสอบว่าผู้ใช้เป็นผู้ชนะหรือไม่
+bool isUserWinner(Map<String, dynamic> winner, String userId)
+```
+
+## Error Handling
+- ทุกฟังก์ชันมีการ handle error และแสดง debug logs
+- ใช้ try-catch เพื่อจัดการ exceptions
+- ส่งกลับ error messages ที่ชัดเจน
+
+## Debug Logs
+ระบบจะแสดง debug logs ต่อไปนี้:
+- `💾 SAVE`: การบันทึกข้อมูลผู้ชนะ
+- `🚀 ANNOUNCE`: การประกาศผู้ชนะ
+- `🔍 CHECK`: การตรวจสอบสถานะ
+- `📊 WINNER`: การดึงข้อมูลผู้ชนะ
+- `📋 LOGS`: การดึง log
+- `❌ ERROR`: ข้อผิดพลาดต่างๆ
