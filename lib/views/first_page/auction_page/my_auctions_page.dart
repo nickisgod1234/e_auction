@@ -10,6 +10,8 @@ import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/services/user_bid_history_service.dart';
 import 'package:e_auction/services/winner_service.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class MyAuctionsPage extends StatefulWidget {
   const MyAuctionsPage({super.key});
@@ -646,10 +648,37 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                                     return ActiveBidCard(
                                       auction: auction,
                                       onTap: () {
+                                        // สร้างข้อมูลที่ตรงกับ AuctionDetailViewPage
+                                        final Map<String, dynamic> formattedAuctionData = {
+                                          'id': auction['id'],
+                                          'quotation_more_information_id': auction['quotation_more_information_id'] ?? auction['id'],
+                                          'title': auction['title'],
+                                          'currentPrice': auction['currentPrice'],
+                                          'startingPrice': auction['startingPrice'],
+                                          'timeRemaining': auction['timeRemaining'],
+                                          'image': auction['image'],
+                                          'description': auction['description'],
+                                          'auction_start_date': auction['auction_start_date'],
+                                          'auction_end_date': auction['auction_end_date'],
+                                          'status': auction['status'],
+                                          'currency': auction['currency'] ?? 'THB',
+                                          'bidCount': auction['bidCount'],
+                                          'minimum_increase': auction['minimumIncrease'],
+                                          'item_note': auction['item_note'],
+                                          'brand': auction['brand'],
+                                          'model': auction['model'],
+                                          'material': auction['material'],
+                                          'size': auction['size'],
+                                          'color': auction['color'],
+                                          'condition': auction['condition'],
+                                          'sellerName': auction['sellerName'],
+                                          'sellerRating': auction['sellerRating'],
+                                        };
+                                        
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => AuctionDetailViewPage(auctionData: auction),
+                                            builder: (context) => AuctionDetailViewPage(auctionData: formattedAuctionData),
                                           ),
                                         );
                                       },
@@ -683,11 +712,86 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                                       }
                                       return ActiveBidCard(
                                         auction: auction,
-                                        onTap: () {
+                                        onTap: () async {
+                                          // Debug: ตรวจสอบข้อมูลที่ส่งไป
+                                          print('🔍 MY_AUCTIONS: Sending auction data to AuctionDetailViewPage:');
+                                          print('🔍 MY_AUCTIONStest: auction[image] = ${auction['image']}');
+                                          print('🔍 MY_AUCTIONS: auction[images] = ${auction['images']}');
+                                          print('🔍 MY_AUCTIONS: auction[id] = ${auction['id']}');
+                                          print('🔍 MY_AUCTIONS: auction[quotation_more_information_id] = ${auction['quotation_more_information_id']}');
+                                          
+                                          // ดึงข้อมูลรูปภาพจาก API หลัก
+                                          String imageUrl = auction['image'];
+                                          if (imageUrl == 'assets/images/noimage.jpg') {
+                                            try {
+                                              final quotationId = auction['quotation_more_information_id'] ?? auction['id'];
+                                              final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
+                                              print('🔍 MY_AUCTIONS: Fetching image from: $url');
+                                              
+                                              final response = await http.get(Uri.parse(url));
+                                              if (response.statusCode == 200) {
+                                                final data = jsonDecode(response.body);
+                                                if (data is Map<String, dynamic> && data['quotation_image'] != null) {
+                                                  // ใช้ logic เดียวกับ product_service.dart
+                                                  final imageName = data['quotation_image'];
+                                                  if (imageName != null && imageName.toString().isNotEmpty && imageName != '[]' && imageName != '"[]"') {
+                                                    String cleanImageName = imageName.trim();
+                                                    if (cleanImageName.startsWith('[') && cleanImageName.endsWith(']')) {
+                                                      try {
+                                                        final parsed = jsonDecode(cleanImageName);
+                                                        if (parsed is List && parsed.isNotEmpty && parsed[0] != null && parsed[0].toString().isNotEmpty) {
+                                                          cleanImageName = parsed[0].toString();
+                                                        }
+                                                      } catch (e) {
+                                                        print('🔍 MY_AUCTIONS: Error parsing image JSON: $e');
+                                                      }
+                                                    }
+                                                    cleanImageName = cleanImageName.replaceAll('"', '').replaceAll('\\', '').replaceAll('[', '').replaceAll(']', '').trim();
+                                                    if (cleanImageName.isNotEmpty) {
+                                                      imageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
+                                                      print('🔍 MY_AUCTIONS: Updated imageUrl to: $imageUrl');
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            } catch (e) {
+                                              print('🔍 MY_AUCTIONS: Error fetching image: $e');
+                                            }
+                                          }
+                                          
+                                          // สร้างข้อมูลที่ตรงกับ AuctionDetailViewPage
+                                          final Map<String, dynamic> formattedAuctionData = {
+                                            'id': auction['id'],
+                                            'quotation_more_information_id': auction['quotation_more_information_id'] ?? auction['id'],
+                                            'title': auction['title'],
+                                            'currentPrice': auction['currentPrice'],
+                                            'startingPrice': auction['startingPrice'],
+                                            'timeRemaining': auction['timeRemaining'],
+                                            'image': imageUrl,
+                                            'description': auction['description'],
+                                            'auction_start_date': auction['auction_start_date'],
+                                            'auction_end_date': auction['auction_end_date'],
+                                            'status': auction['status'],
+                                            'currency': auction['currency'] ?? 'THB',
+                                            'bidCount': auction['bidCount'],
+                                            'minimum_increase': auction['minimumIncrease'],
+                                            'item_note': auction['item_note'],
+                                            'brand': auction['brand'],
+                                            'model': auction['model'],
+                                            'material': auction['material'],
+                                            'size': auction['size'],
+                                            'color': auction['color'],
+                                            'condition': auction['condition'],
+                                            'sellerName': auction['sellerName'],
+                                            'sellerRating': auction['sellerRating'],
+                                          };
+                                          
+                                          print('🔍 MY_AUCTIONS: Formatted auction data: $formattedAuctionData');
+                                          
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => AuctionDetailViewPage(auctionData: auction),
+                                              builder: (context) => AuctionDetailViewPage(auctionData: formattedAuctionData),
                                             ),
                                           );
                                         },

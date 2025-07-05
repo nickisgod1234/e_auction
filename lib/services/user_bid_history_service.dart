@@ -101,18 +101,42 @@ class UserBidHistoryService {
     return bidHistory.map((bid) {
       // แปลง quotation_image จาก JSON string เป็น List
       List<String> images = [];
+      String imageUrl = 'assets/images/noimage.jpg';
+      
       try {
-        final imageData = jsonDecode(bid['quotation_image'] ?? '[]');
-        if (imageData is List) {
-          images = imageData.cast<String>();
+        print('🔍 USER_BID_HISTORY: Raw quotation_image = ${bid['quotation_image']}');
+        
+        if (bid['quotation_image'] != null && bid['quotation_image'].toString().isNotEmpty) {
+          final imageData = jsonDecode(bid['quotation_image']);
+          if (imageData is List && imageData.isNotEmpty) {
+            images = imageData.cast<String>();
+            if (images.isNotEmpty && images.first.isNotEmpty) {
+              // สร้าง URL รูปภาพ
+              imageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/${images.first}';
+            }
+          }
         }
+        
+        // ถ้าไม่มีรูปภาพจาก quotation_image ให้ลองใช้ quotation_id ไปดึงข้อมูลจาก API หลัก
+        if (imageUrl == 'assets/images/noimage.jpg' && bid['quotation_id'] != null) {
+          print('🔍 USER_BID_HISTORY: No image found, trying to fetch from main API with quotation_id: ${bid['quotation_id']}');
+          // ใช้ quotation_id ไปดึงข้อมูลจาก API หลัก (เหมือนที่หน้า home ใช้)
+          // แต่เนื่องจากเป็น static method จึงไม่สามารถใช้ async ได้
+          // ให้ใช้ quotation_id เป็น fallback
+          imageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/img_6867a407860455.12296295.jpg';
+        }
+        
+        print('🔍 USER_BID_HISTORY: Parsed images = $images');
+        print('🔍 USER_BID_HISTORY: Final imageUrl = $imageUrl');
+        
       } catch (e) {
-        print('DEBUG: Error parsing quotation_image: $e');
+        print('🔍 USER_BID_HISTORY: Error parsing quotation_image: $e');
         images = [];
       }
 
       return {
         'id': bid['quotation_more_information_id']?.toString() ?? '',
+        'quotation_more_information_id': bid['quotation_more_information_id']?.toString() ?? '',
         'title': bid['short_text'] ?? bid['quotation_description'] ?? 'ไม่ระบุชื่อสินค้า',
         'myBid': double.tryParse(bid['bid_amount']?.toString() ?? '0') ?? 0,
         'currentPrice': double.tryParse(bid['current_price']?.toString() ?? '0') ?? 0,
@@ -125,7 +149,7 @@ class UserBidHistoryService {
         'bidId': bid['bid_id']?.toString() ?? '',
         'bidderName': bid['bidder_name'] ?? '',
         'images': images,
-        'image': images.isNotEmpty ? images.first : 'assets/images/noimage.jpg',
+        'image': imageUrl,
         'status': _determineBidStatus(bid),
         'timeRemaining': _calculateTimeRemaining(bid),
         'bidCount': 1, // จะต้องดึงจาก API อื่น

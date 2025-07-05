@@ -733,31 +733,50 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
   }
 
   Widget _buildProductImage() {
+    // Debug: ตรวจสอบข้อมูลที่ได้รับ
+    print('🔍 AUCTION_DETAIL: Received auction data:');
+    print('🔍 AUCTION_DETAIL: widget.auctionData[image] = ${widget.auctionData['image']}');
+    print('🔍 AUCTION_DETAIL: widget.auctionData[images] = ${widget.auctionData['images']}');
+    print('🔍 AUCTION_DETAIL: widget.auctionData[id] = ${widget.auctionData['id']}');
+    print('🔍 AUCTION_DETAIL: widget.auctionData[quotation_more_information_id] = ${widget.auctionData['quotation_more_information_id']}');
+    
     return Container(
       width: double.infinity,
       height: 300,
-      child: _buildAuctionImage(widget.auctionData['image']),
+      child: _buildAuctionImage(widget.auctionData['image'], width: double.infinity, height: 300),
     );
   }
 
-  Widget _buildAuctionImage(String? imagePath) {
+  Widget _buildAuctionImage(String? imagePath, {double width = double.infinity, double height = 300}) {
+    print('🔍 AUCTION_DETAIL: _buildAuctionImage called with imagePath = $imagePath');
+    
     if (imagePath == null || imagePath.isEmpty) {
-      return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+      print('🔍 AUCTION_DETAIL: imagePath is null or empty, using noimage.jpg');
+      return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
     }
+    
     if (imagePath.startsWith('http')) {
+      print('🔍 AUCTION_DETAIL: Using Image.network for URL: $imagePath');
       return Image.network(
         imagePath,
+        width: width,
+        height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+          print('🔍 AUCTION_DETAIL: Network image error: $error');
+          return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
         },
       );
     } else {
+      print('🔍 AUCTION_DETAIL: Using Image.asset for path: $imagePath');
       return Image.asset(
         imagePath,
+        width: width,
+        height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+          print('🔍 AUCTION_DETAIL: Asset image error: $error');
+          return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
         },
       );
     }

@@ -8,6 +8,33 @@ class AllCurrentAuctionsPage extends StatelessWidget {
 
   const AllCurrentAuctionsPage({super.key, required this.currentAuctions});
 
+  Widget _buildAuctionImage(String? imagePath, {double width = 80, double height = 80}) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+    }
+    if (imagePath.startsWith('http')) {
+      return Image.network(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+        },
+      );
+    } else {
+      return Image.asset(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+        },
+      );
+    }
+  }
+
   Widget _buildAuctionListItem(
       BuildContext context, Map<String, dynamic> auction) {
     return Card(
@@ -28,21 +55,7 @@ class AllCurrentAuctionsPage extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  auction['image'],
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 80,
-                      height: 80,
-                      color: Colors.grey[200],
-                      child:
-                          Icon(Icons.image_not_supported, color: Colors.grey),
-                    );
-                  },
-                ),
+                child: _buildAuctionImage(auction['image']),
               ),
               const SizedBox(width: 16),
               Expanded(

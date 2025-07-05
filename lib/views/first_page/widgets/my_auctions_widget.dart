@@ -447,6 +447,49 @@ class ContactRowWidget extends StatelessWidget {
   }
 }
 
+// Helper method to build auction image
+Widget _buildAuctionImage(String? imagePath, {double? width, double? height}) {
+  if (imagePath == null || imagePath.isEmpty) {
+    return Container(
+      width: width,
+      height: height,
+      color: Colors.grey[300],
+      child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+    );
+  }
+  if (imagePath.startsWith('http')) {
+    return Image.network(
+      imagePath,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: width,
+          height: height,
+          color: Colors.grey[300],
+          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+        );
+      },
+    );
+  } else {
+    return Image.asset(
+      imagePath,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: width,
+          height: height,
+          color: Colors.grey[300],
+          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+        );
+      },
+    );
+  }
+}
+
 // Auction Card Widgets
 class ActiveBidCard extends StatelessWidget {
   final Map<String, dynamic> auction;
@@ -471,19 +514,10 @@ class ActiveBidCard extends StatelessWidget {
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
+          child: _buildAuctionImage(
             auction['image'],
             width: small ? 44 : 60,
             height: small ? 44 : 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: small ? 44 : 60,
-                height: small ? 44 : 60,
-                color: Colors.grey[300],
-                child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-              );
-            },
           ),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
@@ -535,19 +569,10 @@ class WonAuctionCard extends StatelessWidget {
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
+          child: _buildAuctionImage(
             auction['image'],
             width: small ? 44 : 60,
             height: small ? 44 : 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: small ? 44 : 60,
-                height: small ? 44 : 60,
-                color: Colors.grey[300],
-                child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-              );
-            },
           ),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
