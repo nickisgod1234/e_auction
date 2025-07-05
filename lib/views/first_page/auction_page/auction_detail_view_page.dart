@@ -736,19 +736,31 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     return Container(
       width: double.infinity,
       height: 300,
-      child: Image.asset(
-        widget.auctionData['image'],
+      child: _buildAuctionImage(widget.auctionData['image']),
+    );
+  }
+
+  Widget _buildAuctionImage(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+    }
+    if (imagePath.startsWith('http')) {
+      return Image.network(
+        imagePath,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Container(
-            width: double.infinity,
-            height: 300,
-            color: Colors.grey[200],
-            child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 64),
-          );
+          return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
         },
-      ),
-    );
+      );
+    } else {
+      return Image.asset(
+        imagePath,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+        },
+      );
+    }
   }
 
   Widget _buildProductInfo(BuildContext context) {

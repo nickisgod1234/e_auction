@@ -32,7 +32,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>1.0.2</string>
+	<string>1.0.3</string>
 	<key>FLTEnableImpeller</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>
@@ -60,8 +60,6 @@
 	<string>E-Auction needs access to your photo library to allow you to choose a photo for your profile picture.</string>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>background-processing</string>
-		<string>background-fetch</string>
 		<string>remote-notification</string>
 	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

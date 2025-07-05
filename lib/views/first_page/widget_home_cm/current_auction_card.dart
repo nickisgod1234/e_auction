@@ -82,23 +82,7 @@ class CurrentAuctionCard extends StatelessWidget {
               child: SizedBox(
                 width: 300,
                 height: 200,
-                child: Image.asset(
-                  auctionData['image'] ?? 'assets/images/morket_banner.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading image: ${auctionData['image']}');
-                    return Container(
-                      width: 300,
-                      height: 200,
-                      color: Colors.grey[300],
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 50,
-                        color: Colors.grey[600],
-                      ),
-                    );
-                  },
-                ),
+                child: _buildAuctionImage(auctionData['image']),
               ),
             ),
             Positioned(
@@ -225,6 +209,30 @@ class CurrentAuctionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// เพิ่มฟังก์ชัน helper สำหรับแสดงรูป
+Widget _buildAuctionImage(String? imagePath) {
+  if (imagePath == null || imagePath.isEmpty) {
+    return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+  }
+  if (imagePath.startsWith('http')) {
+    return Image.network(
+      imagePath,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+      },
+    );
+  } else {
+    return Image.asset(
+      imagePath,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+      },
     );
   }
 } 

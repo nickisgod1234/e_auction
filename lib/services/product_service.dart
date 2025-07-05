@@ -362,37 +362,49 @@ class ProductService {
     }
   }
 
-  String _getAuctionImage(dynamic quotationImage) {
-    if (quotationImage == null || quotationImage.toString().isEmpty) {
+  // คืน URL รูปภาพ auction ที่ถูกต้อง
+  String _getAuctionImageUrl(String? imageName) {
+    if (imageName == null || imageName.isEmpty || imageName == '[]' || imageName == '"[]"') {
       return 'assets/images/noimage.jpg';
     }
     
-    // กรณี API ส่งเป็น String ที่เป็น JSON array
-    if (quotationImage is String) {
-      if (quotationImage == '[]' || quotationImage == '"[]"') {
-        return 'assets/images/noimage.jpg';
-      }
-      
-      // ลอง parse JSON array
+    // ลบ escape characters และ quotes ที่ไม่จำเป็น
+    String cleanImageName = imageName.trim();
+    
+    // ถ้าเป็น JSON array string ให้ parse
+    if (cleanImageName.startsWith('[') && cleanImageName.endsWith(']')) {
       try {
-        final parsed = jsonDecode(quotationImage);
+        final parsed = jsonDecode(cleanImageName);
         if (parsed is List && parsed.isNotEmpty && parsed[0] != null && parsed[0].toString().isNotEmpty) {
-          return parsed[0].toString();
+          cleanImageName = parsed[0].toString();
+        } else {
+          return 'assets/images/noimage.jpg';
         }
       } catch (e) {
-        // ถ้า parse ไม่ได้ ให้ใช้เป็น path เดียว
-        if (quotationImage.isNotEmpty && quotationImage != '[]' && quotationImage != '"[]"') {
-          return quotationImage;
-        }
+        print('Error parsing image JSON: $e');
+        return 'assets/images/noimage.jpg';
       }
     }
     
-    return 'assets/images/noimage.jpg';
+    // ลบ quotes และ escape characters ที่เหลืออยู่
+    cleanImageName = cleanImageName
+        .replaceAll('"', '')
+        .replaceAll('\\', '')
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+        .trim();
+    
+    if (cleanImageName.isEmpty) {
+      return 'assets/images/noimage.jpg';
+    }
+    
+    print('DEBUG: Clean image name: $cleanImageName');
+    return 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
   }
 
   // แปลงข้อมูลสินค้าเป็นรูปแบบที่ใช้ในแอพ
   Map<String, dynamic> convertToAppFormat(Map<String, dynamic> product) {
-    final imagePath = _getAuctionImage(product['quotation_image']);
+    final imagePath = _getAuctionImageUrl(product['quotation_image']);
 
     // กำหนดสถานะจากเวลา
     final now = DateTime.now();
