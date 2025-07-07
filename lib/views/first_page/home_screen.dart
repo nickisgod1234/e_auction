@@ -427,45 +427,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
         actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(Icons.notifications_outlined, color: Colors.black),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NotificationPage(),
-                    ),
-                  );
-                },
-              ),
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: const Text(
-                    '1',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          // Stack(
+          //   children: [
+          //     IconButton(
+          //       icon: Icon(Icons.notifications_outlined, color: Colors.black),
+          //       onPressed: () {
+          //         Navigator.push(
+          //           context,
+          //           MaterialPageRoute(
+          //             builder: (context) => NotificationPage(),
+          //           ),
+          //         );
+          //       },
+          //     ),
+          //     Positioned(
+          //       right: 8,
+          //       top: 8,
+          //       child: Container(
+          //         padding: const EdgeInsets.all(2),
+          //         decoration: BoxDecoration(
+          //           color: Colors.red,
+          //           borderRadius: BorderRadius.circular(10),
+          //         ),
+          //         constraints: const BoxConstraints(
+          //           minWidth: 16,
+          //           minHeight: 16,
+          //         ),
+          //         child: const Text(
+          //           '1',
+          //           style: TextStyle(
+          //             color: Colors.white,
+          //             fontSize: 10,
+          //             fontWeight: FontWeight.bold,
+          //           ),
+          //           textAlign: TextAlign.center,
+          //         ),
+          //       ),
+          //     ),
+          //   ],
+          // ),
           IconButton(
             icon: Icon(
               _isSearching ? Icons.close : Icons.search,
