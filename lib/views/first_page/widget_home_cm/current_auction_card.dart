@@ -215,22 +215,32 @@ class CurrentAuctionCard extends StatelessWidget {
 
 // เพิ่มฟังก์ชัน helper สำหรับแสดงรูป
 Widget _buildAuctionImage(String? imagePath) {
+  
+  
   if (imagePath == null || imagePath.isEmpty) {
+   
     return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
   }
-  if (imagePath.startsWith('http')) {
+  
+  // Check if the image path is a network URL
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+   
     return Image.network(
       imagePath,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
+       
         return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
       },
     );
   } else {
+    // Treat as local asset
+   
     return Image.asset(
       imagePath,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
+       
         return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
       },
     );

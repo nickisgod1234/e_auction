@@ -75,7 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (currentAuctions != null) {
         final formattedAuctions = currentAuctions.map((auction) {
-          return _productService.convertToAppFormat(auction);
+          final formatted = _productService.convertToAppFormat(auction);
+          print('DEBUG: HomeScreen - Current auction formatted: ${formatted['title']} - image: ${formatted['image']}');
+          return formatted;
         }).toList();
 
         setState(() {
@@ -89,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('Error loading current auctions: $e');
+   
       setState(() {
         _errorMessage = 'ไม่สามารถโหลดข้อมูลการประมูลปัจจุบันได้';
         _isLoadingCurrent = false;
@@ -108,7 +110,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (upcomingAuctions != null) {
         final formattedAuctions = upcomingAuctions.map((auction) {
-          return _productService.convertToAppFormat(auction);
+          final formatted = _productService.convertToAppFormat(auction);
+          print('DEBUG: HomeScreen - Upcoming auction formatted: ${formatted['title']} - image: ${formatted['image']}');
+          return formatted;
         }).toList();
 
         setState(() {
@@ -122,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('Error loading upcoming auctions: $e');
+   
       setState(() {
         _errorMessage = 'ไม่สามารถโหลดข้อมูลการประมูลที่กำลังจะมาถึงได้';
         _isLoadingUpcoming = false;
