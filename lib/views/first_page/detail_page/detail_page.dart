@@ -260,6 +260,50 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
+  // Helper method to build auction image
+  Widget _buildAuctionImage(String? imagePath, {double? width, double? height}) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return Image.asset('assets/images/noimage.jpg', 
+        width: width, 
+        height: height, 
+        fit: BoxFit.cover
+      );
+    }
+    
+    // ตรวจสอบว่าเป็น URL หรือไม่
+    final isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    
+    if (isUrl) {
+      return Image.network(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset('assets/images/noimage.jpg', 
+            width: width, 
+            height: height, 
+            fit: BoxFit.cover
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset('assets/images/noimage.jpg', 
+            width: width, 
+            height: height, 
+            fit: BoxFit.cover
+          );
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -329,11 +373,10 @@ class _DetailPageState extends State<DetailPage> {
               width: double.infinity,
               child: Stack(
                 children: [
-                  Image.asset(
-                    widget.auctionData['image'] ?? 'assets/images/morket_banner.png',
+                  _buildAuctionImage(
+                    widget.auctionData['image'],
                     width: double.infinity,
                     height: 300,
-                    fit: BoxFit.cover,
                   ),
                   // Auction Status Badge
                   Positioned(
@@ -418,7 +461,7 @@ class _DetailPageState extends State<DetailPage> {
                         ),
                       ),
                       Text(
-                        '฿${Format.formatCurrency(_currentBid)}',
+                        '${Format.formatCurrency(_currentBid)}',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -441,7 +484,7 @@ class _DetailPageState extends State<DetailPage> {
 
                   // Minimum Bid Increment
                   Text(
-                  'ขั้นต่ำ: ${Format.formatCurrency(widget.auctionData['minimumIncrease'] ?? 100)}',
+                  'ขั้นต่ำ: ${Format.formatCurrency(widget.auctionData['minimum_increase'] ?? 100)}',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],

@@ -5,6 +5,43 @@ import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/views/first_page/widgets/auction_dialogs.dart';
 import 'dart:async';
 
+// Helper function to build auction image widget
+Widget _buildAuctionImage(String imagePath, {double? width, double? height, BoxFit fit = BoxFit.cover}) {
+  // Check if the image path is a network URL
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return Image.network(
+      imagePath,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: width,
+          height: height,
+          color: Colors.grey[300],
+          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+        );
+      },
+    );
+  } else {
+    // Treat as local asset
+    return Image.asset(
+      imagePath,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: width,
+          height: height,
+          color: Colors.grey[300],
+          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+        );
+      },
+    );
+  }
+}
+
 // Auction Card Widgets
 class ActiveBidCard extends StatelessWidget {
   final Map<String, dynamic> auction;
@@ -29,19 +66,10 @@ class ActiveBidCard extends StatelessWidget {
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
+          child: _buildAuctionImage(
             auction['image'],
             width: small ? 44 : 60,
             height: small ? 44 : 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: small ? 44 : 60,
-                height: small ? 44 : 60,
-                color: Colors.grey[300],
-                child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-              );
-            },
           ),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
@@ -93,19 +121,10 @@ class WonAuctionCard extends StatelessWidget {
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
+          child: _buildAuctionImage(
             auction['image'],
             width: small ? 44 : 60,
             height: small ? 44 : 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: small ? 44 : 60,
-                height: small ? 44 : 60,
-                color: Colors.grey[300],
-                child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-              );
-            },
           ),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
@@ -201,19 +220,10 @@ class LostAuctionCard extends StatelessWidget {
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
+          child: _buildAuctionImage(
             auction['image'],
             width: small ? 44 : 60,
             height: small ? 44 : 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: small ? 44 : 60,
-                height: small ? 44 : 60,
-                color: Colors.grey[300],
-                child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-              );
-            },
           ),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
@@ -333,22 +343,10 @@ Widget buildWonAuctionCard(
           // Image
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
+            child: _buildAuctionImage(
               auction['image'],
               width: 60,
               height: 60,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
-                );
-              },
             ),
           ),
           SizedBox(width: 12),

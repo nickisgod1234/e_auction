@@ -219,7 +219,11 @@ class UpcomingAuctionCard extends StatelessWidget {
     if (imagePath == null || imagePath.isEmpty) {
       return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
     }
-    if (imagePath.startsWith('http')) {
+    
+    // ตรวจสอบว่าเป็น URL หรือไม่
+    final isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    
+    if (isUrl) {
       return Image.network(
         imagePath,
         fit: BoxFit.cover,

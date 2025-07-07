@@ -115,6 +115,7 @@ class UserBidHistoryService {
               imageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/${images.first}';
             }
           }
+
         }
         
         // ถ้าไม่มีรูปภาพจาก quotation_image ให้ลองใช้ quotation_id ไปดึงข้อมูลจาก API หลัก

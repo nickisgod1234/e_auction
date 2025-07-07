@@ -19,8 +19,58 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
     return 0; // default value
   }
 
+  Widget _buildAuctionImage(String? imagePath, {double width = 80, double height = 80}) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return Container(
+        width: width,
+        height: height,
+        color: Colors.grey[200],
+        child: Icon(Icons.image_not_supported, color: Colors.grey),
+      );
+    }
+    
+    // ตรวจสอบว่าเป็น URL หรือไม่
+    final isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    
+    if (isUrl) {
+      return Image.network(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: width,
+            height: height,
+            color: Colors.grey[200],
+            child: Icon(Icons.image_not_supported, color: Colors.grey),
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: width,
+            height: height,
+            color: Colors.grey[200],
+            child: Icon(Icons.image_not_supported, color: Colors.grey),
+          );
+        },
+      );
+    }
+  }
+
   Widget _buildAuctionListItem(
       BuildContext context, Map<String, dynamic> auction) {
+    // Debug: ตรวจสอบข้อมูล image
+    print('🔍 ALL_UPCOMING: auction[image] = ${auction['image']}');
+    print('🔍 ALL_UPCOMING: auction[title] = ${auction['title']}');
+    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       clipBehavior: Clip.antiAlias,
@@ -39,21 +89,7 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  auction['image'],
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 80,
-                      height: 80,
-                      color: Colors.grey[200],
-                      child:
-                          Icon(Icons.image_not_supported, color: Colors.grey),
-                    );
-                  },
-                ),
+                child: _buildAuctionImage(auction['image']),
               ),
               const SizedBox(width: 16),
               Expanded(

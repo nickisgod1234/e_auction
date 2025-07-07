@@ -755,7 +755,10 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
       return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
     }
     
-    if (imagePath.startsWith('http')) {
+    // ตรวจสอบว่าเป็น URL หรือไม่
+    final isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    
+    if (isUrl) {
       print('🔍 AUCTION_DETAIL: Using Image.network for URL: $imagePath');
       return Image.network(
         imagePath,

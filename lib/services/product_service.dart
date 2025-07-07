@@ -402,6 +402,9 @@ class ProductService {
     return 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
   }
 
+  // คืน URL รูปภาพ auction ที่ถูกต้อง (public)
+  String getAuctionImageUrl(String? imageName) => _getAuctionImageUrl(imageName);
+
   // แปลงข้อมูลสินค้าเป็นรูปแบบที่ใช้ในแอพ
   Map<String, dynamic> convertToAppFormat(Map<String, dynamic> product) {
     final imagePath = _getAuctionImageUrl(product['quotation_image']);
@@ -421,10 +424,10 @@ class ProductService {
       }
     }
 
-    // ใช้ข้อมูลจาก API ใหม่โดยตรง
+    // ใช้ข้อมูลจาก API response โดยตรง
     return {
-      'id': product['quotation_id'] ?? '',
-      'quotation_more_information_id': product['quotation_more_information_id'] ?? '',
+      'id': product['quotation_more_information_id'] ?? product['quotation_id'] ?? '',
+      'quotation_more_information_id': product['quotation_more_information_id'] ?? product['quotation_id'] ?? '',
       'title': product['short_text'] ?? product['description'] ?? 'สินค้าไม่ระบุ',
       'currentPrice': _safeToInt(product['current_price']),
       'startingPrice': _safeToInt(product['star_price']),
@@ -435,10 +438,18 @@ class ProductService {
       'auction_start_date': product['auction_start_date'] ?? '',
       'auction_end_date': product['auction_end_date'] ?? '',
       'status': status,
-      'currency': product['currency_code'] ?? '',
+      'currency': product['currency_code'] ?? 'THB',
       'bidCount': product['number_bidders'] ?? 0,
       'minimum_increase': _safeToInt(product['minimum_increase']),
       'item_note': product['item_note'] ?? '',
+      'brand': product['brand'] ?? 'ไม่ระบุ',
+      'model': product['model'] ?? 'ไม่ระบุ',
+      'material': product['material'] ?? 'ไม่ระบุ',
+      'size': product['size'] ?? 'ไม่ระบุ',
+      'color': product['color'] ?? 'ไม่ระบุ',
+      'condition': product['condition'] ?? 'ไม่ระบุ',
+      'sellerName': product['sellerName'] ?? 'CloudmateTH',
+      'sellerRating': product['sellerRating'] ?? '4.5',
     };
   }
 
