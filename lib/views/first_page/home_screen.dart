@@ -25,7 +25,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -39,10 +38,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _pdpaDialogShown = false;
-  
+
   // ProductService instance
   late ProductService _productService;
-  
+
   // Data lists
   List<Map<String, dynamic>> _currentAuctions = [];
   List<Map<String, dynamic>> _upcomingAuctions = [];
@@ -73,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       final currentAuctions = await _productService.getCurrentAuctions();
-      
+
       if (currentAuctions != null) {
         final formattedAuctions = currentAuctions.map((auction) {
           return _productService.convertToAppFormat(auction);
@@ -106,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       final upcomingAuctions = await _productService.getUpcomingAuctions();
-      
+
       if (upcomingAuctions != null) {
         final formattedAuctions = upcomingAuctions.map((auction) {
           return _productService.convertToAppFormat(auction);
@@ -140,12 +139,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final consent = prefs.getBool('userConsent') ?? false;
     final userId = prefs.getString('id') ?? '';
     final phoneNumber = prefs.getString('phone') ?? '';
-    
+
     // ไม่แสดง PDPA dialog สำหรับ Apple test account
     if (userId == 'APPLE_TEST_ID' || phoneNumber == '0001112345') {
       return;
     }
-    
+
     if (!consent && !_pdpaDialogShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showPdpaDialog();
@@ -163,7 +162,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: Row(
                 children: [
                   Icon(Icons.privacy_tip, color: Colors.black, size: 28),
@@ -171,7 +171,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Text(
                       'นโยบายความเป็นส่วนตัว (PDPA)',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.black),
                     ),
                   ),
                 ],
@@ -180,7 +183,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('บริษัทฯ จะเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านเพื่อวัตถุประสงค์ในการให้บริการตามที่ท่านร้องขอ โดยท่านสามารถศึกษารายละเอียดเพิ่มเติมได้ในนโยบายความเป็นส่วนตัวของบริษัทฯ'),
+                  Text(
+                      'บริษัทฯ จะเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านเพื่อวัตถุประสงค์ในการให้บริการตามที่ท่านร้องขอ โดยท่านสามารถศึกษารายละเอียดเพิ่มเติมได้ในนโยบายความเป็นส่วนตัวของบริษัทฯ'),
                   SizedBox(height: 16),
                   Row(
                     children: [
@@ -209,7 +213,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     await prefs.remove('refno');
                     if (mounted) {
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => RequestOtpLoginPage()),
+                        MaterialPageRoute(
+                            builder: (context) => RequestOtpLoginPage()),
                         (Route<dynamic> route) => false,
                       );
                     }
@@ -232,7 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  List<Map<String, dynamic>> _getFilteredAuctions(List<Map<String, dynamic>> auctions) {
+  List<Map<String, dynamic>> _getFilteredAuctions(
+      List<Map<String, dynamic>> auctions) {
     // Filter by search query if exists
     if (_searchQuery.isEmpty) {
       return auctions;
@@ -250,7 +256,8 @@ class _HomeScreenState extends State<HomeScreen> {
     LoadingService.instance.show();
     // Simulate a network delay or data fetching
     await Future.delayed(const Duration(milliseconds: 300));
-    LoadingService.instance.hide(); // Hide the loader BEFORE pushing the new page
+    LoadingService.instance
+        .hide(); // Hide the loader BEFORE pushing the new page
 
     if (mounted) {
       await Navigator.push(
@@ -263,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onItemTapped(int index) async {
     setState(() {
       _selectedIndex = index;
-      
+
       // Reset search when home tab is tapped
       if (index == 0) {
         _searchQuery = '';
@@ -271,13 +278,14 @@ class _HomeScreenState extends State<HomeScreen> {
         _isSearching = false;
       }
     });
-    
+
     // Navigate to different pages based on selected index
-    if (index == 2) { // Settings tab
+    if (index == 2) {
+      // Settings tab
       await _navigateToPage(context, SettingPage());
       setState(() => _selectedIndex = 0); // Reset index after returning
     } else {
-       setState(() {
+      setState(() {
         _selectedIndex = index;
         if (index == 0) {
           _searchQuery = '';
@@ -489,7 +497,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           '• บริษัทฯ ขอสงวนสิทธิ์ในการยกเลิกหรือเลื่อนการประมูลโดยไม่ต้องแจ้งเหตุผล   '
                           '• คำตัดสินของคณะกรรมการหรือผู้แทนบริษัทฯ ถือเป็นที่สิ้นสุด   '
                           '• บริษัทฯ ไม่รับผิดชอบต่อความเสียหายหรือข้อพิพาทที่อาจเกิดขึ้นหลังจากการส่งมอบสินค้า',
-                          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 14),
+                          style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14),
                           maxLines: 1,
                           overflow: TextOverflow.visible,
                         ),
@@ -560,21 +571,26 @@ class _HomeScreenState extends State<HomeScreen> {
                             scrollDirection: Axis.horizontal,
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             itemCount: 1,
-                            itemBuilder: (context, index) => _buildErrorCard(_errorMessage!),
+                            itemBuilder: (context, index) =>
+                                _buildErrorCard(_errorMessage!),
                           )
                         : filteredCurrentAuctions.isEmpty
                             ? ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                                 itemCount: 1,
-                                itemBuilder: (context, index) => _buildEmptyCard('ไม่มีรายการประมูลปัจจุบัน'),
+                                itemBuilder: (context, index) =>
+                                    _buildEmptyCard(
+                                        'ไม่มีรายการประมูลปัจจุบัน'),
                               )
                             : ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                                 itemCount: filteredCurrentAuctions.length,
                                 itemBuilder: (context, index) {
-                                  return CurrentAuctionCard(auctionData: filteredCurrentAuctions[index]);
+                                  return CurrentAuctionCard(
+                                      auctionData:
+                                          filteredCurrentAuctions[index]);
                                 },
                               ),
               ),
@@ -624,21 +640,26 @@ class _HomeScreenState extends State<HomeScreen> {
                             scrollDirection: Axis.horizontal,
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             itemCount: 1,
-                            itemBuilder: (context, index) => _buildErrorCard(_errorMessage!),
+                            itemBuilder: (context, index) =>
+                                _buildErrorCard(_errorMessage!),
                           )
                         : filteredUpcomingAuctions.isEmpty
                             ? ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                                 itemCount: 1,
-                                itemBuilder: (context, index) => _buildEmptyCard('ไม่มีรายการประมูลที่กำลังจะมาถึง'),
+                                itemBuilder: (context, index) =>
+                                    _buildEmptyCard(
+                                        'ไม่มีรายการประมูลที่กำลังจะมาถึง'),
                               )
                             : ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                                 itemCount: filteredUpcomingAuctions.length,
                                 itemBuilder: (context, index) {
-                                  return UpcomingAuctionCard(auctionData: filteredUpcomingAuctions[index]);
+                                  return UpcomingAuctionCard(
+                                      auctionData:
+                                          filteredUpcomingAuctions[index]);
                                 },
                               ),
               ),
@@ -657,7 +678,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    
                   ],
                 ),
               ),
@@ -724,7 +744,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              
+
               // Bottom spacing
               SizedBox(height: 20),
             ],

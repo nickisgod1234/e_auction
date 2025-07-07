@@ -6,7 +6,8 @@ import 'package:e_auction/views/first_page/widgets/auction_dialogs.dart';
 import 'dart:async';
 
 // Helper function to build auction image widget
-Widget _buildAuctionImage(String imagePath, {double? width, double? height, BoxFit fit = BoxFit.cover}) {
+Widget _buildAuctionImage(String imagePath,
+    {double? width, double? height, BoxFit fit = BoxFit.cover}) {
   // Check if the image path is a network URL
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return Image.network(
@@ -62,7 +63,8 @@ class ActiveBidCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: small ? 4 : 16, vertical: small ? 6 : 8),
+      margin: EdgeInsets.symmetric(
+          horizontal: small ? 4 : 16, vertical: small ? 6 : 8),
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -72,17 +74,24 @@ class ActiveBidCard extends StatelessWidget {
             height: small ? 44 : 60,
           ),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
+        contentPadding: EdgeInsets.symmetric(
+            horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
         title: Text(
           auction['title'],
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: small ? 14 : 16),
+          style:
+              TextStyle(fontWeight: FontWeight.bold, fontSize: small ? 14 : 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('การประมูลของฉัน: ${Format.formatCurrency(auction['myBid'])}', style: TextStyle(fontSize: small ? 12 : 14)),
-            Text('ราคาปัจจุบัน: ${Format.formatCurrency(auction['currentPrice'])}', style: TextStyle(fontSize: small ? 12 : 14)),
-            Text('${auction['timeRemaining']} • อันดับที่ ${auction['myBidRank']}', style: TextStyle(fontSize: small ? 12 : 14)),
+            Text('การประมูลของฉัน: ${Format.formatCurrency(auction['myBid'])}',
+                style: TextStyle(fontSize: small ? 12 : 14)),
+            Text(
+                'ราคาปัจจุบัน: ${Format.formatCurrency(auction['currentPrice'])}',
+                style: TextStyle(fontSize: small ? 12 : 14)),
+            Text(
+                '${auction['timeRemaining']} • อันดับที่ ${auction['myBidRank']}',
+                style: TextStyle(fontSize: small ? 12 : 14)),
           ],
         ),
         trailing: Container(
@@ -93,7 +102,10 @@ class ActiveBidCard extends StatelessWidget {
           ),
           child: Text(
             getStatusText(auction['status'] ?? 'unknown'),
-            style: TextStyle(color: Colors.white, fontSize: small ? 10 : 12, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: small ? 10 : 12,
+                fontWeight: FontWeight.bold),
           ),
         ),
         onTap: onTap,
@@ -117,7 +129,8 @@ class WonAuctionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: small ? 4 : 16, vertical: small ? 6 : 8),
+      margin: EdgeInsets.symmetric(
+          horizontal: small ? 4 : 16, vertical: small ? 6 : 8),
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -127,16 +140,20 @@ class WonAuctionCard extends StatelessWidget {
             height: small ? 44 : 60,
           ),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
+        contentPadding: EdgeInsets.symmetric(
+            horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
         title: Text(
           auction['title'],
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: small ? 14 : 16),
+          style:
+              TextStyle(fontWeight: FontWeight.bold, fontSize: small ? 14 : 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ราคาสุดท้าย: ${Format.formatCurrency(auction['finalPrice'])}', style: TextStyle(fontSize: small ? 12 : 14)),
-            Text('${auction['completedDate']} • ${auction['sellerName']}', style: TextStyle(fontSize: small ? 12 : 14)),
+            Text('ราคาสุดท้าย: ${Format.formatCurrency(auction['finalPrice'])}',
+                style: TextStyle(fontSize: small ? 12 : 14)),
+            Text('${auction['completedDate']} • ${auction['sellerName']}',
+                style: TextStyle(fontSize: small ? 12 : 14)),
             Text(
               'เลขที่ประมูล: ${auction['auctionId']}',
               style: TextStyle(
@@ -146,9 +163,13 @@ class WonAuctionCard extends StatelessWidget {
               ),
             ),
             Text(
-              auction['paymentStatus'] == 'paid' ? 'ชำระเงินแล้ว' : 'รอชำระเงิน',
+              auction['paymentStatus'] == 'paid'
+                  ? 'ชำระเงินแล้ว'
+                  : 'รอชำระเงิน',
               style: TextStyle(
-                color: auction['paymentStatus'] == 'paid' ? Colors.green : Colors.orange,
+                color: auction['paymentStatus'] == 'paid'
+                    ? Colors.green
+                    : Colors.orange,
                 fontWeight: FontWeight.bold,
                 fontSize: small ? 12 : 14,
               ),
@@ -159,7 +180,8 @@ class WonAuctionCard extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: onPaymentTap,
                   icon: Icon(Icons.edit, size: small ? 14 : 16),
-                  label: Text('กรอกข้อมูลผู้ชนะ', style: TextStyle(fontSize: small ? 12 : 14)),
+                  label: Text('กรอกข้อมูลผู้ชนะ',
+                      style: TextStyle(fontSize: small ? 12 : 14)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -174,7 +196,8 @@ class WonAuctionCard extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: null,
                   icon: Icon(Icons.check_circle, size: small ? 14 : 16),
-                  label: Text('ชำระเงินแล้ว', style: TextStyle(fontSize: small ? 12 : 14)),
+                  label: Text('ชำระเงินแล้ว',
+                      style: TextStyle(fontSize: small ? 12 : 14)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[400],
                     foregroundColor: Colors.grey[600],
@@ -195,7 +218,10 @@ class WonAuctionCard extends StatelessWidget {
           ),
           child: Text(
             'ชนะ',
-            style: TextStyle(color: Colors.white, fontSize: small ? 10 : 12, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: small ? 10 : 12,
+                fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -216,7 +242,8 @@ class LostAuctionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: small ? 4 : 16, vertical: small ? 6 : 8),
+      margin: EdgeInsets.symmetric(
+          horizontal: small ? 4 : 16, vertical: small ? 6 : 8),
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -226,17 +253,20 @@ class LostAuctionCard extends StatelessWidget {
             height: small ? 44 : 60,
           ),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
+        contentPadding: EdgeInsets.symmetric(
+            horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
         title: Text(
           auction['title'],
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: small ? 14 : 16),
+          style:
+              TextStyle(fontWeight: FontWeight.bold, fontSize: small ? 14 : 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.sentiment_dissatisfied, size: small ? 12 : 14, color: Colors.red[600]),
+                Icon(Icons.sentiment_dissatisfied,
+                    size: small ? 12 : 14, color: Colors.red[600]),
                 SizedBox(width: 4),
                 Text(
                   'ไม่ชนะการประมูล',
@@ -248,9 +278,16 @@ class LostAuctionCard extends StatelessWidget {
                 ),
               ],
             ),
-            Text('การประมูลของฉัน: ${Format.formatCurrency(auction['myBid'])}', style: TextStyle(fontSize: small ? 12 : 14)),
-            Text('ราคาที่ชนะ: ${Format.formatCurrency(auction['winnerBid'])}', style: TextStyle(fontSize: small ? 12 : 14, fontWeight: FontWeight.w600, color: Colors.red[600])),
-            Text('${auction['completedDate']} • ${auction['sellerName']}', style: TextStyle(fontSize: small ? 12 : 14, color: Colors.grey[600])),
+            Text('การประมูลของฉัน: ${Format.formatCurrency(auction['myBid'])}',
+                style: TextStyle(fontSize: small ? 12 : 14)),
+            Text('ราคาที่ชนะ: ${Format.formatCurrency(auction['winnerBid'])}',
+                style: TextStyle(
+                    fontSize: small ? 12 : 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red[600])),
+            Text('${auction['completedDate']} • ${auction['sellerName']}',
+                style: TextStyle(
+                    fontSize: small ? 12 : 14, color: Colors.grey[600])),
           ],
         ),
         trailing: Container(
@@ -261,7 +298,10 @@ class LostAuctionCard extends StatelessWidget {
           ),
           child: Text(
             'ไม่ชนะ',
-            style: TextStyle(color: Colors.white, fontSize: small ? 10 : 12, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: small ? 10 : 12,
+                fontWeight: FontWeight.w600),
           ),
         ),
       ),
@@ -273,7 +313,8 @@ class LostAuctionCard extends StatelessWidget {
 class CountdownTimerWidget extends StatefulWidget {
   final DateTime endTime;
   final TextStyle? style;
-  const CountdownTimerWidget({Key? key, required this.endTime, this.style}) : super(key: key);
+  const CountdownTimerWidget({Key? key, required this.endTime, this.style})
+      : super(key: key);
 
   @override
   State<CountdownTimerWidget> createState() => _CountdownTimerWidgetState();
@@ -311,7 +352,8 @@ class _CountdownTimerWidgetState extends State<CountdownTimerWidget> {
     final seconds = _remaining.inSeconds % 60;
     return Text(
       '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-      style: widget.style ?? TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+      style: widget.style ??
+          TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
     );
   }
 }
@@ -367,7 +409,8 @@ Widget buildWonAuctionCard(
                 ),
                 Row(
                   children: [
-                    Icon(Icons.emoji_events, size: 14, color: Colors.green[600]),
+                    Icon(Icons.emoji_events,
+                        size: 14, color: Colors.green[600]),
                     SizedBox(width: 4),
                     Text(
                       'ชนะการประมูล',
@@ -406,18 +449,20 @@ Widget buildWonAuctionCard(
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[400]!),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.grey[400]!),
                               ),
                             ),
                           ),
                         );
                       }
                       final isAppleTest = snapshot.data ?? false;
-                      
+
                       // ไม่แสดงปุ่มกรอกข้อมูลสำหรับ Apple test account
                       if (isAppleTest) {
                         return Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
                             borderRadius: BorderRadius.circular(8),
@@ -426,7 +471,8 @@ Widget buildWonAuctionCard(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.info, size: 16, color: Colors.grey[600]),
+                              Icon(Icons.info,
+                                  size: 16, color: Colors.grey[600]),
                               SizedBox(width: 4),
                               Text(
                                 'บัญชีทดสอบ',
@@ -440,11 +486,12 @@ Widget buildWonAuctionCard(
                           ),
                         );
                       }
-                      
+
                       return FutureBuilder<bool>(
                         future: hasWinnerInfo(),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
                             return Container(
                               height: 32,
                               child: Center(
@@ -453,7 +500,8 @@ Widget buildWonAuctionCard(
                                   height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[400]!),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.grey[400]!),
                                   ),
                                 ),
                               ),
@@ -481,16 +529,22 @@ Widget buildWonAuctionCard(
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(8),
                                         onTap: () async {
-                                          if (await validateWinnerInfo(context)) {
-                                            AuctionDialogs.showPaymentDialog(context, auction);
+                                          if (await validateWinnerInfo(
+                                              context)) {
+                                            AuctionDialogs.showPaymentDialog(
+                                                context, auction);
                                           }
                                         },
                                         child: Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 0),
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 4, horizontal: 0),
                                           child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
-                                              Icon(Icons.credit_card, color: Colors.black, size: 16),
+                                              Icon(Icons.credit_card,
+                                                  color: Colors.black,
+                                                  size: 16),
                                               SizedBox(width: 2),
                                               Text(
                                                 'ติดต่อชำระเงิน',
@@ -511,11 +565,16 @@ Widget buildWonAuctionCard(
                                   onPressed: () async {
                                     await loadProfileAndShowDialog(auction);
                                   },
-                                  icon: Icon(Icons.edit, size: 16, color: Colors.grey[600]),
-                                  label: Text('แก้ไขข้อมูลผู้ชนะ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                                  icon: Icon(Icons.edit,
+                                      size: 16, color: Colors.grey[600]),
+                                  label: Text('แก้ไขข้อมูลผู้ชนะ',
+                                      style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w600)),
                                   style: TextButton.styleFrom(
                                     foregroundColor: Colors.grey[600],
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
                                   ),
                                 ),
                               ],
@@ -525,12 +584,15 @@ Widget buildWonAuctionCard(
                               onPressed: () async {
                                 await loadProfileAndShowDialog(auction);
                               },
-                              icon: Icon(Icons.edit, size: 16, color: Colors.black),
-                              label: Text('กรอกข้อมูลผู้ชนะ', style: TextStyle(color: Colors.black)),
+                              icon: Icon(Icons.edit,
+                                  size: 16, color: Colors.black),
+                              label: Text('กรอกข้อมูลผู้ชนะ',
+                                  style: TextStyle(color: Colors.black)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: Colors.black,
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -554,7 +616,8 @@ Widget buildWonAuctionCard(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, size: 16, color: Colors.green[600]),
+                        Icon(Icons.check_circle,
+                            size: 16, color: Colors.green[600]),
                         SizedBox(width: 4),
                         Text(
                           'ชำระเงินแล้ว',
@@ -597,7 +660,7 @@ Future<bool> _isAppleTestAccount() async {
   final prefs = await SharedPreferences.getInstance();
   final userId = prefs.getString('id') ?? '';
   final phoneNumber = prefs.getString('phone') ?? '';
-  
+
   return userId == 'APPLE_TEST_ID' || phoneNumber == '0001112345';
 }
 
@@ -611,7 +674,13 @@ Future<bool> validateWinnerInfo(BuildContext context) async {
   final districtId = prefs.getString('winner_district_id') ?? '';
   final subDistrictId = prefs.getString('winner_sub_district_id') ?? '';
 
-  if (firstname.isEmpty || lastname.isEmpty || phone.isEmpty || address.isEmpty || provinceId.isEmpty || districtId.isEmpty || subDistrictId.isEmpty) {
+  if (firstname.isEmpty ||
+      lastname.isEmpty ||
+      phone.isEmpty ||
+      address.isEmpty ||
+      provinceId.isEmpty ||
+      districtId.isEmpty ||
+      subDistrictId.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('กรุณากรอกข้อมูลผู้ชนะให้ครบถ้วน'),
@@ -623,7 +692,8 @@ Future<bool> validateWinnerInfo(BuildContext context) async {
   return true;
 }
 
-Widget buildEmptyState({required IconData icon, required String title, required String subtitle}) {
+Widget buildEmptyState(
+    {required IconData icon, required String title, required String subtitle}) {
   return Center(
     child: Container(
       padding: EdgeInsets.all(32),
@@ -668,4 +738,4 @@ Widget buildEmptyState({required IconData icon, required String title, required 
       ),
     ),
   );
-} 
+}

@@ -21,7 +21,8 @@ class MyAuctionsPage extends StatefulWidget {
   State<MyAuctionsPage> createState() => _MyAuctionsPageState();
 }
 
-class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProviderStateMixin {
+class _MyAuctionsPageState extends State<MyAuctionsPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedTabIndex = 0;
 
@@ -54,8 +55,6 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   List<Map<String, dynamic>> _wonAuctions = [];
   bool _isLoadingWonAuctions = true;
 
- 
-
   @override
   void initState() {
     super.initState();
@@ -69,7 +68,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     _loadAddressData();
     _loadUserBidHistory();
     _loadUserWonAuctions();
-    
+
     // ประกาศผู้ชนะอัตโนมัติเมื่อเข้ามาหน้านี้
     // _autoTriggerWinnerAnnouncement();
   }
@@ -96,7 +95,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
 
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('id') ?? '';
-      
+
       if (userId.isEmpty) {
         setState(() {
           _wonAuctions = [];
@@ -104,19 +103,19 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         });
         return;
       }
-      
+
       // ดึงข้อมูลผู้ชนะตาม user_id
-      print('🐞 DEBUG: เริ่มเรียก WinnerService.getWinnersByUserId($userId)');
+
       final result = await WinnerService.getWinnersByUserId(userId);
-      print('🐞 DEBUG: WinnerService.getWinnersByUserId($userId) result = ' + result.toString());
-      
+
       if (result['status'] == 'success' && result['data'] != null) {
         final winners = result['data'] as List;
-        
+
         if (winners.isNotEmpty) {
           // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
-          final convertedWinners = WinnerService.convertWinnersToAppFormat(winners);
-          
+          final convertedWinners =
+              WinnerService.convertWinnersToAppFormat(winners);
+
           setState(() {
             _wonAuctions = convertedWinners;
             _isLoadingWonAuctions = false;
@@ -150,7 +149,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
 
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('id') ?? '';
-      
+
       if (userId.isEmpty) {
         setState(() {
           _activeBids = [];
@@ -158,23 +157,25 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
         });
         return;
       }
-      
+
       // ดึงประวัติการประมูลจาก API
       final result = await UserBidHistoryService.getUserBidHistory(userId);
-      
+
       if (result['status'] == 'success' && result['data'] != null) {
         final bidHistory = result['data']['bid_history'] as List;
-        
+
         if (bidHistory.isNotEmpty) {
           // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
-          final convertedBids = UserBidHistoryService.convertBidHistoryToAppFormat(bidHistory);
-          
+          final convertedBids =
+              UserBidHistoryService.convertBidHistoryToAppFormat(bidHistory);
+
           // จัดกลุ่มตาม quotation และหา bid สูงสุด
-          final highestBids = UserBidHistoryService.getHighestBidsByQuotation(convertedBids);
-          
+          final highestBids =
+              UserBidHistoryService.getHighestBidsByQuotation(convertedBids);
+
           // แปลงเป็น List
           final uniqueBids = highestBids.values.toList();
-          
+
           setState(() {
             _activeBids = uniqueBids;
             _isLoadingActiveBids = false;
@@ -203,104 +204,79 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   }
 
   // เช็คและประกาศผู้ชนะสำหรับ auction ที่หมดเวลาแล้ว
-  Future<void> _checkAndAnnounceWinners(List<Map<String, dynamic>> auctions, String userId) async {
+  Future<void> _checkAndAnnounceWinners(
+      List<Map<String, dynamic>> auctions, String userId) async {
     try {
-      print('📱 MY_AUCTIONS: Starting winner check for ${auctions.length} auctions...');
-      
       for (final auction in auctions) {
         final endDate = auction['auction_end_date'];
         final endTime = auction['auction_end_time'];
         final auctionId = auction['id'];
         final title = auction['title'];
-        
-        print('📱 MY_AUCTIONS: Checking auction "$title" (ID: $auctionId)');
-        print('📱 MY_AUCTIONS: End date: $endDate, End time: $endTime');
-        
+
         // เช็คว่า auction หมดเวลาหรือยัง
         bool isEnded = false;
         if (endDate != null && endDate.isNotEmpty) {
           isEnded = isAuctionEnded(endDate, endTime);
         } else {
-          print('📱 MY_AUCTIONS: No end date in auction data, will check via API...');
           // ถ้าไม่มี end date ในข้อมูล ให้ใช้ API เช็คแทน
           isEnded = true; // ให้ API เป็นตัวตัดสินใจ
         }
-        
+
         if (isEnded) {
-          print('📱 MY_AUCTIONS: Auction "$title" has ended! Checking if already announced...');
-          
           // เช็คว่าการประมูลนี้ถูกประกาศผู้ชนะแล้วหรือยัง
           try {
-            final isAlreadyAnnounced = await WinnerService.isWinnerAnnounced(auctionId);
-            
+            final isAlreadyAnnounced =
+                await WinnerService.isWinnerAnnounced(auctionId);
+
             if (!isAlreadyAnnounced) {
-              print('📱 MY_AUCTIONS: Auction "$title" not announced yet! Triggering winner announcement...');
-              
               // เรียกใช้ trigger ประกาศผู้ชนะโดยตรง - ส่งแค่ user_id อย่างเดียว
-              final result = await WinnerService.triggerAnnounceWinner(auctionId, userId);
-              print('📱 MY_AUCTIONS: Trigger result: ${result['status']} - ${result['message']}');
-              
+              final result =
+                  await WinnerService.triggerAnnounceWinner(auctionId, userId);
+
               // ถ้าประกาศสำเร็จ ให้ refresh ข้อมูล
               if (result['status'] == 'success') {
-                print('📱 MY_AUCTIONS: Winner announced successfully! Refreshing data...');
                 // รีเฟรชข้อมูลหลังจากประกาศผู้ชนะสำเร็จ
                 await _loadUserWonAuctions();
               } else {
-                print('⚠️ MY_AUCTIONS: Winner announcement failed: ${result['message']}');
                 // ไม่ throw error เพราะอาจเป็นเพราะประกาศไปแล้ว
               }
-            } else {
-              print('📱 MY_AUCTIONS: Auction "$title" already announced, skipping...');
-            }
+            } else {}
           } catch (e) {
-            print('❌ MY_AUCTIONS: Error checking winner announcement status: $e');
             // ถ้าเช็คไม่ได้ ให้ลองประกาศเลย
-            print('📱 MY_AUCTIONS: Trying to announce winner anyway...');
+
             try {
-              final result = await WinnerService.triggerAnnounceWinner(auctionId, userId);
-              print('📱 MY_AUCTIONS: Fallback trigger result: ${result['status']} - ${result['message']}');
+              final result =
+                  await WinnerService.triggerAnnounceWinner(auctionId, userId);
+
               if (result['status'] == 'success') {
                 await _loadUserWonAuctions();
-              } else {
-                print('⚠️ MY_AUCTIONS: Fallback announcement failed: ${result['message']}');
-              }
+              } else {}
             } catch (fallbackError) {
-              print('⚠️ MY_AUCTIONS: Fallback announcement also failed: $fallbackError');
               // ไม่ throw error ออกไป
             }
           }
-        } else {
-          print('⏰ MY_AUCTIONS: Auction "$title" not ended yet');
-        }
+        } else {}
       }
-      
-      print('📱 MY_AUCTIONS: Winner check completed for all auctions');
     } catch (e) {
-      print('❌ MY_AUCTIONS: Error in winner check: $e');
       // ไม่แสดง error ให้ user เห็น เพราะเป็น background process
     }
   }
 
   // ฟังก์ชันใหม่: ประกาศผู้ชนะด้วยตนเอง (สำหรับทดสอบ)
-  Future<void> _manualTriggerWinnerAnnouncement(String auctionId, String userId) async {
+  Future<void> _manualTriggerWinnerAnnouncement(
+      String auctionId, String userId) async {
     try {
-      print('🔧 MANUAL: Manual winner announcement triggered for auction: $auctionId');
-      print('🔧 MANUAL: Announced by user: $userId');
-      
-      final result = await WinnerService.triggerAnnounceWinner(auctionId, userId);
-      print('🔧 MANUAL: Trigger result: ${result['status']} - ${result['message']}');
-      
+      final result =
+          await WinnerService.triggerAnnounceWinner(auctionId, userId);
+
       if (result['status'] == 'success') {
-        print('🎉 MANUAL: Winner announced successfully!');
         // รีเฟรชข้อมูล
         await _loadUserWonAuctions();
         await _loadUserBidHistory();
       } else {
-        print('⚠️ MANUAL: Winner announcement failed: ${result['message']}');
         // ไม่ throw error เพราะอาจเป็นเพราะประกาศไปแล้ว
       }
     } catch (e) {
-      print('⚠️ MANUAL: Error in manual winner announcement: $e');
       // ไม่ throw error ออกไป เพราะอาจเป็นเพราะประกาศไปแล้ว
     }
   }
@@ -309,17 +285,17 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   // Future<void> _autoTriggerWinnerAnnouncement() async {
   //   try {
   //     print('🚀 AUTO: Auto winner announcement triggered when entering page...');
-      
+
   //     final prefs = await SharedPreferences.getInstance();
   //     final userId = prefs.getString('id') ?? '';
-      
+
   //     if (userId.isEmpty) {
   //       print('❌ AUTO: No user ID found, skipping auto announcement');
   //       return;
   //     }
-      
+
   //     print('🚀 AUTO: Announcing winners for user: $userId');
-      
+
   //     // ประกาศผู้ชนะสำหรับ auction ID 8 (ตามตัวอย่าง)
   //     // เปลี่ยนเป็น try-catch เพื่อไม่ให้ error หยุดการทำงาน
   //     try {
@@ -328,11 +304,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   //       print('⚠️ AUTO: Failed to announce winner for auction 8: $e');
   //       // ไม่ throw error ออกไป เพราะอาจเป็นเพราะประกาศไปแล้ว
   //     }
-      
+
   //     // สามารถเพิ่ม auction ID อื่นๆ ได้ที่นี่
   //     // await _manualTriggerWinnerAnnouncement('9', userId);
   //     // await _manualTriggerWinnerAnnouncement('10', userId);
-      
+
   //   } catch (e) {
   //     print('❌ AUTO: Error in auto winner announcement: $e');
   //   }
@@ -405,29 +381,18 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       final provinceId = prefs.getString('winner_province_id') ?? '';
       final districtId = prefs.getString('winner_district_id') ?? '';
       final subDistrictId = prefs.getString('winner_sub_district_id') ?? '';
-      
+
       // ตรวจสอบข้อมูลที่จำเป็น
-      final hasRequiredInfo = firstname.isNotEmpty && 
-                             lastname.isNotEmpty && 
-                             phone.isNotEmpty && 
-                             address.isNotEmpty && 
-                             provinceId.isNotEmpty && 
-                             districtId.isNotEmpty && 
-                             subDistrictId.isNotEmpty;
-      
-      print('🔍 HAS_WINNER_INFO: Checking winner info...');
-      print('🔍 HAS_WINNER_INFO: firstname: ${firstname.isNotEmpty ? "✓" : "✗"}');
-      print('🔍 HAS_WINNER_INFO: lastname: ${lastname.isNotEmpty ? "✓" : "✗"}');
-      print('🔍 HAS_WINNER_INFO: phone: ${phone.isNotEmpty ? "✓" : "✗"}');
-      print('🔍 HAS_WINNER_INFO: address: ${address.isNotEmpty ? "✓" : "✗"}');
-      print('🔍 HAS_WINNER_INFO: provinceId: ${provinceId.isNotEmpty ? "✓" : "✗"}');
-      print('🔍 HAS_WINNER_INFO: districtId: ${districtId.isNotEmpty ? "✓" : "✗"}');
-      print('🔍 HAS_WINNER_INFO: subDistrictId: ${subDistrictId.isNotEmpty ? "✓" : "✗"}');
-      print('🔍 HAS_WINNER_INFO: Has complete info: $hasRequiredInfo');
-      
+      final hasRequiredInfo = firstname.isNotEmpty &&
+          lastname.isNotEmpty &&
+          phone.isNotEmpty &&
+          address.isNotEmpty &&
+          provinceId.isNotEmpty &&
+          districtId.isNotEmpty &&
+          subDistrictId.isNotEmpty;
+
       return hasRequiredInfo;
     } catch (e) {
-      print('❌ HAS_WINNER_INFO: Error checking winner info: $e');
       return false;
     }
   }
@@ -437,7 +402,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('id') ?? '';
-      
+
       if (userId.isEmpty) {
         throw Exception('ไม่พบข้อมูล ID ผู้ใช้');
       }
@@ -445,7 +410,9 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       // สร้างข้อมูลผู้ชนะจาก form controllers
       final winnerInfo = WinnerService.createWinnerInfo(
         customerId: userId,
-        fullname: '${_controllers['firstname']!.text} ${_controllers['lastname']!.text}'.trim(),
+        fullname:
+            '${_controllers['firstname']!.text} ${_controllers['lastname']!.text}'
+                .trim(),
         email: _controllers['email']!.text,
         phone: _controllers['phone']!.text,
         addr: _controllers['address']!.text,
@@ -458,30 +425,30 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
 
       // บันทึกข้อมูลผู้ชนะ
       final result = await WinnerService.saveWinnerInfo(winnerInfo);
-      
+
       if (result['success'] == true) {
-        print('✅ บันทึกข้อมูลผู้ชนะเรียบร้อยแล้ว');
-        print('✅ ข้อมูลที่บันทึก: ${result['data']}');
-        
         // บันทึกข้อมูลลง SharedPreferences ด้วย prefix winner_ เพื่อให้ validateWinnerInfo ใช้งานได้
-        await prefs.setString('winner_firstname', _controllers['firstname']!.text);
-        await prefs.setString('winner_lastname', _controllers['lastname']!.text);
+        await prefs.setString(
+            'winner_firstname', _controllers['firstname']!.text);
+        await prefs.setString(
+            'winner_lastname', _controllers['lastname']!.text);
         await prefs.setString('winner_phone', _controllers['phone']!.text);
         await prefs.setString('winner_address', _controllers['address']!.text);
-        await prefs.setString('winner_tax_number', _controllers['taxNumber']!.text);
+        await prefs.setString(
+            'winner_tax_number', _controllers['taxNumber']!.text);
         await prefs.setString('winner_email', _controllers['email']!.text);
-        await prefs.setString('winner_province_id', _controllers['provinceId']!.text);
-        await prefs.setString('winner_district_id', _controllers['districtId']!.text);
-        await prefs.setString('winner_sub_district_id', _controllers['subDistrictId']!.text);
+        await prefs.setString(
+            'winner_province_id', _controllers['provinceId']!.text);
+        await prefs.setString(
+            'winner_district_id', _controllers['districtId']!.text);
+        await prefs.setString(
+            'winner_sub_district_id', _controllers['subDistrictId']!.text);
         await prefs.setString('winner_sub', _controllers['sub']!.text);
         await prefs.setString('winner_zip_code', _controllers['zipCode']!.text);
-        
-        print('✅ บันทึกข้อมูลลง SharedPreferences เรียบร้อยแล้ว');
       } else {
         throw Exception('บันทึกข้อมูลไม่สำเร็จ: ${result['message']}');
       }
     } catch (e) {
-      print('Error saving winner info: $e');
       rethrow;
     }
   }
@@ -495,26 +462,23 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   bool isAuctionEnded(String? endDate, [String? endTime]) {
     try {
       String? dateToCheck = endDate;
-      if ((dateToCheck == null || dateToCheck.isEmpty) && endTime != null && endTime.isNotEmpty) {
+      if ((dateToCheck == null || dateToCheck.isEmpty) &&
+          endTime != null &&
+          endTime.isNotEmpty) {
         dateToCheck = endTime;
       }
       if (dateToCheck == null || dateToCheck.isEmpty) return false;
-      
+
       String dateTimeString = dateToCheck;
       if (endTime != null && endTime.isNotEmpty && !dateToCheck.contains(' ')) {
         dateTimeString = '$dateToCheck $endTime';
       }
-      
+
       final end = DateTime.parse(dateTimeString);
       final now = DateTime.now();
-      
-      print('📱 MY_AUCTIONS: Current time: ${now.toString()}');
-      print('📱 MY_AUCTIONS: End time: ${end.toString()}');
-      print('📱 MY_AUCTIONS: Is auction ended? ${now.isAfter(end)}');
-      
+
       return now.isAfter(end);
     } catch (e) {
-      print('❌ MY_AUCTIONS: Error parsing date: $e');
       return false;
     }
   }
@@ -522,21 +486,25 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   // เพิ่มฟังก์ชันคำนวณอันดับ
   int getUserBidRank(List<dynamic> bidHistory, String userId) {
     final sorted = List<Map<String, dynamic>>.from(bidHistory)
-      ..sort((a, b) => (b['bid_amount'] as num).compareTo(a['bid_amount'] as num));
-    final idx = sorted.indexWhere((bid) => bid['bidder_id'].toString() == userId);
+      ..sort(
+          (a, b) => (b['bid_amount'] as num).compareTo(a['bid_amount'] as num));
+    final idx =
+        sorted.indexWhere((bid) => bid['bidder_id'].toString() == userId);
     return idx >= 0 ? idx + 1 : -1;
   }
 
   @override
   Widget build(BuildContext context) {
     // Filter lists for each tab using 'auction_end_date' or fallback to 'auction_end_time'
-    final List<Map<String, dynamic>> filteredActiveBids = _activeBids.where((auction) {
+    final List<Map<String, dynamic>> filteredActiveBids =
+        _activeBids.where((auction) {
       final endDate = auction['auction_end_date'];
       final endTime = auction['auction_end_time'];
       return !isAuctionEnded(endDate, endTime);
     }).toList();
     // For won tab, use only _wonAuctions from WinnerService
-    final List<Map<String, dynamic>> filteredWonAuctions = _wonAuctions.where((auction) {
+    final List<Map<String, dynamic>> filteredWonAuctions =
+        _wonAuctions.where((auction) {
       final endDate = auction['auction_end_date'];
       final endTime = auction['auction_end_time'];
       return isAuctionEnded(endDate, endTime);
@@ -561,16 +529,16 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
           icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-                actions: [
-                  // ปุ่มรีเฟรช
-                  IconButton(
-                    icon: Icon(Icons.refresh, color: Colors.black, size: 20),
-                    onPressed: () {
-                      _loadUserBidHistory();
-                      _loadUserWonAuctions();
-                    },
-                  ),
-                ],
+        actions: [
+          // ปุ่มรีเฟรช
+          IconButton(
+            icon: Icon(Icons.refresh, color: Colors.black, size: 20),
+            onPressed: () {
+              _loadUserBidHistory();
+              _loadUserWonAuctions();
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -605,7 +573,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                     child: Text(
                       'กำลังประมูล\n${filteredActiveBids.length}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -615,7 +584,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                     child: Text(
                       'ชนะ\n${filteredWonAuctions.length}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -639,7 +609,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                             padding: EdgeInsets.symmetric(horizontal: 8),
                             itemCount: filteredActiveBids.length,
                             itemBuilder: (context, index) {
-                              final auction = Map<String, dynamic>.from(filteredActiveBids[index]);
+                              final auction = Map<String, dynamic>.from(
+                                  filteredActiveBids[index]);
                               final prefs = SharedPreferences.getInstance();
                               return FutureBuilder<SharedPreferences>(
                                 future: prefs,
@@ -649,16 +620,26 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                                     return ActiveBidCard(
                                       auction: auction,
                                       onTap: () async {
-                                        final productService = ProductService(baseUrl: Config.apiUrlAuction);
-                                        final quotationId = auction['quotation_more_information_id'] ?? auction['id'];
+                                        final productService = ProductService(
+                                            baseUrl: Config.apiUrlAuction);
+                                        final quotationId = auction[
+                                                'quotation_more_information_id'] ??
+                                            auction['id'];
                                         // ดึงข้อมูลล่าสุดจาก API (เหมือนหน้า home)
-                                        final auctionData = await productService.getAuctionProductById(quotationId.toString());
+                                        final auctionData = await productService
+                                            .getAuctionProductById(
+                                                quotationId.toString());
                                         // แปลงข้อมูลให้อยู่ในรูปแบบเดียวกับหน้า home
-                                        final formattedAuctionData = productService.convertToAppFormat(auctionData ?? {});
+                                        final formattedAuctionData =
+                                            productService.convertToAppFormat(
+                                                auctionData ?? {});
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => AuctionDetailViewPage(auctionData: formattedAuctionData),
+                                            builder: (context) =>
+                                                AuctionDetailViewPage(
+                                                    auctionData:
+                                                        formattedAuctionData),
                                           ),
                                         );
                                       },
@@ -667,23 +648,26 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                                       small: true,
                                     );
                                   }
-                                  final userId = snapshot.data!.getString('id') ?? '';
+                                  final userId =
+                                      snapshot.data!.getString('id') ?? '';
                                   return FutureBuilder<List<dynamic>>(
-                                    future: UserBidHistoryService.getUserBidRanking(auction['id'].toString()),
+                                    future:
+                                        UserBidHistoryService.getUserBidRanking(
+                                            auction['id'].toString()),
                                     builder: (context, rankSnapshot) {
-                                      if (rankSnapshot.connectionState == ConnectionState.waiting) {
+                                      if (rankSnapshot.connectionState ==
+                                          ConnectionState.waiting) {
                                         auction['myBidRank'] = '-';
                                       } else if (rankSnapshot.hasData) {
-                                        print('DEBUG: userId type = ${userId.runtimeType}, value = $userId');
-                                        for (var e in rankSnapshot.data!) {
-                                          print('DEBUG: bidder_id type = ${e['bidder_id'].runtimeType}, value = ${e['bidder_id']}');
-                                        }
                                         final userRanks = rankSnapshot.data!
-                                            .where((e) => e['bidder_id'].toString() == userId.toString())
+                                            .where((e) =>
+                                                e['bidder_id'].toString() ==
+                                                userId.toString())
                                             .toList();
                                         if (userRanks.isNotEmpty) {
                                           final latest = userRanks.first;
-                                          auction['myBidRank'] = latest['rank']?.toString() ?? '-';
+                                          auction['myBidRank'] =
+                                              latest['rank']?.toString() ?? '-';
                                         } else {
                                           auction['myBidRank'] = '-';
                                         }
@@ -693,44 +677,54 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                                       return ActiveBidCard(
                                         auction: auction,
                                         onTap: () async {
-                                          // Debug: ตรวจสอบข้อมูลที่ส่งไป
-                                          print('🔍 MY_AUCTIONS: Sending auction data to AuctionDetailViewPage:');
-                                          print('🔍 MY_AUCTIONStest: auction[image] = ${auction['image']}');
-                                          print('🔍 MY_AUCTIONS: auction[images] = ${auction['images']}');
-                                          print('🔍 MY_AUCTIONS: auction[id] = ${auction['id']}');
-                                          print('🔍 MY_AUCTIONS: auction[quotation_more_information_id] = ${auction['quotation_more_information_id']}');
-                                          
                                           // ใช้ ProductService ในการจัดการรูปภาพ
-                                          final productService = ProductService(baseUrl: Config.apiUrlAuction);
-                                          
+                                          final productService = ProductService(
+                                              baseUrl: Config.apiUrlAuction);
+
                                           // ดึงข้อมูลจาก getAllQuotations() เหมือนหน้า home
-                                          final allQuotations = await productService.getAllQuotations();
-                                          final quotationId = auction['quotation_more_information_id'] ?? auction['id'];
-                                          
+                                          final allQuotations =
+                                              await productService
+                                                  .getAllQuotations();
+                                          final quotationId = auction[
+                                                  'quotation_more_information_id'] ??
+                                              auction['id'];
+
                                           // หา quotation ที่ตรงกับ ID
-                                          final matchingQuotation = allQuotations?.firstWhere(
-                                            (q) => q['quotation_more_information_id']?.toString() == quotationId.toString(),
+                                          final matchingQuotation =
+                                              allQuotations?.firstWhere(
+                                            (q) =>
+                                                q['quotation_more_information_id']
+                                                    ?.toString() ==
+                                                quotationId.toString(),
                                             orElse: () => <String, dynamic>{},
                                           );
-                                          
-                                          if (matchingQuotation != null && matchingQuotation.isNotEmpty) {
+
+                                          if (matchingQuotation != null &&
+                                              matchingQuotation.isNotEmpty) {
                                             // ใช้ข้อมูลจาก getAllQuotations() เหมือนหน้า home
-                                            final formattedAuctionData = productService.convertToAppFormat(matchingQuotation);
-                                            print('🔍 MY_AUCTIONS: Formatted auction data from getAllQuotations: $formattedAuctionData');
-                                            
+                                            final formattedAuctionData =
+                                                productService
+                                                    .convertToAppFormat(
+                                                        matchingQuotation);
+
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) => AuctionDetailViewPage(auctionData: formattedAuctionData),
+                                                builder: (context) =>
+                                                    AuctionDetailViewPage(
+                                                        auctionData:
+                                                            formattedAuctionData),
                                               ),
                                             );
                                           } else {
                                             // Fallback: ใช้ข้อมูลเดิม
-                                            print('🔍 MY_AUCTIONS: No matching quotation found, using original data');
+
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) => AuctionDetailViewPage(auctionData: auction),
+                                                builder: (context) =>
+                                                    AuctionDetailViewPage(
+                                                        auctionData: auction),
                                               ),
                                             );
                                           }
@@ -758,7 +752,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                             padding: EdgeInsets.symmetric(horizontal: 8),
                             itemCount: filteredWonAuctions.length,
                             itemBuilder: (context, index) {
-                              return buildWonAuctionCard(context, filteredWonAuctions[index], _hasWinnerInfo, _loadProfileAndShowDialog);
+                              return buildWonAuctionCard(
+                                  context,
+                                  filteredWonAuctions[index],
+                                  _hasWinnerInfo,
+                                  _loadProfileAndShowDialog);
                             },
                           ),
               ],
@@ -774,7 +772,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       // ดึง customer ID จาก SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final customerId = prefs.getString('id') ?? '';
-      
+
       if (customerId.isEmpty) {
         _showValidationError('ไม่พบข้อมูล ID ผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
         return;
@@ -799,14 +797,14 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
 
       // ดึงข้อมูลโปรไฟล์จาก API
       final profile = await _authService.getProfile(customerId);
-      
+
       // ปิด loading dialog
       Navigator.of(context).pop();
 
       if (profile != null) {
         // ตรวจสอบข้อมูลที่ขาดหายไป
         final missingFields = _checkMissingFields(profile);
-        
+
         if (missingFields.isEmpty) {
           // ข้อมูลครบแล้ว แสดงข้อมูลสรุป
           _showProfileSummaryDialog(auction, profile);
@@ -829,7 +827,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   // ตรวจสอบข้อมูลที่ขาดหายไป
   List<String> _checkMissingFields(Map<String, dynamic> profile) {
     final missingFields = <String>[];
-    
+
     // ตรวจสอบข้อมูลที่จำเป็น
     if (profile['fullname']?.isEmpty == true || profile['fullname'] == null) {
       missingFields.add('fullname');
@@ -840,16 +838,19 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     if (profile['address']?.isEmpty == true || profile['address'] == null) {
       missingFields.add('address');
     }
-    if (profile['province_id']?.isEmpty == true || profile['province_id'] == null) {
+    if (profile['province_id']?.isEmpty == true ||
+        profile['province_id'] == null) {
       missingFields.add('province_id');
     }
-    if (profile['district_id']?.isEmpty == true || profile['district_id'] == null) {
+    if (profile['district_id']?.isEmpty == true ||
+        profile['district_id'] == null) {
       missingFields.add('district_id');
     }
-    if (profile['sub_district_id']?.isEmpty == true || profile['sub_district_id'] == null) {
+    if (profile['sub_district_id']?.isEmpty == true ||
+        profile['sub_district_id'] == null) {
       missingFields.add('sub_district_id');
     }
-    
+
     return missingFields;
   }
 
@@ -860,10 +861,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     final nameParts = fullname.split(' ');
     final firstname = nameParts.isNotEmpty ? nameParts.first : '';
     final lastname = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-    
+
     // ปรับเบอร์โทรให้ขึ้นต้นด้วย 0 ถ้าข้อมูลมี 9 หลักและไม่ขึ้นต้นด้วย 0
     final rawPhone = profile['phone'] ?? '';
-    final phone = (rawPhone.length == 9 && !rawPhone.startsWith('0')) ? '0$rawPhone' : rawPhone;
+    final phone = (rawPhone.length == 9 && !rawPhone.startsWith('0'))
+        ? '0$rawPhone'
+        : rawPhone;
 
     _controllers['firstname']!.text = firstname;
     _controllers['lastname']!.text = lastname;
@@ -876,7 +879,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     _controllers['subDistrictId']!.text = profile['sub_district_id'] ?? '';
     _controllers['sub']!.text = profile['sub'] ?? '';
     // zip code จะถูกเติมอัตโนมัติเมื่อเลือก sub-district
-    
+
     // บันทึกข้อมูลลง SharedPreferences ด้วย prefix winner_ เพื่อให้ validateWinnerInfo ใช้งานได้
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -888,14 +891,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
       await prefs.setString('winner_email', profile['email'] ?? '');
       await prefs.setString('winner_province_id', profile['province_id'] ?? '');
       await prefs.setString('winner_district_id', profile['district_id'] ?? '');
-      await prefs.setString('winner_sub_district_id', profile['sub_district_id'] ?? '');
+      await prefs.setString(
+          'winner_sub_district_id', profile['sub_district_id'] ?? '');
       await prefs.setString('winner_sub', profile['sub'] ?? '');
       await prefs.setString('winner_zip_code', profile['zip_code'] ?? '');
-      
-      print('✅ บันทึกข้อมูลโปรไฟล์ลง SharedPreferences เรียบร้อยแล้ว');
-    } catch (e) {
-      print('❌ Error saving profile to SharedPreferences: $e');
-    }
+    } catch (e) {}
   }
 
   // แปลงชื่อ field เป็นชื่อที่แสดง
@@ -921,7 +921,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   }
 
   // เพิ่มฟังก์ชันค้นหา zip code จาก addressData
-  String? findZipCode(String? provinceId, String? districtId, String? subDistrictId, List<Map<String, dynamic>> addressData) {
+  String? findZipCode(String? provinceId, String? districtId,
+      String? subDistrictId, List<Map<String, dynamic>> addressData) {
     final province = addressData.firstWhere(
       (p) => p['id'].toString() == provinceId,
       orElse: () => {},
@@ -941,13 +942,15 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
   }
 
   // แสดง dialog สรุปข้อมูลโปรไฟล์
-  void _showProfileSummaryDialog(Map<String, dynamic> auction, Map<String, dynamic> profile) {
+  void _showProfileSummaryDialog(
+      Map<String, dynamic> auction, Map<String, dynamic> profile) {
     final zip = findZipCode(
-      profile['province_id'],
-      profile['district_id'],
-      profile['sub_district_id'],
-      addressData,
-    ) ?? '';
+          profile['province_id'],
+          profile['district_id'],
+          profile['sub_district_id'],
+          addressData,
+        ) ??
+        '';
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1017,7 +1020,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                 // Profile info summary (ปรับตามที่ต้องการ)
                 Text(
                   'ข้อมูลสำหรับการจัดส่ง:',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -1093,10 +1097,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                       );
                     },
                     icon: Icon(Icons.edit, color: Colors.blue),
-                    label: Text('แก้ไขข้อมูล', style: TextStyle(color: Colors.blue)),
+                    label: Text('แก้ไขข้อมูล',
+                        style: TextStyle(color: Colors.blue)),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: Colors.blue),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       padding: EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
@@ -1109,10 +1115,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                       AuctionDialogs.showPaymentDialog(context, auction);
                     },
                     icon: Icon(Icons.payment, color: Colors.white),
-                    label: Text('ติดต่อชำระเงิน', style: TextStyle(color: Colors.white)),
+                    label: Text('ติดต่อชำระเงิน',
+                        style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       padding: EdgeInsets.symmetric(vertical: 14),
                       elevation: 2,
                     ),
@@ -1149,10 +1157,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     return full;
   }
 
-  Future<void> _showMissingFieldsDialog(Map<String, dynamic> auction, Map<String, dynamic> profile, List<String> missingFields) async {
+  Future<void> _showMissingFieldsDialog(Map<String, dynamic> auction,
+      Map<String, dynamic> profile, List<String> missingFields) async {
     // เติมข้อมูลที่มีอยู่แล้วใน controllers
     await _fillControllersWithProfile(profile);
-    
+
     // แสดง dialog แจ้งเตือนข้อมูลที่ขาด
     showDialog(
       context: context,
@@ -1175,16 +1184,18 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
                 style: TextStyle(fontWeight: FontWeight.w500),
               ),
               SizedBox(height: 12),
-              ...missingFields.map((field) => Padding(
-                padding: EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Icon(Icons.error, color: Colors.red, size: 16),
-                    SizedBox(width: 8),
-                    Text(_getFieldDisplayName(field)),
-                  ],
-                ),
-              )).toList(),
+              ...missingFields
+                  .map((field) => Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error, color: Colors.red, size: 16),
+                            SizedBox(width: 8),
+                            Text(_getFieldDisplayName(field)),
+                          ],
+                        ),
+                      ))
+                  .toList(),
             ],
           ),
           actions: [
@@ -1219,7 +1230,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage> with SingleTickerProvid
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('id') ?? '';
     final phoneNumber = prefs.getString('phone') ?? '';
-    
+
     return userId == 'APPLE_TEST_ID' || phoneNumber == '0001112345';
   }
-} 
+}

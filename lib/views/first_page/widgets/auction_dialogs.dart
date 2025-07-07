@@ -9,9 +9,9 @@ import 'dart:async';
 
 class PaymentDialogContent extends StatefulWidget {
   final Map<String, dynamic> auction;
-  
+
   const PaymentDialogContent({super.key, required this.auction});
-  
+
   @override
   State<PaymentDialogContent> createState() => _PaymentDialogContentState();
 }
@@ -20,19 +20,19 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
   int timeLeft = 60;
   Timer? timer;
   bool isDialogOpen = true;
-  
+
   @override
   void initState() {
     super.initState();
     _startTimer();
   }
-  
+
   @override
   void dispose() {
     timer?.cancel();
     super.dispose();
   }
-  
+
   void _startTimer() {
     timer = Timer.periodic(const Duration(seconds: 1), (periodicTimer) {
       if (mounted && isDialogOpen) {
@@ -51,7 +51,7 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
       }
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -90,7 +90,7 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
               ],
             ),
             SizedBox(height: 24),
-            
+
             // Countdown timer
             Container(
               padding: EdgeInsets.all(16),
@@ -114,7 +114,7 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
               ),
             ),
             SizedBox(height: 20),
-            
+
             // Success message
             Container(
               padding: EdgeInsets.all(16),
@@ -140,7 +140,7 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
               ),
             ),
             SizedBox(height: 20),
-            
+
             // Auction info
             Container(
               padding: EdgeInsets.all(16),
@@ -170,7 +170,7 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
               ),
             ),
             SizedBox(height: 20),
-            
+
             Text(
               'กรุณาติดต่อผู้ขายเพื่อชำระเงิน:',
               style: TextStyle(
@@ -180,7 +180,7 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
               ),
             ),
             SizedBox(height: 12),
-            
+
             // Contact info
             Container(
               padding: EdgeInsets.all(16),
@@ -190,16 +190,20 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
               ),
               child: Column(
                 children: [
-                  ContactRowWidget(icon: Icons.phone, contact: 'โทร: 02-123-4567'),
+                  ContactRowWidget(
+                      icon: Icons.phone, contact: 'โทร: 02-123-4567'),
                   SizedBox(height: 8),
-                  ContactRowWidget(icon: Icons.chat, contact: 'Line: @e_auction_support'),
+                  ContactRowWidget(
+                      icon: Icons.chat, contact: 'Line: @e_auction_support'),
                   SizedBox(height: 8),
-                  ContactRowWidget(icon: Icons.email, contact: 'Email: support@e-auction.com'),
+                  ContactRowWidget(
+                      icon: Icons.email,
+                      contact: 'Email: support@e-auction.com'),
                 ],
               ),
             ),
             SizedBox(height: 16),
-            
+
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -225,7 +229,7 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
               ),
             ),
             SizedBox(height: 24),
-            
+
             // Action button
             SizedBox(
               width: double.infinity,
@@ -262,7 +266,8 @@ class _PaymentDialogContentState extends State<PaymentDialogContent> {
 
 // Dialog Methods
 class AuctionDialogs {
-  static void showPaymentDialog(BuildContext context, Map<String, dynamic> auction) {
+  static void showPaymentDialog(
+      BuildContext context, Map<String, dynamic> auction) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -293,7 +298,8 @@ class AuctionDialogs {
             return AlertDialog(
               title: Row(
                 children: [
-                  Icon(hasInfo ? Icons.edit : Icons.emoji_events, color: hasInfo ? Colors.blue : Colors.green, size: 24),
+                  Icon(hasInfo ? Icons.edit : Icons.emoji_events,
+                      color: hasInfo ? Colors.blue : Colors.green, size: 24),
                   const SizedBox(width: 8),
                   Text(hasInfo ? 'แก้ไขข้อมูลผู้ชนะ' : 'ข้อมูลผู้ชนะการประมูล'),
                 ],
@@ -309,19 +315,26 @@ class AuctionDialogs {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: hasInfo ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                          color: hasInfo
+                              ? Colors.blue.withOpacity(0.1)
+                              : Colors.green.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: hasInfo ? Colors.blue.withOpacity(0.3) : Colors.green.withOpacity(0.3)),
+                          border: Border.all(
+                              color: hasInfo
+                                  ? Colors.blue.withOpacity(0.3)
+                                  : Colors.green.withOpacity(0.3)),
                         ),
                         child: Row(
                           children: [
-                            Icon(hasInfo ? Icons.edit : Icons.celebration, color: hasInfo ? Colors.blue : Colors.green, size: 20),
+                            Icon(hasInfo ? Icons.edit : Icons.celebration,
+                                color: hasInfo ? Colors.blue : Colors.green,
+                                size: 20),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                hasInfo 
-                                  ? 'แก้ไขข้อมูลสำหรับการประมูล ${auction['title']}'
-                                  : 'ยินดีด้วย! คุณชนะการประมูล ${auction['title']}',
+                                hasInfo
+                                    ? 'แก้ไขข้อมูลสำหรับการประมูล ${auction['title']}'
+                                    : 'ยินดีด้วย! คุณชนะการประมูล ${auction['title']}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: hasInfo ? Colors.blue : Colors.green,
@@ -332,7 +345,7 @@ class AuctionDialogs {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Auction info
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -350,21 +363,25 @@ class AuctionDialogs {
                             ),
                             InfoRowWidget(
                               label: 'ราคาที่ชนะ',
-                              value: Format.formatCurrency(auction['finalPrice']),
+                              value:
+                                  Format.formatCurrency(auction['finalPrice']),
                               isHighlight: true,
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Form fields
                       Text(
-                        hasInfo ? 'แก้ไขข้อมูลสำหรับการจัดส่ง:' : 'กรุณากรอกข้อมูลสำหรับการจัดส่ง:',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        hasInfo
+                            ? 'แก้ไขข้อมูลสำหรับการจัดส่ง:'
+                            : 'กรุณากรอกข้อมูลสำหรับการจัดส่ง:',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       FormFieldWidget(
                         controller: controllers['firstname']!,
                         label: 'ชื่อ *',
@@ -373,7 +390,7 @@ class AuctionDialogs {
                         requiredField: true,
                       ),
                       const SizedBox(height: 8),
-                      
+
                       FormFieldWidget(
                         controller: controllers['lastname']!,
                         label: 'นามสกุล *',
@@ -382,7 +399,7 @@ class AuctionDialogs {
                         requiredField: true,
                       ),
                       const SizedBox(height: 8),
-                      
+
                       FormFieldWidget(
                         controller: controllers['phone']!,
                         label: 'เบอร์โทรศัพท์ *',
@@ -393,7 +410,7 @@ class AuctionDialogs {
                         isPhone: true,
                       ),
                       const SizedBox(height: 8),
-                      
+
                       FormFieldWidget(
                         controller: controllers['email']!,
                         label: 'อีเมล *',
@@ -404,7 +421,7 @@ class AuctionDialogs {
                         isEmail: true,
                       ),
                       const SizedBox(height: 8),
-                      
+
                       FormFieldWidget(
                         controller: controllers['address']!,
                         label: 'ที่อยู่ *',
@@ -414,24 +431,26 @@ class AuctionDialogs {
                         requiredField: true,
                       ),
                       const SizedBox(height: 8),
-                      
+
                       CascadeAddressDropdowns(
                         controllers: controllers,
-                        authService: AuthService(baseUrl: Config.apiUrlotpsever),
+                        authService:
+                            AuthService(baseUrl: Config.apiUrlotpsever),
                       ),
-                      
+
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.blue.withOpacity(0.3)),
                         ),
                         child: Text(
-                          hasInfo 
-                            ? '💡 ข้อมูลที่แก้ไขจะถูกบันทึกและใช้สำหรับการประมูลครั้งต่อไป'
-                            : '💡 ข้อมูลนี้จะถูกบันทึกและใช้สำหรับการประมูลครั้งต่อไป',
+                          hasInfo
+                              ? '💡 ข้อมูลที่แก้ไขจะถูกบันทึกและใช้สำหรับการประมูลครั้งต่อไป'
+                              : '💡 ข้อมูลนี้จะถูกบันทึกและใช้สำหรับการประมูลครั้งต่อไป',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.blue,
@@ -458,7 +477,8 @@ class AuctionDialogs {
                         showPaymentDialog(context, auction);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${hasInfo ? 'แก้ไข' : 'บันทึก'}ข้อมูลเรียบร้อยแล้ว (${auction['auctionId']})'),
+                            content: Text(
+                                '${hasInfo ? 'แก้ไข' : 'บันทึก'}ข้อมูลเรียบร้อยแล้ว (${auction['auctionId']})'),
                             backgroundColor: Colors.green,
                             duration: const Duration(seconds: 3),
                           ),
@@ -485,7 +505,8 @@ class AuctionDialogs {
     );
   }
 
-  static Future<void> _loadWinnerInfo(Map<String, TextEditingController> controllers) async {
+  static Future<void> _loadWinnerInfo(
+      Map<String, TextEditingController> controllers) async {
     final prefs = await SharedPreferences.getInstance();
     controllers['firstname']!.text = prefs.getString('winner_firstname') ?? '';
     controllers['lastname']!.text = prefs.getString('winner_lastname') ?? '';
@@ -493,30 +514,38 @@ class AuctionDialogs {
     controllers['address']!.text = prefs.getString('winner_address') ?? '';
     controllers['taxNumber']!.text = prefs.getString('winner_tax_number') ?? '';
     controllers['email']!.text = prefs.getString('winner_email') ?? '';
-    controllers['provinceId']!.text = prefs.getString('winner_province_id') ?? '';
-    controllers['districtId']!.text = prefs.getString('winner_district_id') ?? '';
-    controllers['subDistrictId']!.text = prefs.getString('winner_sub_district_id') ?? '';
+    controllers['provinceId']!.text =
+        prefs.getString('winner_province_id') ?? '';
+    controllers['districtId']!.text =
+        prefs.getString('winner_district_id') ?? '';
+    controllers['subDistrictId']!.text =
+        prefs.getString('winner_sub_district_id') ?? '';
     controllers['sub']!.text = prefs.getString('winner_sub') ?? '';
     controllers['zipCode']!.text = prefs.getString('winner_zip_code') ?? '';
   }
 
-  static Future<bool> _hasWinnerInfo(Map<String, TextEditingController> controllers) async {
+  static Future<bool> _hasWinnerInfo(
+      Map<String, TextEditingController> controllers) async {
     final prefs = await SharedPreferences.getInstance();
     final firstname = prefs.getString('winner_firstname') ?? '';
     final lastname = prefs.getString('winner_lastname') ?? '';
     final phone = prefs.getString('winner_phone') ?? '';
     final address = prefs.getString('winner_address') ?? '';
     final taxNumber = prefs.getString('winner_tax_number') ?? '';
-    
-    return firstname.isNotEmpty && lastname.isNotEmpty && phone.isNotEmpty && 
-           address.isNotEmpty && taxNumber.isNotEmpty;
+
+    return firstname.isNotEmpty &&
+        lastname.isNotEmpty &&
+        phone.isNotEmpty &&
+        address.isNotEmpty &&
+        taxNumber.isNotEmpty;
   }
 }
 
 // Form Components
 class PhoneNumberFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     String formatted = '';
     for (int i = 0; i < digits.length && i < 10; i++) {
@@ -572,7 +601,9 @@ class FormFieldWidget extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
-          inputFormatters: isPhone ? [FilteringTextInputFormatter.digitsOnly, PhoneNumberFormatter()] : null,
+          inputFormatters: isPhone
+              ? [FilteringTextInputFormatter.digitsOnly, PhoneNumberFormatter()]
+              : null,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[500]),
@@ -711,7 +742,8 @@ class CascadeAddressDropdowns extends StatefulWidget {
   });
 
   @override
-  State<CascadeAddressDropdowns> createState() => _CascadeAddressDropdownsState();
+  State<CascadeAddressDropdowns> createState() =>
+      _CascadeAddressDropdownsState();
 }
 
 class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
@@ -739,19 +771,27 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
           // Restore selected values from controllers
           if (widget.controllers['provinceId']!.text.isNotEmpty) {
             selectedProvince = addressData.firstWhere(
-              (p) => p['id'].toString() == widget.controllers['provinceId']!.text,
+              (p) =>
+                  p['id'].toString() == widget.controllers['provinceId']!.text,
               orElse: () => {},
             );
           }
-          if (selectedProvince != null && widget.controllers['districtId']!.text.isNotEmpty) {
-            selectedDistrict = (selectedProvince!['districts'] as List).firstWhere(
-              (d) => d['id'].toString() == widget.controllers['districtId']!.text,
+          if (selectedProvince != null &&
+              widget.controllers['districtId']!.text.isNotEmpty) {
+            selectedDistrict =
+                (selectedProvince!['districts'] as List).firstWhere(
+              (d) =>
+                  d['id'].toString() == widget.controllers['districtId']!.text,
               orElse: () => {},
             );
           }
-          if (selectedDistrict != null && widget.controllers['subDistrictId']!.text.isNotEmpty) {
-            selectedSubDistrict = (selectedDistrict!['sub_districts'] as List).firstWhere(
-              (s) => s['id'].toString() == widget.controllers['subDistrictId']!.text,
+          if (selectedDistrict != null &&
+              widget.controllers['subDistrictId']!.text.isNotEmpty) {
+            selectedSubDistrict =
+                (selectedDistrict!['sub_districts'] as List).firstWhere(
+              (s) =>
+                  s['id'].toString() ==
+                  widget.controllers['subDistrictId']!.text,
               orElse: () => {},
             );
           }
@@ -766,9 +806,12 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
     setState(() {
       provinceError = selectedProvince == null ? 'กรุณาเลือกจังหวัด' : null;
       districtError = selectedDistrict == null ? 'กรุณาเลือกอำเภอ/เขต' : null;
-      subDistrictError = selectedSubDistrict == null ? 'กรุณาเลือกตำบล/แขวง' : null;
+      subDistrictError =
+          selectedSubDistrict == null ? 'กรุณาเลือกตำบล/แขวง' : null;
     });
-    return provinceError == null && districtError == null && subDistrictError == null;
+    return provinceError == null &&
+        districtError == null &&
+        subDistrictError == null;
   }
 
   @override
@@ -777,7 +820,8 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // จังหวัด
-        Text('จังหวัด *', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        Text('จังหวัด *',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 4),
         DropdownButtonFormField<Map<String, dynamic>>(
           value: selectedProvince,
@@ -805,7 +849,8 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
               districtError = null;
               subDistrictError = null;
             });
-            widget.controllers['provinceId']!.text = province?['id']?.toString() ?? '';
+            widget.controllers['provinceId']!.text =
+                province?['id']?.toString() ?? '';
             widget.controllers['districtId']!.text = '';
             widget.controllers['subDistrictId']!.text = '';
           },
@@ -813,22 +858,27 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
         if (provinceError != null)
           Padding(
             padding: const EdgeInsets.only(left: 12, top: 2),
-            child: Text(provinceError!, style: TextStyle(color: Colors.red, fontSize: 12)),
+            child: Text(provinceError!,
+                style: TextStyle(color: Colors.red, fontSize: 12)),
           ),
         const SizedBox(height: 8),
         // อำเภอ
         if (selectedProvince != null) ...[
-          Text('อำเภอ/เขต *', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          Text('อำเภอ/เขต *',
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
           const SizedBox(height: 4),
           DropdownButtonFormField<Map<String, dynamic>>(
             value: selectedDistrict,
             decoration: InputDecoration(
               prefixIcon: Icon(Icons.location_city, size: 20),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               filled: true,
               fillColor: Colors.grey[50],
               errorText: districtError,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
             hint: const Text('เลือกอำเภอ/เขต'),
             items: (selectedProvince!['districts'] as List).map((district) {
@@ -844,33 +894,40 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
                 districtError = null;
                 subDistrictError = null;
               });
-              widget.controllers['districtId']!.text = district?['id']?.toString() ?? '';
+              widget.controllers['districtId']!.text =
+                  district?['id']?.toString() ?? '';
               widget.controllers['subDistrictId']!.text = '';
             },
           ),
           if (districtError != null)
             Padding(
               padding: const EdgeInsets.only(left: 12, top: 2),
-              child: Text(districtError!, style: TextStyle(color: Colors.red, fontSize: 12)),
+              child: Text(districtError!,
+                  style: TextStyle(color: Colors.red, fontSize: 12)),
             ),
           const SizedBox(height: 8),
         ],
         // ตำบล
         if (selectedDistrict != null) ...[
-          Text('ตำบล/แขวง *', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          Text('ตำบล/แขวง *',
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
           const SizedBox(height: 4),
           DropdownButtonFormField<Map<String, dynamic>>(
             value: selectedSubDistrict,
             decoration: InputDecoration(
               prefixIcon: Icon(Icons.location_on, size: 20),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               filled: true,
               fillColor: Colors.grey[50],
               errorText: subDistrictError,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
             hint: const Text('เลือกตำบล/แขวง'),
-            items: (selectedDistrict!['sub_districts'] as List).map((subDistrict) {
+            items:
+                (selectedDistrict!['sub_districts'] as List).map((subDistrict) {
               return DropdownMenuItem<Map<String, dynamic>>(
                 value: subDistrict,
                 child: Text(subDistrict['name_th'] ?? ''),
@@ -881,20 +938,25 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
                 selectedSubDistrict = subDistrict;
                 subDistrictError = null;
               });
-              widget.controllers['subDistrictId']!.text = subDistrict?['id']?.toString() ?? '';
-              widget.controllers['zipCode']!.text = subDistrict?['zip_code']?.toString() ?? '';
+              widget.controllers['subDistrictId']!.text =
+                  subDistrict?['id']?.toString() ?? '';
+              widget.controllers['zipCode']!.text =
+                  subDistrict?['zip_code']?.toString() ?? '';
             },
           ),
           if (subDistrictError != null)
             Padding(
               padding: const EdgeInsets.only(left: 12, top: 2),
-              child: Text(subDistrictError!, style: TextStyle(color: Colors.red, fontSize: 12)),
+              child: Text(subDistrictError!,
+                  style: TextStyle(color: Colors.red, fontSize: 12)),
             ),
           const SizedBox(height: 8),
         ],
         // รหัสไปรษณีย์
         if (selectedSubDistrict != null) ...[
-          Text('รหัสไปรษณีย์', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          Text('รหัสไปรษณีย์',
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
           FormFieldWidget(
             controller: widget.controllers['zipCode']!,
             label: '',
@@ -907,4 +969,4 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
       ],
     );
   }
-} 
+}

@@ -19,7 +19,8 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
     return 0; // default value
   }
 
-  Widget _buildAuctionImage(String? imagePath, {double width = 80, double height = 80}) {
+  Widget _buildAuctionImage(String? imagePath,
+      {double width = 80, double height = 80}) {
     if (imagePath == null || imagePath.isEmpty) {
       return Container(
         width: width,
@@ -28,10 +29,11 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
         child: Icon(Icons.image_not_supported, color: Colors.grey),
       );
     }
-    
+
     // ตรวจสอบว่าเป็น URL หรือไม่
-    final isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
-    
+    final isUrl =
+        imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
     if (isUrl) {
       return Image.network(
         imagePath,
@@ -70,7 +72,7 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
     // Debug: ตรวจสอบข้อมูล image
     print('🔍 ALL_UPCOMING: auction[image] = ${auction['image']}');
     print('🔍 ALL_UPCOMING: auction[title] = ${auction['title']}');
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       clipBehavior: Clip.antiAlias,
@@ -157,4 +159,4 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
             ),
     );
   }
-} 
+}

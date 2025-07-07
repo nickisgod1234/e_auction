@@ -35,7 +35,7 @@ class _DetailPageState extends State<DetailPage> {
     } else {
       _currentBid = 0;
     }
-    
+
     final startingPrice = widget.auctionData['startingPrice'];
     int startingPriceInt = 0;
     if (startingPrice is double) {
@@ -43,7 +43,7 @@ class _DetailPageState extends State<DetailPage> {
     } else if (startingPrice is int) {
       startingPriceInt = startingPrice;
     }
-    
+
     // คำนวณจำนวนเงินขั้นต่ำที่ต้องเพิ่ม (3% ของราคาเริ่มต้น)
     _minBidIncrement = (startingPriceInt * 0.03).round();
     // ตั้งค่าเริ่มต้นให้กับ text field เป็นราคาปัจจุบัน + ขั้นต่ำที่ต้องเพิ่ม
@@ -83,7 +83,8 @@ class _DetailPageState extends State<DetailPage> {
     if (increment < _minBidIncrement) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('ต้องเพิ่มขั้นต่ำ ฿${Format.formatCurrency(_minBidIncrement)} (3% ของราคาเริ่มต้น)'),
+          content: Text(
+              'ต้องเพิ่มขั้นต่ำ ฿${Format.formatCurrency(_minBidIncrement)} (3% ของราคาเริ่มต้น)'),
           backgroundColor: Colors.red,
         ),
       );
@@ -93,7 +94,8 @@ class _DetailPageState extends State<DetailPage> {
     // ตรวจสอบว่าควรแสดง dialog หรือไม่ (แยกตาม ID ของสินค้า)
     final prefs = await SharedPreferences.getInstance();
     final itemId = widget.auctionData['id'] ?? 'default';
-    final dontShowDialog = prefs.getBool('dont_show_bid_dialog_$itemId') ?? false;
+    final dontShowDialog =
+        prefs.getBool('dont_show_bid_dialog_$itemId') ?? false;
 
     if (dontShowDialog) {
       // ไม่แสดง dialog และประมูลทันที
@@ -168,7 +170,8 @@ class _DetailPageState extends State<DetailPage> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                            Icon(Icons.info_outline,
+                                color: Colors.orange, size: 20),
                             SizedBox(width: 8),
                             Text(
                               'ข้อกำหนดการประมูล',
@@ -227,7 +230,7 @@ class _DetailPageState extends State<DetailPage> {
                       final itemId = widget.auctionData['id'] ?? 'default';
                       await prefs.setBool('dont_show_bid_dialog_$itemId', true);
                     }
-                    
+
                     Navigator.of(context).pop();
                     _confirmBid(bidAmount);
                   },
@@ -251,28 +254,28 @@ class _DetailPageState extends State<DetailPage> {
       // อัพเดทค่าใน text field เป็นราคาปัจจุบัน + ขั้นต่ำที่ต้องเพิ่ม
       _bidController.text = (_currentBid + _minBidIncrement).toString();
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('ประมูลสำเร็จ! ราคา: ฿${Format.formatCurrency(bidAmount)}'),
+        content:
+            Text('ประมูลสำเร็จ! ราคา: ฿${Format.formatCurrency(bidAmount)}'),
         backgroundColor: Colors.green,
       ),
     );
   }
 
   // Helper method to build auction image
-  Widget _buildAuctionImage(String? imagePath, {double? width, double? height}) {
+  Widget _buildAuctionImage(String? imagePath,
+      {double? width, double? height}) {
     if (imagePath == null || imagePath.isEmpty) {
-      return Image.asset('assets/images/noimage.jpg', 
-        width: width, 
-        height: height, 
-        fit: BoxFit.cover
-      );
+      return Image.asset('assets/images/noimage.jpg',
+          width: width, height: height, fit: BoxFit.cover);
     }
-    
+
     // ตรวจสอบว่าเป็น URL หรือไม่
-    final isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
-    
+    final isUrl =
+        imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
     if (isUrl) {
       return Image.network(
         imagePath,
@@ -280,11 +283,8 @@ class _DetailPageState extends State<DetailPage> {
         height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg', 
-            width: width, 
-            height: height, 
-            fit: BoxFit.cover
-          );
+          return Image.asset('assets/images/noimage.jpg',
+              width: width, height: height, fit: BoxFit.cover);
         },
       );
     } else {
@@ -294,11 +294,8 @@ class _DetailPageState extends State<DetailPage> {
         height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg', 
-            width: width, 
-            height: height, 
-            fit: BoxFit.cover
-          );
+          return Image.asset('assets/images/noimage.jpg',
+              width: width, height: height, fit: BoxFit.cover);
         },
       );
     }
@@ -383,16 +380,17 @@ class _DetailPageState extends State<DetailPage> {
                     top: 16,
                     left: 16,
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: widget.auctionData['isActive'] == true 
-                            ? Colors.green 
+                        color: widget.auctionData['isActive'] == true
+                            ? Colors.green
                             : Colors.orange,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
-                        widget.auctionData['isActive'] == true 
-                            ? 'กำลังประมูล' 
+                        widget.auctionData['isActive'] == true
+                            ? 'กำลังประมูล'
                             : 'กำลังจะเริ่ม',
                         style: TextStyle(
                           color: Colors.white,
@@ -408,7 +406,8 @@ class _DetailPageState extends State<DetailPage> {
                       top: 16,
                       right: 16,
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.7),
                           borderRadius: BorderRadius.circular(16),
@@ -484,7 +483,7 @@ class _DetailPageState extends State<DetailPage> {
 
                   // Minimum Bid Increment
                   Text(
-                  'ขั้นต่ำ: ${Format.formatCurrency(widget.auctionData['minimum_increase'] ?? 100)}',
+                    'ขั้นต่ำ: ${Format.formatCurrency(widget.auctionData['minimum_increase'] ?? 100)}',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -513,13 +512,12 @@ class _DetailPageState extends State<DetailPage> {
                     'รายละเอียดสินค้า',
                     style: TextStyle(
                       fontSize: 18,
-                      
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    widget.auctionData['description'] ?? 
-                    'นาฬิกา Rolex Submariner รุ่นคลาสสิก วัสดุคุณภาพสูง มาพร้อมกับกล่องและเอกสารรับประกัน อยู่ในสภาพดีมาก เหมาะสำหรับนักสะสมและผู้ที่ชื่นชอบนาฬิกาคุณภาพสูง',
+                    widget.auctionData['description'] ??
+                        'นาฬิกา Rolex Submariner รุ่นคลาสสิก วัสดุคุณภาพสูง มาพร้อมกับกล่องและเอกสารรับประกัน อยู่ในสภาพดีมาก เหมาะสำหรับนักสะสมและผู้ที่ชื่นชอบนาฬิกาคุณภาพสูง',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[700],
@@ -533,16 +531,21 @@ class _DetailPageState extends State<DetailPage> {
                     'ข้อมูลจำเพาะ',
                     style: TextStyle(
                       fontSize: 18,
-                     
                     ),
                   ),
                   SizedBox(height: 8),
-                  _buildSpecificationItem('ยี่ห้อ', widget.auctionData['brand'] ?? 'Rolex'),
-                  _buildSpecificationItem('รุ่น', widget.auctionData['model'] ?? 'Submariner'),
-                  _buildSpecificationItem('วัสดุ', widget.auctionData['material'] ?? 'สแตนเลสสตีล'),
-                  _buildSpecificationItem('ขนาด', widget.auctionData['size'] ?? '40mm'),
-                  _buildSpecificationItem('สี', widget.auctionData['color'] ?? 'ดำ'),
-                  _buildSpecificationItem('สภาพ', widget.auctionData['condition'] ?? 'ดีมาก'),
+                  _buildSpecificationItem(
+                      'ยี่ห้อ', widget.auctionData['brand'] ?? 'Rolex'),
+                  _buildSpecificationItem(
+                      'รุ่น', widget.auctionData['model'] ?? 'Submariner'),
+                  _buildSpecificationItem(
+                      'วัสดุ', widget.auctionData['material'] ?? 'สแตนเลสสตีล'),
+                  _buildSpecificationItem(
+                      'ขนาด', widget.auctionData['size'] ?? '40mm'),
+                  _buildSpecificationItem(
+                      'สี', widget.auctionData['color'] ?? 'ดำ'),
+                  _buildSpecificationItem(
+                      'สภาพ', widget.auctionData['condition'] ?? 'ดีมาก'),
                   SizedBox(height: 24),
 
                   // Item Notes
@@ -563,7 +566,6 @@ class _DetailPageState extends State<DetailPage> {
                           'ข้อมูลผู้ขาย',
                           style: TextStyle(
                             fontSize: 18,
-                           
                           ),
                         ),
                         SizedBox(height: 8),
@@ -579,10 +581,10 @@ class _DetailPageState extends State<DetailPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  widget.auctionData['sellerName'] ?? 'CloudmateTH',
+                                  widget.auctionData['sellerName'] ??
+                                      'CloudmateTH',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    
                                   ),
                                 ),
                                 Text(
@@ -642,7 +644,8 @@ class _DetailPageState extends State<DetailPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: context.customTheme.primaryColor,
                         foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -654,7 +657,6 @@ class _DetailPageState extends State<DetailPage> {
               ),
             )
           : null,
-          
     );
   }
 
@@ -671,7 +673,6 @@ class _DetailPageState extends State<DetailPage> {
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[600],
-             
               ),
             ),
           ),
@@ -681,7 +682,6 @@ class _DetailPageState extends State<DetailPage> {
               value,
               style: TextStyle(
                 fontSize: 16,
-               
               ),
             ),
           ),
@@ -691,7 +691,7 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Widget _buildItemNotes() {
-    final itemNote = widget.auctionData['item_note'];   
+    final itemNote = widget.auctionData['item_note'];
     if (itemNote == null || itemNote.toString().isEmpty) {
       // แสดงหมายเหตุทดสอบเพื่อดูว่า section ทำงานหรือไม่
       return Column(
@@ -718,7 +718,6 @@ class _DetailPageState extends State<DetailPage> {
             ],
           ),
           const SizedBox(height: 12),
-         
         ],
       );
     }
@@ -779,4 +778,4 @@ class _DetailPageState extends State<DetailPage> {
       ],
     );
   }
-} 
+}

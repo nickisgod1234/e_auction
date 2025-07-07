@@ -181,24 +181,32 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
       await prefs.setString('email', Emai);
       await prefs.setString('password', password);
       // ... (บันทึก fields อื่นๆ เหมือนเดิม)
-      await prefs.setString('created_at', _safeGetString(userData, 'created_at'));
-      await prefs.setString('updated_at', _safeGetString(userData, 'updated_at'));
-      await prefs.setString('company_id', _safeGetString(userData, 'company_id'));
+      await prefs.setString(
+          'created_at', _safeGetString(userData, 'created_at'));
+      await prefs.setString(
+          'updated_at', _safeGetString(userData, 'updated_at'));
+      await prefs.setString(
+          'company_id', _safeGetString(userData, 'company_id'));
       await prefs.setString('type', _safeGetString(userData, 'type'));
       await prefs.setString('logo', _safeGetString(userData, 'logo'));
       await prefs.setString('phone', _safeGetString(userData, 'phone'));
       await prefs.setString('code', _safeGetString(userData, 'code'));
       await prefs.setString('name', _safeGetString(userData, 'name'));
-      await prefs.setString('tax_number', _safeGetString(userData, 'tax_number'));
+      await prefs.setString(
+          'tax_number', _safeGetString(userData, 'tax_number'));
       await prefs.setString('fullname', _safeGetString(userData, 'fullname'));
       await prefs.setString('addr', _safeGetString(userData, 'addr'));
-      await prefs.setString('province_id', _safeGetString(userData, 'province_id'));
-      await prefs.setString('district_id', _safeGetString(userData, 'district_id'));
-      await prefs.setString('sub_district_id', _safeGetString(userData, 'sub_district_id'));
+      await prefs.setString(
+          'province_id', _safeGetString(userData, 'province_id'));
+      await prefs.setString(
+          'district_id', _safeGetString(userData, 'district_id'));
+      await prefs.setString(
+          'sub_district_id', _safeGetString(userData, 'sub_district_id'));
       await prefs.setString('sub', _safeGetString(userData, 'sub'));
       await prefs.setString('pass', _safeGetString(userData, 'pass'));
       await prefs.setString('reset_key', _safeGetString(userData, 'reset_key'));
-      await prefs.setString('reset_key_exp', _safeGetString(userData, 'reset_key_exp'));
+      await prefs.setString(
+          'reset_key_exp', _safeGetString(userData, 'reset_key_exp'));
       await prefs.setString('isdelete', userData['isdelete'] ?? '');
 
       print('User ID: $phone_number');
@@ -268,7 +276,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             icon: Icon(Icons.close, color: Colors.white),
             label: Text('ยกเลิก', style: TextStyle(color: Colors.white)),
@@ -278,7 +287,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             icon: Icon(Icons.check, color: Colors.white),
             label: Text('ตกลง', style: TextStyle(color: Colors.white)),
@@ -295,21 +305,21 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
   // เพิ่มเมธอดใหม่สำหรับเริ่มกระบวนการลงทะเบียน
   void _startRegistrationProcess(String phoneNumber) async {
     _startLoadingDialog(context);
-    
+
     try {
       // ส่ง OTP สำหรับลงทะเบียน
       final otpResponse = await _authService.sendOtp(phoneNumber);
       _stopLoadingDialog(context);
-      
+
       if (otpResponse != null) {
         setState(() {
           _refno = otpResponse['refno'];
           _isPinVisible = true;
         });
-        
+
         // เริ่ม countdown timer
         _startCountdown();
-        
+
         // แสดง dialog สำหรับกรอก OTP
         _showRegistrationOtpDialog(phoneNumber);
       } else {
@@ -328,13 +338,14 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
   // เพิ่มเมธอดใหม่สำหรับแสดง dialog กรอก OTP ลงทะเบียน
   void _showRegistrationOtpDialog(String phoneNumber) {
     final TextEditingController otpController = TextEditingController();
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Column(
             children: [
               Icon(Icons.verified_user, color: Colors.blue, size: 48),
@@ -372,7 +383,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                 controller: otpController,
                 decoration: InputDecoration(
                   labelText: 'กรอกรหัส OTP',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 keyboardType: TextInputType.number,
               ),
@@ -382,7 +394,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () => Navigator.pop(context),
               child: Text('ยกเลิก', style: TextStyle(color: Colors.white)),
@@ -390,36 +403,40 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () async {
                 final pin = otpController.text;
-                
+
                 if (pin.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('กรุณากรอกรหัส OTP')),
                   );
                   return;
                 }
-                
+
                 _startLoadingDialog(context);
                 final response = await _authService.verifyOtp(phoneNumber, pin);
                 _stopLoadingDialog(context);
-                
+
                 if (response['success']) {
                   Navigator.pop(context); // ปิด OTP dialog
-                  
+
                   // บันทึกข้อมูลการลงทะเบียน
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('phone_number', phoneNumber);
                   await prefs.setString('token_otp', response['token'] ?? '');
                   await prefs.setString('id', response['id']?.toString() ?? '');
-                  
+
                   // บันทึกข้อมูลอื่นๆ ที่ได้จาก response
-                  if (response['email'] != null) await prefs.setString('email', response['email']);
-                  if (response['password'] != null) await prefs.setString('password', response['password']);
-                  if (response['name'] != null) await prefs.setString('name', response['name']);
-                  
+                  if (response['email'] != null)
+                    await prefs.setString('email', response['email']);
+                  if (response['password'] != null)
+                    await prefs.setString('password', response['password']);
+                  if (response['name'] != null)
+                    await prefs.setString('name', response['name']);
+
                   // แสดงข้อความสำเร็จ
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -427,7 +444,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                       backgroundColor: Colors.green,
                     ),
                   );
-                  
+
                   // ไปยังหน้า HomeScreen
                   Navigator.pushReplacement(
                     context,
@@ -519,11 +536,14 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
         await prefs.setString('phone_number', phoneNumber);
         await prefs.setString('token_otp', response['token'] ?? '');
         await prefs.setString('id', id.toString());
-        
+
         // บันทึกข้อมูลอื่นๆ ที่ได้จาก response
-        if (response['email'] != null) await prefs.setString('email', response['email']);
-        if (response['password'] != null) await prefs.setString('password', response['password']);
-        if (response['name'] != null) await prefs.setString('name', response['name']);
+        if (response['email'] != null)
+          await prefs.setString('email', response['email']);
+        if (response['password'] != null)
+          await prefs.setString('password', response['password']);
+        if (response['name'] != null)
+          await prefs.setString('name', response['name']);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('ยืนยันสำเร็จ!')),
@@ -720,7 +740,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                 icon: Icon(Icons.phone, color: Colors.white),
                                 label: Text("ล็อกอินด้วยเบอร์โทร"),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: context.customTheme.primaryColor,
+                                  backgroundColor:
+                                      context.customTheme.primaryColor,
                                   foregroundColor: Colors.white,
                                   minimumSize: Size(double.infinity, 50),
                                 ),
@@ -734,16 +755,22 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                   labelText: 'กรอกเบอร์โทรศัพท์',
                                   filled: true,
                                   fillColor: Colors.white.withOpacity(0.5),
-                                  floatingLabelBehavior: FloatingLabelBehavior.auto,
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.auto,
                                   focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: context.customTheme.primaryColor),
+                                    borderSide: BorderSide(
+                                        color:
+                                            context.customTheme.primaryColor),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: context.customTheme.primaryColor.withOpacity(0.5)),
+                                    borderSide: BorderSide(
+                                        color: context.customTheme.primaryColor
+                                            .withOpacity(0.5)),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  labelStyle: TextStyle(color: context.customTheme.primaryColor),
+                                  labelStyle: TextStyle(
+                                      color: context.customTheme.primaryColor),
                                 ),
                                 keyboardType: TextInputType.phone,
                               ),
@@ -751,7 +778,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                               ElevatedButton(
                                 onPressed: _submitPhoneNumber,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: context.customTheme.primaryColor,
+                                  backgroundColor:
+                                      context.customTheme.primaryColor,
                                   foregroundColor: Colors.white,
                                   minimumSize: Size(double.infinity, 50),
                                   shape: RoundedRectangleBorder(
@@ -777,14 +805,21 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                     filled: true,
                                     fillColor: Colors.white.withOpacity(0.5),
                                     focusedBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(color: context.customTheme.primaryColor),
+                                      borderSide: BorderSide(
+                                          color:
+                                              context.customTheme.primaryColor),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(color: context.customTheme.primaryColor.withOpacity(0.5)),
+                                      borderSide: BorderSide(
+                                          color: context
+                                              .customTheme.primaryColor
+                                              .withOpacity(0.5)),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    labelStyle: TextStyle(color: context.customTheme.primaryColor),
+                                    labelStyle: TextStyle(
+                                        color:
+                                            context.customTheme.primaryColor),
                                   ),
                                   keyboardType: TextInputType.number,
                                 ),
@@ -792,7 +827,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                 ElevatedButton(
                                   onPressed: _verifyOTP,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: context.customTheme.primaryColor,
+                                    backgroundColor:
+                                        context.customTheme.primaryColor,
                                     foregroundColor: Colors.white,
                                     minimumSize: Size(double.infinity, 50),
                                     shape: RoundedRectangleBorder(
@@ -803,10 +839,11 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                 ),
                                 SizedBox(height: 10),
                                 ElevatedButton(
-                                  onPressed: _isRequestEnabled ? _requestNewOTP : null,
+                                  onPressed:
+                                      _isRequestEnabled ? _requestNewOTP : null,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isRequestEnabled 
-                                        ? context.customTheme.primaryColor 
+                                    backgroundColor: _isRequestEnabled
+                                        ? context.customTheme.primaryColor
                                         : context.customTheme.secondaryColor,
                                     foregroundColor: Colors.white,
                                     minimumSize: Size(double.infinity, 50),

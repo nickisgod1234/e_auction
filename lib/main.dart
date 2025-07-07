@@ -9,17 +9,17 @@ import 'package:timezone/data/latest.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // ตั้งค่าแจ้งเตือน
   await _setupNotifications();
-  
+
   runApp(const MyApp());
 }
 
 Future<void> _setupNotifications() async {
   // ตั้งค่า timezone
   tz.initializeTimeZones();
-  
+
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
@@ -35,8 +35,7 @@ Future<void> _setupNotifications() async {
     requestSoundPermission: true,
   );
 
-  const InitializationSettings initializationSettings =
-      InitializationSettings(
+  const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
     iOS: initializationSettingsIOS,
   );
@@ -49,7 +48,7 @@ Future<void> _setupNotifications() async {
       print('🔔 MAIN: Payload: ${response.payload}');
       print('🔔 MAIN: ID: ${response.id}');
       print('🔔 MAIN: Action ID: ${response.actionId}');
-      
+
       // เช็คว่าเป็น scheduled notification สำหรับประกาศผู้ชนะหรือไม่
       if (response.payload == 'announce_winners') {
         print('🔔 MAIN: Received scheduled winner announcement notification');
@@ -57,7 +56,8 @@ Future<void> _setupNotifications() async {
         // เรียกใช้ฟังก์ชันประกาศผู้ชนะ
         announceWinnersAtScheduledTime(flutterLocalNotificationsPlugin);
       } else {
-        print('🔔 MAIN: Not a winner announcement notification, payload: ${response.payload}');
+        print(
+            '🔔 MAIN: Not a winner announcement notification, payload: ${response.payload}');
       }
     },
   );
@@ -66,7 +66,6 @@ Future<void> _setupNotifications() async {
 
   await setupIOSNewAuctionNotification(flutterLocalNotificationsPlugin);
 
-  
   // ตั้งค่า background task สำหรับประกาศผู้ชนะ
   await setupBackgroundWinnerAnnouncement();
 }

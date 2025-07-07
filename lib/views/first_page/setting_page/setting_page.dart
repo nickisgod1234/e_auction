@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/auth_service/auth_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 
-
 class SettingPage extends StatefulWidget {
   @override
   _SettingPageState createState() => _SettingPageState();
@@ -150,7 +149,8 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(response?['message'] ?? 'ไม่สามารถลบบัญชีได้ กรุณาลองใหม่'),
+        content:
+            Text(response?['message'] ?? 'ไม่สามารถลบบัญชีได้ กรุณาลองใหม่'),
         backgroundColor: Colors.red,
       ));
     }
@@ -217,7 +217,8 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('ตั้งค่าบัญชี', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: Text('ตั้งค่าบัญชี',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 2,
@@ -231,11 +232,18 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
             Card(
               color: Colors.white,
               elevation: 1,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: ListTile(
                 leading: Icon(Icons.privacy_tip_outlined, color: Colors.black),
-                title: Text('ยินยอมในการเก็บข้อมูล', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-                subtitle: Text(_isConsentGiven ? 'ยินยอมให้เก็บข้อมูลแล้ว' : 'ยังไม่ได้ให้ความยินยอม', style: TextStyle(color: Colors.grey[700])),
+                title: Text('ยินยอมในการเก็บข้อมูล',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.black)),
+                subtitle: Text(
+                    _isConsentGiven
+                        ? 'ยินยอมให้เก็บข้อมูลแล้ว'
+                        : 'ยังไม่ได้ให้ความยินยอม',
+                    style: TextStyle(color: Colors.grey[700])),
                 trailing: Switch(
                   value: _isConsentGiven,
                   onChanged: (bool newValue) {
@@ -256,13 +264,19 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
             Card(
               color: Colors.white,
               elevation: 1,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: ListTile(
                 leading: Icon(Icons.delete_forever, color: Colors.red.shade700),
-                title: Text('ลบบัญชี', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
-                subtitle: Text('ลบบัญชีและข้อมูลทั้งหมดอย่างถาวร', style: TextStyle(color: Colors.grey[700])),
+                title: Text('ลบบัญชี',
+                    style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.bold)),
+                subtitle: Text('ลบบัญชีและข้อมูลทั้งหมดอย่างถาวร',
+                    style: TextStyle(color: Colors.grey[700])),
                 onTap: _showDeleteConfirmationDialog,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
             ),
             SizedBox(height: 16),
@@ -271,21 +285,27 @@ class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
               Card(
                 color: Colors.white,
                 elevation: 1,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 child: ListTile(
                   leading: Icon(Icons.logout, color: Colors.black),
-                  title: Text('ออกจากระบบ', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  title: Text('ออกจากระบบ',
+                      style: TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.bold)),
                   onTap: () async {
-                    SharedPreferences prefs = await SharedPreferences.getInstance();
+                    SharedPreferences prefs =
+                        await SharedPreferences.getInstance();
                     await prefs.clear();
                     if (mounted) {
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => RequestOtpLoginPage()),
+                        MaterialPageRoute(
+                            builder: (context) => RequestOtpLoginPage()),
                         (Route<dynamic> route) => false,
                       );
                     }
                   },
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
               ),
           ],

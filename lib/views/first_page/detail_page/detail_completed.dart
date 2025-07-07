@@ -87,11 +87,16 @@ class DetailCompleted extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: 12),
-                        _buildDetailRow('ราคาสุดท้าย', '${Format.formatCurrency(_getFinalPriceAsInt())}'),
-                        _buildDetailRow('ราคาเริ่มต้น', '${Format.formatCurrency(_getStartingPriceAsInt())}'),
-                        _buildDetailRow('จำนวนการประมูล', '${auctionData['bidCount'] ?? 0} รายการ'),
-                        _buildDetailRow('ผู้ชนะการประมูล', auctionData['winner'] ?? 'ไม่ระบุ'),
-                        _buildDetailRow('วันที่เสร็จสิ้น', auctionData['completedDate'] ?? 'ไม่ระบุ'),
+                        _buildDetailRow('ราคาสุดท้าย',
+                            '${Format.formatCurrency(_getFinalPriceAsInt())}'),
+                        _buildDetailRow('ราคาเริ่มต้น',
+                            '${Format.formatCurrency(_getStartingPriceAsInt())}'),
+                        _buildDetailRow('จำนวนการประมูล',
+                            '${auctionData['bidCount'] ?? 0} รายการ'),
+                        _buildDetailRow('ผู้ชนะการประมูล',
+                            auctionData['winner'] ?? 'ไม่ระบุ'),
+                        _buildDetailRow('วันที่เสร็จสิ้น',
+                            auctionData['completedDate'] ?? 'ไม่ระบุ'),
                       ],
                     ),
                   ),
@@ -146,4 +151,4 @@ class DetailCompleted extends StatelessWidget {
       ),
     );
   }
-} 
+}

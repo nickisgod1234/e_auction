@@ -34,7 +34,8 @@ class AuthService {
             result['id'] = _safeToString(userData['id']);
             result['phone_number'] = _safeToString(userData['phone_number']);
             result['name'] = _safeToString(userData['name']);
-            result['profile_picture'] = _safeToString(userData['profile_picture']);
+            result['profile_picture'] =
+                _safeToString(userData['profile_picture']);
             result['type'] = _safeToString(userData['type']);
             result['email'] = _safeToString(userData['email']);
             result['password'] = _safeToString(userData['password']);
@@ -44,17 +45,28 @@ class AuthService {
             result['created_at'] = _safeToString(userData['created_at']);
             result['updated_at'] = _safeToString(userData['updated_at']);
             result['company_id'] = _safeToString(userData['company_id']);
-            result['logo'] = _safeToString(userData['logo']) != '' ? _safeToString(userData['logo']) : _safeToString(userData['profile_picture']);
-            result['phone'] = _safeToString(userData['phone']) != '' ? _safeToString(userData['phone']) : _safeToString(userData['phone_number']);
+            result['logo'] = _safeToString(userData['logo']) != ''
+                ? _safeToString(userData['logo'])
+                : _safeToString(userData['profile_picture']);
+            result['phone'] = _safeToString(userData['phone']) != ''
+                ? _safeToString(userData['phone'])
+                : _safeToString(userData['phone_number']);
             result['code'] = _safeToString(userData['code']);
             result['tax_number'] = _safeToString(userData['tax_number']);
-            result['fullname'] = _safeToString(userData['fullname']) != '' ? _safeToString(userData['fullname']) : _safeToString(userData['name']);
-            result['addr'] = _safeToString(userData['addr']) != '' ? _safeToString(userData['addr']) : _safeToString(userData['address']);
+            result['fullname'] = _safeToString(userData['fullname']) != ''
+                ? _safeToString(userData['fullname'])
+                : _safeToString(userData['name']);
+            result['addr'] = _safeToString(userData['addr']) != ''
+                ? _safeToString(userData['addr'])
+                : _safeToString(userData['address']);
             result['province_id'] = _safeToString(userData['province_id']);
             result['district_id'] = _safeToString(userData['district_id']);
-            result['sub_district_id'] = _safeToString(userData['sub_district_id']);
+            result['sub_district_id'] =
+                _safeToString(userData['sub_district_id']);
             result['sub'] = _safeToString(userData['sub']);
-            result['pass'] = _safeToString(userData['pass']) != '' ? _safeToString(userData['pass']) : _safeToString(userData['password']);
+            result['pass'] = _safeToString(userData['pass']) != ''
+                ? _safeToString(userData['pass'])
+                : _safeToString(userData['password']);
             result['reset_key'] = _safeToString(userData['reset_key']);
             result['reset_key_exp'] = _safeToString(userData['reset_key_exp']);
             print('Result created successfully');
@@ -132,14 +144,16 @@ class AuthService {
 
       // เพิ่มฟิลด์ตาม API specification
       request.fields['customer_id'] = phoneUserId;
-      request.fields['fullname'] = '${firstname ?? ''} ${lastname ?? ''}'.trim();
+      request.fields['fullname'] =
+          '${firstname ?? ''} ${lastname ?? ''}'.trim();
       if (firstname != null) request.fields['name'] = firstname;
       if (email != null) request.fields['email'] = email;
       if (phone != null) request.fields['phone'] = phone;
       if (address != null) request.fields['addr'] = address;
       if (provinceId != null) request.fields['province_id'] = provinceId;
       if (districtId != null) request.fields['district_id'] = districtId;
-      if (subDistrictId != null) request.fields['sub_district_id'] = subDistrictId;
+      if (subDistrictId != null)
+        request.fields['sub_district_id'] = subDistrictId;
       if (sub != null) request.fields['sub'] = sub;
       if (type != null) request.fields['type'] = type;
       if (companyId != null) request.fields['company_id'] = companyId;
@@ -207,7 +221,8 @@ class AuthService {
       if (address != null) request.fields['addr'] = address;
       if (provinceId != null) request.fields['province_id'] = provinceId;
       if (districtId != null) request.fields['district_id'] = districtId;
-      if (subDistrictId != null) request.fields['sub_district_id'] = subDistrictId;
+      if (subDistrictId != null)
+        request.fields['sub_district_id'] = subDistrictId;
       if (sub != null) request.fields['sub'] = sub;
       if (type != null) request.fields['type'] = type;
       if (companyId != null) request.fields['company_id'] = companyId;
@@ -262,10 +277,11 @@ class AuthService {
       final response = await http.get(url).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception('Request timeout - ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+          throw Exception(
+              'Request timeout - ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
         },
       );
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success']) {
@@ -274,7 +290,8 @@ class AuthService {
           throw Exception(data['message'] ?? 'ไม่สามารถโหลดข้อมูลที่อยู่ได้');
         }
       } else {
-        throw Exception('HTTP ${response.statusCode} - ไม่สามารถโหลดข้อมูลที่อยู่ได้');
+        throw Exception(
+            'HTTP ${response.statusCode} - ไม่สามารถโหลดข้อมูลที่อยู่ได้');
       }
     } catch (e) {
       print('Error fetching address data: $e');
@@ -284,31 +301,34 @@ class AuthService {
 
   // ดึงข้อมูลโปรไฟล์ลูกค้า
   Future<Map<String, dynamic>?> getProfile(String customerId) async {
-    final url = Uri.parse('$baseUrl/login_phone_auction/get_customer_data.php?customer_id=$customerId');
+    final url = Uri.parse(
+        '$baseUrl/login_phone_auction/get_customer_data.php?customer_id=$customerId');
     try {
       final response = await http.get(url).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception('Request timeout - ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+          throw Exception(
+              'Request timeout - ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
         },
       );
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('Profile Response: ${response.body}');
-        
+
         if (data['success']) {
           final customerData = data['data'];
-          
+
           // สร้าง Map ใหม่ด้วยการ handle null values อย่างปลอดภัย
           final result = <String, String>{};
-          
+
           // ใช้ field names ตามที่ API ส่งกลับมา
           result['id'] = _safeToString(customerData['id']);
           result['phone'] = _safeToString(customerData['phone']);
           result['fullname'] = _safeToString(customerData['fullname']);
           result['email'] = _safeToString(customerData['email']);
-          result['profile_picture'] = _safeToString(customerData['profile_picture']);
+          result['profile_picture'] =
+              _safeToString(customerData['profile_picture']);
           result['type'] = _safeToString(customerData['type']);
           result['company_id'] = _safeToString(customerData['company_id']);
           result['tax_number'] = _safeToString(customerData['tax_number']);
@@ -316,21 +336,26 @@ class AuthService {
           result['code'] = _safeToString(customerData['code']);
           result['address'] = _safeToString(customerData['address']);
           result['province_id'] = _safeToString(customerData['province_id']);
-          result['province_name'] = _safeToString(customerData['province_name']);
+          result['province_name'] =
+              _safeToString(customerData['province_name']);
           result['district_id'] = _safeToString(customerData['district_id']);
-          result['district_name'] = _safeToString(customerData['district_name']);
-          result['sub_district_id'] = _safeToString(customerData['sub_district_id']);
-          result['sub_district_name'] = _safeToString(customerData['sub_district_name']);
+          result['district_name'] =
+              _safeToString(customerData['district_name']);
+          result['sub_district_id'] =
+              _safeToString(customerData['sub_district_id']);
+          result['sub_district_name'] =
+              _safeToString(customerData['sub_district_name']);
           result['sub'] = _safeToString(customerData['sub']);
           result['created_at'] = _safeToString(customerData['created_at']);
           result['updated_at'] = _safeToString(customerData['updated_at']);
-          
+
           return result;
         } else {
           throw Exception(data['message'] ?? 'ไม่สามารถดึงข้อมูลโปรไฟล์ได้');
         }
       } else {
-        throw Exception('HTTP ${response.statusCode} - ไม่สามารถดึงข้อมูลโปรไฟล์ได้');
+        throw Exception(
+            'HTTP ${response.statusCode} - ไม่สามารถดึงข้อมูลโปรไฟล์ได้');
       }
     } catch (e) {
       print('Error fetching profile: $e');

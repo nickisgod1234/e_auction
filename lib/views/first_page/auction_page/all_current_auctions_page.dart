@@ -8,9 +8,11 @@ class AllCurrentAuctionsPage extends StatelessWidget {
 
   const AllCurrentAuctionsPage({super.key, required this.currentAuctions});
 
-  Widget _buildAuctionImage(String? imagePath, {double width = 80, double height = 80}) {
+  Widget _buildAuctionImage(String? imagePath,
+      {double width = 80, double height = 80}) {
     if (imagePath == null || imagePath.isEmpty) {
-      return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+      return Image.asset('assets/images/noimage.jpg',
+          width: width, height: height, fit: BoxFit.cover);
     }
     if (imagePath.startsWith('http')) {
       return Image.network(
@@ -19,7 +21,8 @@ class AllCurrentAuctionsPage extends StatelessWidget {
         height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+          return Image.asset('assets/images/noimage.jpg',
+              width: width, height: height, fit: BoxFit.cover);
         },
       );
     } else {
@@ -29,7 +32,8 @@ class AllCurrentAuctionsPage extends StatelessWidget {
         height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+          return Image.asset('assets/images/noimage.jpg',
+              width: width, height: height, fit: BoxFit.cover);
         },
       );
     }
@@ -123,4 +127,4 @@ class AllCurrentAuctionsPage extends StatelessWidget {
             ),
     );
   }
-} 
+}

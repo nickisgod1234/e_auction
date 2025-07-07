@@ -29,38 +29,35 @@ class ProductService {
 
   // เรียกรายการ quotation ทั้งหมด
   Future<List<Map<String, dynamic>>?> getAllQuotations() async {
-    final url = Uri.parse('$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
-    
+    final url = Uri.parse(
+        '$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
+
     try {
       final response = await http.get(
         url,
         headers: {'Content-Type': 'application/json'},
       );
 
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         if (data is List) {
           return _parseQuotationList(data);
         } else {
-          print('Unexpected response format: $data');
           return [];
         }
       } else {
-        throw Exception('Failed to fetch quotations. Status: ${response.statusCode}');
+        throw Exception(
+            'Failed to fetch quotations. Status: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in getAllQuotations: $e');
-      print('Error stack trace: ${StackTrace.current}');
       return null;
     }
   }
 
   // กรองเฉพาะ quotation ที่เป็น auction (AS นำหน้า)
-  List<Map<String, dynamic>> _filterAuctionQuotations(List<Map<String, dynamic>> quotations) {
+  List<Map<String, dynamic>> _filterAuctionQuotations(
+      List<Map<String, dynamic>> quotations) {
     return quotations.where((quotation) {
       final typeCode = _safeToString(quotation['quotation_type_code']);
       return typeCode.startsWith('AS');
@@ -80,30 +77,29 @@ class ProductService {
 
       return auctionQuotations;
     } catch (e) {
-      print('Error in getAllAuctionProducts: $e');
       return null;
     }
   }
 
   // เรียกข้อมูลสินค้าประมูลตาม ID
-  Future<Map<String, dynamic>?> getAuctionProductById(String quotationId) async {
-    final url = Uri.parse('$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
+  Future<Map<String, dynamic>?> getAuctionProductById(
+      String quotationId) async {
+    final url = Uri.parse(
+        '$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
     try {
-      print('GET URL: $url');
       final response = await http.get(
         url,
         headers: {'Content-Type': 'application/json'},
       );
-      print('Status Code for ID $quotationId: ${response.statusCode}');
-      print('Response Body for ID $quotationId: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return _parseSingleAuctionProduct(data);
       } else {
-        throw Exception('Failed to fetch auction product. Status: ${response.statusCode}');
+        throw Exception(
+            'Failed to fetch auction product. Status: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in getAuctionProductById for ID $quotationId: $e');
       return null;
     }
   }
@@ -117,9 +113,9 @@ class ProductService {
     return products.where((product) {
       final startDate = DateTime.tryParse(product['auction_start_date'] ?? '');
       final endDate = DateTime.tryParse(product['auction_end_date'] ?? '');
-      
+
       if (startDate == null || endDate == null) return false;
-      
+
       return now.isAfter(startDate) && now.isBefore(endDate);
     }).toList();
   }
@@ -132,9 +128,9 @@ class ProductService {
     final now = DateTime.now();
     return products.where((product) {
       final startDate = DateTime.tryParse(product['auction_start_date'] ?? '');
-      
+
       if (startDate == null) return false;
-      
+
       return now.isBefore(startDate);
     }).toList();
   }
@@ -147,9 +143,9 @@ class ProductService {
     final now = DateTime.now();
     return products.where((product) {
       final endDate = DateTime.tryParse(product['auction_end_date'] ?? '');
-      
+
       if (endDate == null) return false;
-      
+
       return now.isAfter(endDate);
     }).toList();
   }
@@ -157,12 +153,13 @@ class ProductService {
   // Parse รายการ quotation จาก API response
   List<Map<String, dynamic>> _parseQuotationList(List<dynamic> rawData) {
     final List<Map<String, dynamic>> quotations = [];
-    
+
     for (var item in rawData) {
       if (item is Map<String, dynamic>) {
         final quotation = {
           'quotation_id': _safeToString(item['quotation_id']),
-          'quotation_more_information_id': _safeToString(item['quotation_more_information_id']),
+          'quotation_more_information_id':
+              _safeToString(item['quotation_more_information_id']),
           'sequence': _safeToString(item['sequence']),
           'quotation_type_code': _safeToString(item['quotation_type_code']),
           'description': _safeToString(item['description']),
@@ -186,19 +183,21 @@ class ProductService {
         quotations.add(quotation);
       }
     }
-    
+
     return quotations;
   }
 
   // Parse ข้อมูลสินค้าประมูลเดี่ยว
-  Map<String, dynamic>? _parseSingleAuctionProduct(Map<String, dynamic> rawData) {
+  Map<String, dynamic>? _parseSingleAuctionProduct(
+      Map<String, dynamic> rawData) {
     try {
       // ข้อมูลหลักของสินค้า
       final Map<String, dynamic> product = {
         'id': _safeToString(rawData['quotation_id']),
         'type_id': _safeToString(rawData['quotation_type_id']),
         'type_code': _safeToString(rawData['quotation_type_code']),
-        'type_description': _safeToString(rawData['quotation_type_description']),
+        'type_description':
+            _safeToString(rawData['quotation_type_description']),
         'sourcing': _safeToString(rawData['sourcing']),
         'description': _safeToString(rawData['description']),
         'vendor_id': _safeToString(rawData['vendor_id']),
@@ -214,20 +213,19 @@ class ProductService {
       // Parse รายการสินค้า
       if (rawData['items'] != null && rawData['items'] is List) {
         final List<Map<String, dynamic>> items = [];
-        
+
         for (var item in rawData['items']) {
           final parsedItem = _parseAuctionItem(item);
           if (parsedItem != null) {
             items.add(parsedItem);
           }
         }
-        
+
         product['items'] = items;
       }
 
       return product;
     } catch (e) {
-      print('Error parsing auction product: $e');
       return null;
     }
   }
@@ -236,10 +234,12 @@ class ProductService {
   Map<String, dynamic>? _parseAuctionItem(Map<String, dynamic> rawItem) {
     try {
       final Map<String, dynamic> item = {
-        'purchase_order_main_id': _safeToString(rawItem['purchase_order_main_id']),
+        'purchase_order_main_id':
+            _safeToString(rawItem['purchase_order_main_id']),
         'status': _safeToString(rawItem['status']),
         'item_number': _safeToString(rawItem['item_number']),
-        'accounting_category_id': _safeToString(rawItem['accounting_category_id']),
+        'accounting_category_id':
+            _safeToString(rawItem['accounting_category_id']),
         'item_category_id': _safeToString(rawItem['item_category_id']),
         'material_id': _safeToString(rawItem['material_id']),
         'short_text': _safeToString(rawItem['short_text']),
@@ -254,13 +254,15 @@ class ProductService {
       // Parse tabs data
       if (rawItem['tabs'] != null && rawItem['tabs'] is Map) {
         final tabs = rawItem['tabs'] as Map<String, dynamic>;
-        
+
         // Material data
         if (tabs['material_data'] != null) {
           final materialData = tabs['material_data'] as Map<String, dynamic>;
           item['tabs']['material_data'] = {
-            'quotation_material_data_id': _safeToString(materialData['quotation_material_data_id']),
-            'quotation_main_id': _safeToString(materialData['quotation_main_id']),
+            'quotation_material_data_id':
+                _safeToString(materialData['quotation_material_data_id']),
+            'quotation_main_id':
+                _safeToString(materialData['quotation_main_id']),
             'material_id_tab': _safeToString(materialData['material_id_tab']),
             'short_text_tab': _safeToString(materialData['short_text_tab']),
             'mpn_material': _safeToString(materialData['mpn_material']),
@@ -268,10 +270,13 @@ class ProductService {
             'batch': _safeToString(materialData['batch']),
             'revision_level': _safeToString(materialData['revision_level']),
             'assessment_value': _safeToString(materialData['assessment_value']),
-            'material_group_id': _safeToString(materialData['material_group_id']),
+            'material_group_id':
+                _safeToString(materialData['material_group_id']),
             'iuid_relevant': _safeToString(materialData['iuid_relevant']),
-            'supplier_material': _safeToString(materialData['supplier_material']),
-            'product_category_group': _safeToString(materialData['product_category_group']),
+            'supplier_material':
+                _safeToString(materialData['supplier_material']),
+            'product_category_group':
+                _safeToString(materialData['product_category_group']),
             'manufacturer': _safeToString(materialData['manufacturer']),
             'ext_man': _safeToString(materialData['ext_man']),
             'mfr_part_profile': _safeToString(materialData['mfr_part_profile']),
@@ -287,8 +292,10 @@ class ProductService {
         if (tabs['quantity_date'] != null) {
           final quantityDate = tabs['quantity_date'] as Map<String, dynamic>;
           item['tabs']['quantity_date'] = {
-            'quotation_quantity_date_id': _safeToString(quantityDate['quotation_quantity_date_id']),
-            'quotation_main_id': _safeToString(quantityDate['quotation_main_id']),
+            'quotation_quantity_date_id':
+                _safeToString(quantityDate['quotation_quantity_date_id']),
+            'quotation_main_id':
+                _safeToString(quantityDate['quotation_main_id']),
             'quantity_tab': _safeToInt(quantityDate['quantity_tab']),
             'delivery_date': _safeToString(quantityDate['delivery_date']),
             'ordered_quantity': _safeToString(quantityDate['ordered_quantity']),
@@ -296,7 +303,8 @@ class ProductService {
             'pending_quantity': _safeToString(quantityDate['pending_quantity']),
             'approval_date': _safeToString(quantityDate['approval_date']),
             'closed_status': _safeToString(quantityDate['closed_status']),
-            'planned_delivery_time': _safeToString(quantityDate['planned_delivery_time']),
+            'planned_delivery_time':
+                _safeToString(quantityDate['planned_delivery_time']),
             'fixed_id': _safeToString(quantityDate['fixed_id']),
             'transfer_time': _safeToString(quantityDate['transfer_time']),
             'quantity_confirm': _safeToString(quantityDate['quantity_confirm']),
@@ -313,7 +321,8 @@ class ProductService {
         if (tabs['valuation'] != null) {
           final valuation = tabs['valuation'] as Map<String, dynamic>;
           item['tabs']['valuation'] = {
-            'quotation_valuation_id': _safeToString(valuation['quotation_valuation_id']),
+            'quotation_valuation_id':
+                _safeToString(valuation['quotation_valuation_id']),
             'quotation_main_id': _safeToString(valuation['quotation_main_id']),
             'estimated_price': _safeToInt(valuation['estimated_price']),
             'currency_id': _safeToString(valuation['currency_id']),
@@ -339,7 +348,8 @@ class ProductService {
         if (tabs['message'] != null) {
           final message = tabs['message'] as Map<String, dynamic>;
           item['tabs']['message'] = {
-            'quotation_message_id': _safeToString(message['quotation_message_id']),
+            'quotation_message_id':
+                _safeToString(message['quotation_message_id']),
             'quotation_main_id': _safeToString(message['quotation_main_id']),
             'purchase_message': _safeToString(message['purchase_message']),
             'item_note': _safeToString(message['item_note']),
@@ -357,35 +367,39 @@ class ProductService {
 
       return item;
     } catch (e) {
-      print('Error parsing auction item: $e');
       return null;
     }
   }
 
   // คืน URL รูปภาพ auction ที่ถูกต้อง
   String _getAuctionImageUrl(String? imageName) {
-    if (imageName == null || imageName.isEmpty || imageName == '[]' || imageName == '"[]"') {
+    if (imageName == null ||
+        imageName.isEmpty ||
+        imageName == '[]' ||
+        imageName == '"[]"') {
       return 'assets/images/noimage.jpg';
     }
-    
+
     // ลบ escape characters และ quotes ที่ไม่จำเป็น
     String cleanImageName = imageName.trim();
-    
+
     // ถ้าเป็น JSON array string ให้ parse
     if (cleanImageName.startsWith('[') && cleanImageName.endsWith(']')) {
       try {
         final parsed = jsonDecode(cleanImageName);
-        if (parsed is List && parsed.isNotEmpty && parsed[0] != null && parsed[0].toString().isNotEmpty) {
+        if (parsed is List &&
+            parsed.isNotEmpty &&
+            parsed[0] != null &&
+            parsed[0].toString().isNotEmpty) {
           cleanImageName = parsed[0].toString();
         } else {
           return 'assets/images/noimage.jpg';
         }
       } catch (e) {
-        print('Error parsing image JSON: $e');
         return 'assets/images/noimage.jpg';
       }
     }
-    
+
     // ลบ quotes และ escape characters ที่เหลืออยู่
     cleanImageName = cleanImageName
         .replaceAll('"', '')
@@ -393,17 +407,18 @@ class ProductService {
         .replaceAll('[', '')
         .replaceAll(']', '')
         .trim();
-    
+
     if (cleanImageName.isEmpty) {
       return 'assets/images/noimage.jpg';
     }
-    
+
     print('DEBUG: Clean image name: $cleanImageName');
     return 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
   }
 
   // คืน URL รูปภาพ auction ที่ถูกต้อง (public)
-  String getAuctionImageUrl(String? imageName) => _getAuctionImageUrl(imageName);
+  String getAuctionImageUrl(String? imageName) =>
+      _getAuctionImageUrl(imageName);
 
   // แปลงข้อมูลสินค้าเป็นรูปแบบที่ใช้ในแอพ
   Map<String, dynamic> convertToAppFormat(Map<String, dynamic> product) {
@@ -426,15 +441,25 @@ class ProductService {
 
     // ใช้ข้อมูลจาก API response โดยตรง
     return {
-      'id': product['quotation_more_information_id'] ?? product['quotation_id'] ?? '',
-      'quotation_more_information_id': product['quotation_more_information_id'] ?? product['quotation_id'] ?? '',
-      'title': product['short_text'] ?? product['description'] ?? 'สินค้าไม่ระบุ',
+      'id': product['quotation_more_information_id'] ??
+          product['quotation_id'] ??
+          '',
+      'quotation_more_information_id':
+          product['quotation_more_information_id'] ??
+              product['quotation_id'] ??
+              '',
+      'title':
+          product['short_text'] ?? product['description'] ?? 'สินค้าไม่ระบุ',
       'currentPrice': _safeToInt(product['current_price']),
       'startingPrice': _safeToInt(product['star_price']),
-      'timeRemaining': product['remaining_time'] ?? _calculateTimeRemaining(product['auction_end_date']),
+      'timeRemaining': product['remaining_time'] ??
+          _calculateTimeRemaining(product['auction_end_date']),
       'timeUntilStart': _calculateDaysUntilStart(product['auction_start_date']),
       'image': imagePath,
-      'description': product['purchase_message']?.toString().replaceAll(RegExp(r"^'|'$"), '') ?? '',
+      'description': product['purchase_message']
+              ?.toString()
+              .replaceAll(RegExp(r"^'|'$"), '') ??
+          '',
       'auction_start_date': product['auction_start_date'] ?? '',
       'auction_end_date': product['auction_end_date'] ?? '',
       'status': status,
@@ -456,18 +481,18 @@ class ProductService {
   // คำนวณเวลาที่เหลือ
   String _calculateTimeRemaining(String? endDate) {
     if (endDate == null || endDate.isEmpty) return 'ไม่ระบุ';
-    
+
     try {
       final end = DateTime.parse(endDate);
       final now = DateTime.now();
-      
+
       if (now.isAfter(end)) return 'หมดเวลาแล้ว';
-      
+
       final difference = end.difference(now);
       final days = difference.inDays;
       final hours = difference.inHours % 24;
       final minutes = difference.inMinutes % 60;
-      
+
       if (days > 0) {
         return 'เหลือ $days วัน $hours ชั่วโมง';
       } else if (hours > 0) {
@@ -483,16 +508,16 @@ class ProductService {
   // คำนวณจำนวนวันที่เหลือจนถึงวันเริ่มประมูล
   String _calculateDaysUntilStart(String? startDate) {
     if (startDate == null || startDate.isEmpty) return 'ไม่ระบุ';
-    
+
     try {
       final start = DateTime.parse(startDate);
       final now = DateTime.now();
-      
+
       if (now.isAfter(start)) return 'เริ่มแล้ว';
-      
+
       final difference = start.difference(now);
       final days = difference.inDays;
-      
+
       if (days == 0) {
         final hours = difference.inHours;
         if (hours == 0) {
@@ -517,29 +542,29 @@ class ProductService {
     required String bidderId,
     required String bidderName,
   }) async {
-    final url = Uri.parse('$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
+    final url = Uri.parse(
+        '$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
     final body = {
       'minimum_increase': minimumIncrease,
       'bid_amount': bidAmount,
       'bidder_id': bidderId,
       'bidder_name': bidderName,
     };
-    print('DEBUG: placeBid body = $body');
+
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
-      print('DEBUG: placeBid response.body = ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
         throw Exception('Failed to place bid. Status: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in placeBid: $e');
       return null;
     }
   }
-} 
+}

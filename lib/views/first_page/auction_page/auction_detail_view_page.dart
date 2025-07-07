@@ -21,7 +21,8 @@ class AuctionDetailViewPage extends StatefulWidget {
 }
 
 class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
-  final GlobalKey<_RealtimeAuctionPriceWidgetState> realtimePriceKey = GlobalKey<_RealtimeAuctionPriceWidgetState>();
+  final GlobalKey<_RealtimeAuctionPriceWidgetState> realtimePriceKey =
+      GlobalKey<_RealtimeAuctionPriceWidgetState>();
   Map<String, dynamic>? _latestAuctionData;
 
   // Add a static variable to track the disclaimer popup state
@@ -32,15 +33,15 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     super.initState();
   }
 
-
-
   // Helper method to get current price as int
   int _getCurrentPriceAsInt() {
     // ใช้ข้อมูลจาก real-time ถ้ามี หรือใช้ข้อมูลเดิม
     if (_latestAuctionData != null) {
-      return int.tryParse(_latestAuctionData!['current_price']?.toString() ?? '0') ?? 0;
+      return int.tryParse(
+              _latestAuctionData!['current_price']?.toString() ?? '0') ??
+          0;
     }
-    
+
     final currentPriceRaw = widget.auctionData['currentPrice'];
     if (currentPriceRaw is double) {
       return currentPriceRaw.round();
@@ -54,9 +55,11 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
   int _getStartingPriceAsInt() {
     // ใช้ข้อมูลจาก real-time ถ้ามี หรือใช้ข้อมูลเดิม
     if (_latestAuctionData != null) {
-      return int.tryParse(_latestAuctionData!['star_price']?.toString() ?? '0') ?? 0;
+      return int.tryParse(
+              _latestAuctionData!['star_price']?.toString() ?? '0') ??
+          0;
     }
-    
+
     final startingPriceRaw = widget.auctionData['startingPrice'];
     if (startingPriceRaw is double) {
       return startingPriceRaw.round();
@@ -67,7 +70,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
   }
 
   // แสดง Custom Toast Message
-  void _showCustomToast(BuildContext context, String message, {bool isSuccess = true}) {
+  void _showCustomToast(BuildContext context, String message,
+      {bool isSuccess = true}) {
     final overlay = Overlay.of(context);
     final overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -172,11 +176,14 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     padding: EdgeInsets.symmetric(vertical: 16),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: Text('ตกลง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: Text('ตกลง',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -196,40 +203,38 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     );
 
     final productService = ProductService(baseUrl: Config.apiUrlAuction);
-    final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? widget.auctionData['id'].toString();
-    
-    print('🔍 BID_DIALOG: Starting bid dialog for quotation ID: $quotationId');
-    print('🔍 BID_DIALOG: Using base URL: ${Config.apiUrlAuction}');
-    
-    try {
-      final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
-      print('🔍 BID_DIALOG: Making API call to: $url');
-      
-      final response = await http.get(Uri.parse(url));
+    final quotationId =
+        widget.auctionData['quotation_more_information_id']?.toString() ??
+            widget.auctionData['id'].toString();
 
-      print('🔍 BID_DIALOG: API Response Status: ${response.statusCode}');
-      print('🔍 BID_DIALOG: API Response Body: ${response.body}');
+    try {
+      final url =
+          '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
+
+      final response = await http.get(Uri.parse(url));
 
       Navigator.pop(context); // ปิด loading
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('🔍 BID_DIALOG: Parsed data: $data');
-        
+
         if (data != null && data['quotation_more_information_id'] != null) {
           final latestData = data;
-          print('🔍 BID_DIALOG: Latest data: $latestData');
-          
+
           final TextEditingController bidController = TextEditingController();
-          final currentPrice = int.tryParse(latestData['current_price']?.toString() ?? '0') ?? 0;
-          final minimumIncrease = int.tryParse(latestData['minimum_increase']?.toString() ?? '0') ?? 0;
+          final currentPrice =
+              int.tryParse(latestData['current_price']?.toString() ?? '0') ?? 0;
+          final minimumIncrease =
+              int.tryParse(latestData['minimum_increase']?.toString() ?? '0') ??
+                  0;
           final minBid = currentPrice + minimumIncrease;
 
           showDialog(
             context: context,
             builder: (BuildContext context) {
               return AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
                 title: Column(
                   children: [
                     Container(
@@ -276,7 +281,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                                   width: 60,
                                   height: 60,
                                   color: Colors.grey[200],
-                                  child: Icon(Icons.image_not_supported, color: Colors.grey),
+                                  child: Icon(Icons.image_not_supported,
+                                      color: Colors.grey),
                                 );
                               },
                             ),
@@ -314,12 +320,16 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                       padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.green.withOpacity(0.1), Colors.blue.withOpacity(0.1)],
+                          colors: [
+                            Colors.green.withOpacity(0.1),
+                            Colors.blue.withOpacity(0.1)
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                        border:
+                            Border.all(color: Colors.green.withOpacity(0.3)),
                       ),
                       child: Column(
                         children: [
@@ -373,7 +383,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                       controller: bidController,
                       decoration: InputDecoration(
                         labelText: 'ราคาที่ต้องการประมูล (บาท)',
-                        hintText: 'กรุณากรอกราคาที่มากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}',
+                        hintText:
+                            'กรุณากรอกราคาที่มากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey[300]!),
@@ -382,7 +393,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.green, width: 2),
                         ),
-                        prefixIcon: Icon(Icons.attach_money, color: Colors.green),
+                        prefixIcon:
+                            Icon(Icons.attach_money, color: Colors.green),
                         filled: true,
                         fillColor: Colors.grey[50],
                       ),
@@ -399,7 +411,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey[300],
                             foregroundColor: Colors.grey[700],
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             padding: EdgeInsets.symmetric(vertical: 16),
                           ),
                           onPressed: () => Navigator.pop(context),
@@ -408,7 +421,10 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                             children: [
                               Icon(Icons.close, size: 20),
                               SizedBox(width: 8),
-                              Text('ยกเลิก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                              Text('ยกเลิก',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),
@@ -419,14 +435,17 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             padding: EdgeInsets.symmetric(vertical: 16),
                             elevation: 2,
                           ),
                           onPressed: () async {
                             final bidAmount = int.tryParse(bidController.text);
                             if (bidAmount == null || bidAmount < minBid) {
-                              _showCustomToast(context, 'กรุณากรอกราคาที่มากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}', isSuccess: false);
+                              _showCustomToast(context,
+                                  'กรุณากรอกราคาที่มากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}',
+                                  isSuccess: false);
                               return;
                             }
 
@@ -434,12 +453,14 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                             showDialog(
                               context: context,
                               barrierDismissible: false,
-                              builder: (_) => Center(child: CircularProgressIndicator()),
+                              builder: (_) =>
+                                  Center(child: CircularProgressIndicator()),
                             );
 
                             final prefs = await SharedPreferences.getInstance();
                             final bidderId = prefs.getString('id') ?? '';
-                            final bidderName = prefs.getString('phone_number') ?? '';
+                            final bidderName =
+                                prefs.getString('phone_number') ?? '';
 
                             final result = await productService.placeBid(
                               quotationId: quotationId,
@@ -452,31 +473,39 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                             Navigator.pop(context); // ปิด loading
                             Navigator.pop(context); // ปิด dialog
 
-                            if (result != null && result['status'] == 'success') {
-                              _showSuccessDialog(context, 'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}');
-                              
+                            if (result != null &&
+                                result['status'] == 'success') {
+                              _showSuccessDialog(context,
+                                  'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}');
+
                               // ดึงข้อมูลล่าสุดและอัปเดต real-time
                               try {
-                                final latestUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
-                                final latestResponse = await http.get(Uri.parse(latestUrl));
-                                
+                                final latestUrl =
+                                    '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
+                                final latestResponse =
+                                    await http.get(Uri.parse(latestUrl));
+
                                 if (latestResponse.statusCode == 200) {
-                                  final latestData = jsonDecode(latestResponse.body);
-                                  if (latestData != null && latestData['quotation_more_information_id'] != null) {
+                                  final latestData =
+                                      jsonDecode(latestResponse.body);
+                                  if (latestData != null &&
+                                      latestData[
+                                              'quotation_more_information_id'] !=
+                                          null) {
                                     // อัปเดตข้อมูลใน state
                                     setState(() {
                                       _latestAuctionData = latestData;
                                     });
                                     // อัปเดต widget realtime
-                                    realtimePriceKey.currentState?.updateAuctionData(latestData);
-                                    print('✅ BID_SUCCESS: Updated real-time data after successful bid');
+                                    realtimePriceKey.currentState
+                                        ?.updateAuctionData(latestData);
                                   }
                                 }
-                              } catch (e) {
-                                print('⚠️ BID_SUCCESS: Failed to update real-time data: $e');
-                              }
+                              } catch (e) {}
                             } else {
-                              _showCustomToast(context, 'เกิดข้อผิดพลาดในการประมูล', isSuccess: false);
+                              _showCustomToast(
+                                  context, 'เกิดข้อผิดพลาดในการประมูล',
+                                  isSuccess: false);
                             }
                           },
                           child: Row(
@@ -484,7 +513,10 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                             children: [
                               Icon(Icons.gavel, size: 20),
                               SizedBox(width: 8),
-                              Text('ยืนยัน', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                              Text('ยืนยัน',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),
@@ -496,10 +528,12 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
             },
           );
         } else {
-          _showCustomToast(context, 'ไม่สามารถโหลดข้อมูลล่าสุดได้', isSuccess: false);
+          _showCustomToast(context, 'ไม่สามารถโหลดข้อมูลล่าสุดได้',
+              isSuccess: false);
         }
       } else {
-        _showCustomToast(context, 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', isSuccess: false);
+        _showCustomToast(context, 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+            isSuccess: false);
       }
     } catch (e) {
       Navigator.pop(context); // ปิด loading
@@ -516,7 +550,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: Row(
                 children: [
                   Icon(Icons.info_outline, color: Colors.orange, size: 28),
@@ -524,7 +559,10 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                   Expanded(
                     child: Text(
                       'ข้อสงวนสิทธิ์ของบริษัทฯ',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.orange[900]),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.orange[900]),
                     ),
                   ),
                 ],
@@ -533,11 +571,14 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('บริษัทฯ ขอสงวนสิทธิ์ในการยกเลิกหรือเลื่อนการประมูลโดยไม่ต้องแจ้งเหตุผล'),
+                  Text(
+                      'บริษัทฯ ขอสงวนสิทธิ์ในการยกเลิกหรือเลื่อนการประมูลโดยไม่ต้องแจ้งเหตุผล'),
                   SizedBox(height: 8),
-                  Text('คำตัดสินของคณะกรรมการหรือผู้แทนบริษัทฯ ถือเป็นที่สิ้นสุด'),
+                  Text(
+                      'คำตัดสินของคณะกรรมการหรือผู้แทนบริษัทฯ ถือเป็นที่สิ้นสุด'),
                   SizedBox(height: 8),
-                  Text('บริษัทฯ ไม่รับผิดชอบต่อความเสียหายหรือข้อพิพาทที่อาจเกิดขึ้นหลังจากการส่งมอบสินค้า'),
+                  Text(
+                      'บริษัทฯ ไม่รับผิดชอบต่อความเสียหายหรือข้อพิพาทที่อาจเกิดขึ้นหลังจากการส่งมอบสินค้า'),
                   SizedBox(height: 16),
                   Row(
                     children: [
@@ -616,27 +657,30 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
           children: [
             // Product Image
             _buildProductImage(),
-            
+
             // Product Info
             _buildProductInfo(context),
-            
+
             // Realtime Auction Price
             RealtimeAuctionPriceWidget(
-              quotationId: widget.auctionData['quotation_more_information_id']?.toString() ?? widget.auctionData['id'].toString(),
+              quotationId: widget.auctionData['quotation_more_information_id']
+                      ?.toString() ??
+                  widget.auctionData['id'].toString(),
               baseUrl: Config.apiUrlAuction,
             ),
-            
+
             // Product Details
             _buildProductDetails(context),
-            
+
             // Item Notes
             _buildItemNotes(context),
-            
+
             // Seller Info
             _buildSellerInfo(context),
-            
+
             // Bottom spacing
-            SizedBox(height: 100), // เพิ่มระยะห่างด้านล่างสำหรับ floating button
+            SizedBox(
+                height: 100), // เพิ่มระยะห่างด้านล่างสำหรับ floating button
           ],
         ),
       ),
@@ -733,53 +777,45 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
   }
 
   Widget _buildProductImage() {
-    // Debug: ตรวจสอบข้อมูลที่ได้รับ
-    print('🔍 AUCTION_DETAIL: Received auction data:');
-    print('🔍 AUCTION_DETAIL: widget.auctionData[image] = ${widget.auctionData['image']}');
-    print('🔍 AUCTION_DETAIL: widget.auctionData[images] = ${widget.auctionData['images']}');
-    print('🔍 AUCTION_DETAIL: widget.auctionData[id] = ${widget.auctionData['id']}');
-    print('🔍 AUCTION_DETAIL: widget.auctionData[quotation_more_information_id] = ${widget.auctionData['quotation_more_information_id']}');
-    
     return Container(
       width: double.infinity,
       height: 300,
-      child: _buildAuctionImage(widget.auctionData['image'], width: double.infinity, height: 300),
+      child: _buildAuctionImage(widget.auctionData['image'],
+          width: double.infinity, height: 300),
     );
   }
 
-  Widget _buildAuctionImage(String? imagePath, {double width = double.infinity, double height = 300}) {
-    print('🔍 AUCTION_DETAIL: _buildAuctionImage called with imagePath = $imagePath');
-    
+  Widget _buildAuctionImage(String? imagePath,
+      {double width = double.infinity, double height = 300}) {
     if (imagePath == null || imagePath.isEmpty) {
-      print('🔍 AUCTION_DETAIL: imagePath is null or empty, using noimage.jpg');
-      return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+      return Image.asset('assets/images/noimage.jpg',
+          width: width, height: height, fit: BoxFit.cover);
     }
-    
+
     // ตรวจสอบว่าเป็น URL หรือไม่
-    final isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
-    
+    final isUrl =
+        imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
     if (isUrl) {
-      print('🔍 AUCTION_DETAIL: Using Image.network for URL: $imagePath');
       return Image.network(
         imagePath,
         width: width,
         height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          print('🔍 AUCTION_DETAIL: Network image error: $error');
-          return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+          return Image.asset('assets/images/noimage.jpg',
+              width: width, height: height, fit: BoxFit.cover);
         },
       );
     } else {
-      print('🔍 AUCTION_DETAIL: Using Image.asset for path: $imagePath');
       return Image.asset(
         imagePath,
         width: width,
         height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          print('🔍 AUCTION_DETAIL: Asset image error: $error');
-          return Image.asset('assets/images/noimage.jpg', width: width, height: height, fit: BoxFit.cover);
+          return Image.asset('assets/images/noimage.jpg',
+              width: width, height: height, fit: BoxFit.cover);
         },
       );
     }
@@ -835,12 +871,17 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
             ),
             child: Column(
               children: [
-                _buildDetailRow('แบรนด์', widget.auctionData['brand'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('รุ่น', widget.auctionData['model'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('วัสดุ', widget.auctionData['material'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('ขนาด', widget.auctionData['size'] ?? 'ไม่ระบุ'),
+                _buildDetailRow(
+                    'แบรนด์', widget.auctionData['brand'] ?? 'ไม่ระบุ'),
+                _buildDetailRow(
+                    'รุ่น', widget.auctionData['model'] ?? 'ไม่ระบุ'),
+                _buildDetailRow(
+                    'วัสดุ', widget.auctionData['material'] ?? 'ไม่ระบุ'),
+                _buildDetailRow(
+                    'ขนาด', widget.auctionData['size'] ?? 'ไม่ระบุ'),
                 _buildDetailRow('สี', widget.auctionData['color'] ?? 'ไม่ระบุ'),
-                _buildDetailRow('สภาพ', widget.auctionData['condition'] ?? 'ไม่ระบุ'),
+                _buildDetailRow(
+                    'สภาพ', widget.auctionData['condition'] ?? 'ไม่ระบุ'),
               ],
             ),
           ),
@@ -876,9 +917,9 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                   radius: 25,
                   backgroundColor: context.customTheme.primaryColor,
                   child: Text(
-                    (widget.auctionData['sellerName']?.length ?? 0) >= 2 
-                      ? widget.auctionData['sellerName']!.substring(0, 2) 
-                      : (widget.auctionData['sellerName'] ?? 'CM'),
+                    (widget.auctionData['sellerName']?.length ?? 0) >= 2
+                        ? widget.auctionData['sellerName']!.substring(0, 2)
+                        : (widget.auctionData['sellerName'] ?? 'CM'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1024,18 +1065,20 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 class RealtimeAuctionPriceWidget extends StatefulWidget {
   final String quotationId;
   final String baseUrl;
-  
+
   const RealtimeAuctionPriceWidget({
-    Key? key, 
+    Key? key,
     required this.quotationId,
     required this.baseUrl,
   }) : super(key: key);
 
   @override
-  _RealtimeAuctionPriceWidgetState createState() => _RealtimeAuctionPriceWidgetState();
+  _RealtimeAuctionPriceWidgetState createState() =>
+      _RealtimeAuctionPriceWidgetState();
 }
 
-class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget> {
+class _RealtimeAuctionPriceWidgetState
+    extends State<RealtimeAuctionPriceWidget> {
   Timer? _timer;
   Map<String, dynamic>? _auctionData;
   bool isLoading = true;
@@ -1062,13 +1105,15 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
   Future<void> _loadAuctionData() async {
     try {
       final response = await http.get(
-        Uri.parse('${widget.baseUrl}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${widget.quotationId}'),
+        Uri.parse(
+            '${widget.baseUrl}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${widget.quotationId}'),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          if (data is Map<String, dynamic> && data['quotation_more_information_id'] != null) {
+          if (data is Map<String, dynamic> &&
+              data['quotation_more_information_id'] != null) {
             _auctionData = data;
           } else {
             _auctionData = null;
@@ -1100,7 +1145,7 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
 
   String _maskPhoneNumber(String? phoneNumber) {
     if (phoneNumber == null || phoneNumber.isEmpty) return 'ไม่ระบุ';
-    
+
     // ถ้าเป็นเบอร์โทรศัพท์ (มีตัวเลข 10 หลัก)
     if (phoneNumber.length >= 10 && RegExp(r'^\d+$').hasMatch(phoneNumber)) {
       if (phoneNumber.length >= 4) {
@@ -1109,7 +1154,7 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
         return '****';
       }
     }
-    
+
     // ถ้าไม่ใช่เบอร์โทรศัพท์ ให้แสดงตามปกติ
     return phoneNumber;
   }
@@ -1190,17 +1235,24 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ราคาปัจจุบัน', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                    Text('ราคาปัจจุบัน',
+                        style:
+                            TextStyle(fontSize: 14, color: Colors.grey[600])),
                     SizedBox(height: 4),
                     Text(
                       '฿${_auctionData?['current_price'] ?? '0'}',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green[700]),
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[700]),
                     ),
-                    if (_auctionData?['remaining_time'] != null && (_auctionData?['remaining_time'] as String).isNotEmpty)
+                    if (_auctionData?['remaining_time'] != null &&
+                        (_auctionData?['remaining_time'] as String).isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 6.0),
                         child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.orange.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
@@ -1212,7 +1264,10 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                               SizedBox(width: 6),
                               Text(
                                 _auctionData?['remaining_time'] ?? '-',
-                                style: TextStyle(fontSize: 14, color: Colors.orange[800], fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.orange[800],
+                                    fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -1223,22 +1278,32 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                 Container(width: 1, height: 40, color: Colors.grey[300]),
                 Column(
                   children: [
-                    Text('ราคาเริ่มต้น', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    Text('ราคาเริ่มต้น',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[600])),
                     SizedBox(height: 4),
                     Text(
                       '฿${_auctionData?['star_price'] ?? '0'}',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.orange[700]),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange[700]),
                     ),
                   ],
                 ),
                 Container(width: 1, height: 40, color: Colors.grey[300]),
                 Column(
                   children: [
-                    Text('ขั้นต่ำ', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    Text('ขั้นต่ำ',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[600])),
                     SizedBox(height: 4),
                     Text(
                       '฿${_auctionData?['minimum_increase'] ?? '0'}',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blue[700]),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[700]),
                     ),
                   ],
                 ),
@@ -1265,7 +1330,10 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                         SizedBox(width: 6),
                         Text(
                           'ผู้ประมูล: ${_auctionData?['number_bidders'] ?? '0'} คน',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -1275,7 +1343,10 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                         SizedBox(width: 6),
                         Text(
                           'จำนวนครั้ง: ${_auctionData?['total_bids'] ?? '0'} ครั้ง',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -1291,7 +1362,8 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                         SizedBox(width: 6),
                         Text(
                           'อัปเดตล่าสุด: ${_formatTime(_auctionData?['last_updated']).length >= 19 ? _formatTime(_auctionData?['last_updated']).substring(11, 19) : _formatTime(_auctionData?['last_updated'])}',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
                         ),
                       ],
                     ),
@@ -1303,7 +1375,10 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                       ),
                       child: Text(
                         'Live',
-                        style: TextStyle(fontSize: 10, color: Colors.green[700], fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.green[700],
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -1312,14 +1387,17 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
             ),
           ),
           SizedBox(height: 16),
-          if (_auctionData?['bid_history'] != null && (_auctionData?['bid_history'] as List).isNotEmpty)
+          if (_auctionData?['bid_history'] != null &&
+              (_auctionData?['bid_history'] as List).isNotEmpty)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('ประวัติการประมูล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('ประวัติการประมูล',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     Text(
                       '${(_auctionData?['bid_history'] as List).length} รายการ',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -1333,28 +1411,39 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                     itemCount: (_auctionData?['bid_history'] as List).length,
                     itemBuilder: (context, index) {
                       // Reverse index เพื่อให้รายการล่าสุดอยู่บนสุด
-                      final reversedIndex = (_auctionData?['bid_history'] as List).length - 1 - index;
-                      final bid = (_auctionData?['bid_history'] as List)[reversedIndex];
-                      final isLatestBid = index == 0; // รายการล่าสุด (ตอนนี้ index 0 จะเป็นรายการล่าสุด)
+                      final reversedIndex =
+                          (_auctionData?['bid_history'] as List).length -
+                              1 -
+                              index;
+                      final bid =
+                          (_auctionData?['bid_history'] as List)[reversedIndex];
+                      final isLatestBid = index ==
+                          0; // รายการล่าสุด (ตอนนี้ index 0 จะเป็นรายการล่าสุด)
                       return Container(
                         margin: EdgeInsets.only(bottom: 4),
                         decoration: BoxDecoration(
-                          color: isLatestBid ? Colors.green.withOpacity(0.1) : Colors.transparent,
+                          color: isLatestBid
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
-                          border: isLatestBid ? Border.all(color: Colors.green.withOpacity(0.3)) : null,
+                          border: isLatestBid
+                              ? Border.all(color: Colors.green.withOpacity(0.3))
+                              : null,
                         ),
                         child: ListTile(
                           dense: true,
                           leading: Container(
                             padding: EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: isLatestBid ? Colors.green : Colors.grey[300],
+                              color:
+                                  isLatestBid ? Colors.green : Colors.grey[300],
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Icon(
                               Icons.person,
                               size: 16,
-                              color: isLatestBid ? Colors.white : Colors.grey[600],
+                              color:
+                                  isLatestBid ? Colors.white : Colors.grey[600],
                             ),
                           ),
                           title: Row(
@@ -1362,14 +1451,19 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                               Text(
                                 '฿${bid['bid_amount']}',
                                 style: TextStyle(
-                                  fontWeight: isLatestBid ? FontWeight.bold : FontWeight.normal,
-                                  color: isLatestBid ? Colors.green[700] : Colors.black,
+                                  fontWeight: isLatestBid
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isLatestBid
+                                      ? Colors.green[700]
+                                      : Colors.black,
                                 ),
                               ),
                               if (isLatestBid) ...[
                                 SizedBox(width: 8),
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: Colors.green,
                                     borderRadius: BorderRadius.circular(10),
@@ -1386,22 +1480,28 @@ class _RealtimeAuctionPriceWidgetState extends State<RealtimeAuctionPriceWidget>
                               ],
                             ],
                           ),
-                          subtitle: Text('โดย: ${_maskPhoneNumber(bid['bidder_name'])}'),
+                          subtitle: Text(
+                              'โดย: ${_maskPhoneNumber(bid['bidder_name'])}'),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                _formatTime(bid['bid_time']).length >= 19 
-                                  ? _formatTime(bid['bid_time']).substring(11, 19) 
-                                  : _formatTime(bid['bid_time']), // แสดงเฉพาะเวลา
+                                _formatTime(bid['bid_time']).length >= 19
+                                    ? _formatTime(bid['bid_time'])
+                                        .substring(11, 19)
+                                    : _formatTime(
+                                        bid['bid_time']), // แสดงเฉพาะเวลา
                                 style: TextStyle(fontSize: 12),
                               ),
                               Text(
-                                _formatTime(bid['bid_time']).length >= 10 
-                                  ? _formatTime(bid['bid_time']).substring(0, 10) 
-                                  : _formatTime(bid['bid_time']), // แสดงเฉพาะวันที่
-                                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                                _formatTime(bid['bid_time']).length >= 10
+                                    ? _formatTime(bid['bid_time'])
+                                        .substring(0, 10)
+                                    : _formatTime(
+                                        bid['bid_time']), // แสดงเฉพาะวันที่
+                                style: TextStyle(
+                                    fontSize: 10, color: Colors.grey[600]),
                               ),
                             ],
                           ),
@@ -1428,7 +1528,3 @@ bool isAuctionEnded(Map<String, dynamic> auction) {
     return false;
   }
 }
-
-
-
- 
