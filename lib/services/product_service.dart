@@ -412,6 +412,16 @@ class ProductService {
       return 'assets/images/noimage.jpg';
     }
 
+    // ตรวจสอบนามสกุลไฟล์
+    final validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    final hasValidExtension = validExtensions.any((ext) => 
+        cleanImageName.toLowerCase().endsWith(ext));
+    
+    if (!hasValidExtension) {
+      print('DEBUG: Invalid image extension: $cleanImageName');
+      return 'assets/images/noimage.jpg';
+    }
+
     print('DEBUG: Clean image name: $cleanImageName');
     return 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
   }
