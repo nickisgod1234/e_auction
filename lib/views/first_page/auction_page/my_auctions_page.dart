@@ -45,6 +45,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
     'subDistrictId': TextEditingController(),
     'sub': TextEditingController(),
     'zipCode': TextEditingController(),
+    // ข้อมูลที่อยู่ใหม่
+    'village': TextEditingController(),
+    'road': TextEditingController(),
+    'postalCode': TextEditingController(),
+    'country': TextEditingController(),
   };
 
   // User's auction history from API
@@ -370,6 +375,96 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
     );
   }
 
+  // แสดง popup dialog สำหรับข้อมูลที่ซ้ำ
+  void _showDuplicateFieldDialog(BuildContext rootContext, String fieldName, String fieldKey, Map<String, dynamic> auction) {
+ 
+    final TextEditingController newValueController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: rootContext, // ใช้ context หลัก
+        barrierDismissible: false,
+        useRootNavigator: true,
+        builder: (BuildContext context) {
+       
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange, size: 24),
+                SizedBox(width: 8),
+                Text('ข้อมูลซ้ำ'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$fieldName นี้ถูกใช้ไปแล้ว กรุณาใส่ $fieldName ใหม่:',
+                  style: TextStyle(fontSize: 16),
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  controller: newValueController,
+                  decoration: InputDecoration(
+                    labelText: fieldName,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    hintText: 'ใส่ $fieldName ใหม่',
+                  ),
+                  keyboardType: _getKeyboardType(fieldKey),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'หลังจากแก้ไข กรุณากดบันทึกในหน้าหลักอีกครั้ง',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('ยกเลิก'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final newValue = newValueController.text.trim();
+                  if (newValue.isNotEmpty) {
+                    _controllers[fieldKey]?.text = newValue;
+                    Navigator.of(context).pop(); // ปิด popup
+                    final success = await _saveWinnerInfoToServer(auction);
+                    if (success) {
+                      Navigator.of(rootContext).pop(); // ปิด dialog หลัก
+                      AuctionDialogs.showPaymentDialog(rootContext, auction);
+                    }
+                    // ถ้าไม่ success จะวน popup เดิมอีกครั้ง
+                  } else {
+                    _showValidationError('กรุณาใส่ $fieldName');
+                  }
+                },
+                child: Text('บันทึก'),
+              ),
+            ],
+          );
+        },
+      );
+    });
+  }
+
+  // กำหนด keyboard type ตามประเภทข้อมูล
+  TextInputType _getKeyboardType(String fieldKey) {
+    switch (fieldKey) {
+      case 'email':
+        return TextInputType.emailAddress;
+      case 'phone':
+        return TextInputType.phone;
+      case 'taxNumber':
+        return TextInputType.number;
+      default:
+        return TextInputType.text;
+    }
+  }
+
   // Check if winner information exists
   Future<bool> _hasWinnerInfo() async {
     try {
@@ -391,6 +486,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
           districtId.isNotEmpty &&
           subDistrictId.isNotEmpty;
 
+      // ตรวจสอบข้อมูลที่อยู่ใหม่ (ไม่บังคับ แต่แนะนำ)
+      final hasOptionalAddressInfo = prefs.getString('winner_village')?.isNotEmpty == true ||
+          prefs.getString('winner_road')?.isNotEmpty == true ||
+          prefs.getString('winner_postal_code')?.isNotEmpty == true;
+
       return hasRequiredInfo;
     } catch (e) {
       return false;
@@ -398,7 +498,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
   }
 
   // Save winner information using WinnerService
-  Future<void> _saveWinnerInfoToServer() async {
+  Future<bool> _saveWinnerInfoToServer([Map<String, dynamic>? auction]) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('id') ?? '';
@@ -421,6 +521,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
         subDistrictId: _controllers['subDistrictId']!.text,
         sub: _controllers['sub']!.text,
         taxNumber: _controllers['taxNumber']!.text,
+        // ข้อมูลที่อยู่ใหม่
+        village: _controllers['village']!.text,
+        road: _controllers['road']!.text,
+        postalCode: _controllers['zipCode']!.text, // ใช้ zipCode controller สำหรับ postalCode
+        country: _controllers['country']!.text.isNotEmpty ? _controllers['country']!.text : 'Thailand',
       );
 
       // บันทึกข้อมูลผู้ชนะ
@@ -445,11 +550,52 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
             'winner_sub_district_id', _controllers['subDistrictId']!.text);
         await prefs.setString('winner_sub', _controllers['sub']!.text);
         await prefs.setString('winner_zip_code', _controllers['zipCode']!.text);
+        // บันทึกข้อมูลที่อยู่ใหม่
+        await prefs.setString('winner_village', _controllers['village']!.text);
+        await prefs.setString('winner_road', _controllers['road']!.text);
+        await prefs.setString('winner_postal_code', _controllers['zipCode']!.text);
+        await prefs.setString('winner_country', _controllers['country']!.text.isNotEmpty ? _controllers['country']!.text : 'Thailand');
+        return true; // บันทึกสำเร็จ
       } else {
-        throw Exception('บันทึกข้อมูลไม่สำเร็จ: ${result['message']}');
+        // ตรวจสอบข้อความ error จาก API และแสดง popup dialog แจ้งเตือน
+        final message = result['message']?.toString() ?? '';
+        
+        if (message.toLowerCase().contains('email already exists') || 
+            (message.toLowerCase().contains('อีเมล') && message.toLowerCase().contains('ซ้ำ'))) {
+       
+          if (auction != null) {
+            _showDuplicateFieldDialog(context, 'อีเมล', 'email', auction);
+          } else {
+            _showValidationError('อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่น');
+          }
+          return false;
+        } else if (message.toLowerCase().contains('phone already exists') || 
+                   (message.toLowerCase().contains('เบอร์โทร') && message.toLowerCase().contains('ซ้ำ'))) {
+      
+          if (auction != null) {
+            _showDuplicateFieldDialog(context, 'เบอร์โทรศัพท์', 'phone', auction);
+          } else {
+            _showValidationError('เบอร์โทรศัพท์นี้ถูกใช้ไปแล้ว กรุณาใช้เบอร์อื่น');
+          }
+          return false;
+        } else if (message.toLowerCase().contains('tax number already exists') || 
+                   (message.toLowerCase().contains('เลขบัตรประชาชน') && message.toLowerCase().contains('ซ้ำ'))) {
+       
+          if (auction != null) {
+            _showDuplicateFieldDialog(context, 'เลขบัตรประชาชน', 'taxNumber', auction);
+          } else {
+            _showValidationError('เลขบัตรประชาชนนี้ถูกใช้ไปแล้ว กรุณาใช้เลขบัตรอื่น');
+          }
+          return false;
+        } else {
+          _showValidationError('บันทึกข้อมูลไม่สำเร็จ: $message');
+          return false;
+        }
       }
     } catch (e) {
-      rethrow;
+      // แสดง error ที่เกิดจาก network หรือ error อื่นๆ
+      _showValidationError('เกิดข้อผิดพลาดในการเชื่อมต่อ: ${e.toString()}');
+      return false; // บันทึกไม่สำเร็จ
     }
   }
 
@@ -851,6 +997,17 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
       missingFields.add('sub_district_id');
     }
 
+    // ตรวจสอบข้อมูลที่อยู่ใหม่ (ไม่บังคับ แต่แนะนำให้กรอก)
+    // if (profile['village']?.isEmpty == true || profile['village'] == null) {
+    //   missingFields.add('village');
+    // }
+    // if (profile['road']?.isEmpty == true || profile['road'] == null) {
+    //   missingFields.add('road');
+    // }
+    // if (profile['postal_code']?.isEmpty == true || profile['postal_code'] == null) {
+    //   missingFields.add('postal_code');
+    // }
+
     return missingFields;
   }
 
@@ -880,6 +1037,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
     _controllers['sub']!.text = profile['sub'] ?? '';
     // zip code จะถูกเติมอัตโนมัติเมื่อเลือก sub-district
 
+    // เติมข้อมูลที่อยู่ใหม่
+    _controllers['village']!.text = profile['village'] ?? '';
+    _controllers['road']!.text = profile['road'] ?? '';
+    _controllers['postalCode']!.text = profile['postal_code'] ?? profile['zip_code'] ?? '';
+    _controllers['country']!.text = profile['country'] ?? 'Thailand';
+
     // บันทึกข้อมูลลง SharedPreferences ด้วย prefix winner_ เพื่อให้ validateWinnerInfo ใช้งานได้
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -895,6 +1058,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
           'winner_sub_district_id', profile['sub_district_id'] ?? '');
       await prefs.setString('winner_sub', profile['sub'] ?? '');
       await prefs.setString('winner_zip_code', profile['zip_code'] ?? '');
+      // บันทึกข้อมูลที่อยู่ใหม่
+      await prefs.setString('winner_village', profile['village'] ?? '');
+      await prefs.setString('winner_road', profile['road'] ?? '');
+      await prefs.setString('winner_postal_code', profile['postal_code'] ?? profile['zip_code'] ?? '');
+      await prefs.setString('winner_country', profile['country'] ?? 'Thailand');
     } catch (e) {}
   }
 
@@ -915,6 +1083,14 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
         return 'อำเภอ/เขต';
       case 'sub_district_id':
         return 'ตำบล/แขวง';
+      case 'village':
+        return 'หมู่';
+      case 'road':
+        return 'ถนน';
+      case 'postal_code':
+        return 'รหัสไปรษณีย์';
+      case 'country':
+        return 'ประเทศ';
       default:
         return field;
     }
@@ -943,7 +1119,14 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
 
   // แสดง dialog สรุปข้อมูลโปรไฟล์
   void _showProfileSummaryDialog(
-      Map<String, dynamic> auction, Map<String, dynamic> profile) {
+      Map<String, dynamic> auction, Map<String, dynamic> profile) async {
+    // เติมข้อมูลหมู่ ถนน รหัสไปรษณีย์ ประเทศ จาก SharedPreferences ถ้ายังไม่มีใน profile
+    final prefs = await SharedPreferences.getInstance();
+    profile['village'] = profile['village'] ?? prefs.getString('winner_village') ?? '';
+    profile['road'] = profile['road'] ?? prefs.getString('winner_road') ?? '';
+    profile['postal_code'] = profile['postal_code'] ?? prefs.getString('winner_postal_code') ?? '';
+    profile['country'] = profile['country'] ?? prefs.getString('winner_country') ?? 'Thailand';
+
     final zip = findZipCode(
           profile['province_id'],
           profile['district_id'],
@@ -1047,11 +1230,6 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                           label: 'อีเมลล์',
                           value: profile['email'] ?? '',
                         ),
-                      // InfoRowWidget(
-                      //   label: 'เลขบัตรประชาชน',
-                      //   value: profile['tax_number'] ?? '',
-                      //   isMonospace: true,
-                      // ),
                       InfoRowWidget(
                         label: 'ที่อยู่เต็ม',
                         value: _formatFullAddressWithZip(profile, zip),
@@ -1086,12 +1264,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       Navigator.of(context).pop();
-                      await _fillControllersWithProfile(profile);
+                      // โหลดข้อมูลล่าสุดจาก SharedPreferences ก่อนแสดงฟอร์ม
                       AuctionDialogs.showWinnerInfoDialog(
                         context,
                         auction,
                         _controllers,
-                        _saveWinnerInfoToServer,
+                        ([Map<String, dynamic>? _]) => _saveWinnerInfoToServer(auction),
                         _validateForm,
                         _showValidationError,
                       );
@@ -1146,15 +1324,26 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
 
   String _formatFullAddressWithZip(Map<String, dynamic> profile, String zip) {
     final address = profile['address'] ?? '';
+    final village = profile['village'] ?? '';
+    final road = profile['road'] ?? '';
     final sub = profile['sub'] ?? '';
     final subDistrict = profile['sub_district_name'] ?? '';
     final district = profile['district_name'] ?? '';
     final province = profile['province_name'] ?? '';
-    String full = '$address $sub $subDistrict $district $province'.trim();
-    if (zip.isNotEmpty) {
-      full = '$full $zip';
-    }
-    return full;
+    final country = profile['country'] ?? 'Thailand';
+    
+    // สร้างที่อยู่เต็มรูปแบบ พร้อมตัวย่อ
+    final List<String> addressParts = [];
+    if (address.isNotEmpty) addressParts.add(address);
+    if (village.isNotEmpty) addressParts.add('หมู่ $village');
+    if (road.isNotEmpty) addressParts.add('ถ.$road');
+    if (sub.isNotEmpty) addressParts.add('ซอย $sub');
+    if (subDistrict.isNotEmpty) addressParts.add('ต.$subDistrict');
+    if (district.isNotEmpty) addressParts.add('อ.$district');
+    if (province.isNotEmpty) addressParts.add('จ.$province');
+    if (zip.isNotEmpty) addressParts.add(zip);
+    if (country.isNotEmpty) addressParts.add(country);
+    return addressParts.join(' ');
   }
 
   Future<void> _showMissingFieldsDialog(Map<String, dynamic> auction,
@@ -1206,14 +1395,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                // เติมข้อมูลที่มีอยู่แล้วใน controllers ก่อนแสดงฟอร์ม
-                await _fillControllersWithProfile(profile);
-                // แสดงฟอร์มกรอกข้อมูลที่ขาด
+                // โหลดข้อมูลล่าสุดจาก SharedPreferences ก่อนแสดงฟอร์ม
                 AuctionDialogs.showWinnerInfoDialog(
                   context,
                   auction,
                   _controllers,
-                  _saveWinnerInfoToServer,
+                  ([Map<String, dynamic>? _]) => _saveWinnerInfoToServer(auction),
                   _validateForm,
                   _showValidationError,
                 );

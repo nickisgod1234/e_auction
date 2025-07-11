@@ -294,6 +294,7 @@ class FormFieldWidget extends StatelessWidget {
   final bool requiredField;
   final bool isEmail;
   final bool isPhone;
+  final bool readOnly;
 
   const FormFieldWidget({
     super.key,
@@ -306,6 +307,7 @@ class FormFieldWidget extends StatelessWidget {
     this.requiredField = true,
     this.isEmail = false,
     this.isPhone = false,
+    this.readOnly = false,
   });
 
   @override
@@ -367,6 +369,7 @@ class FormFieldWidget extends StatelessWidget {
             }
             return null;
           },
+          readOnly: readOnly,
         ),
       ],
     );
@@ -944,14 +947,58 @@ class AuctionDialogs {
                         requiredField: true,
                       ),
                       const SizedBox(height: 8),
-
+ Row(
+                        children: [
+                          Expanded(
+                            child: FormFieldWidget(
+                              controller: controllers['village']!,
+                              label: 'หมู่',
+                              icon: Icons.home,
+                              hint: 'กรอกหมู่ (ไม่บังคับ)',
+                              requiredField: false,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: FormFieldWidget(
+                              controller: controllers['road']!,
+                              label: 'ถนน',
+                              icon: Icons.directions_car,
+                              hint: 'กรอกถนน (ไม่บังคับ)',
+                              requiredField: false,
+                            ),
+                          ),
+                        ],
+                      ),
                       CascadeAddressDropdowns(
                         controllers: controllers,
                         authService:
                             AuthService(baseUrl: Config.apiUrlotpsever),
                       ),
+                      
+                      // ข้อมูลที่อยู่เพิ่มเติม
+                     
+                    
+                      const SizedBox(height: 8),
+                      FormFieldWidget(
+                        controller: controllers['postalCode']!,
+                        label: 'รหัสไปรษณีย์',
+                        icon: Icons.mail,
+                        hint: 'รหัสไปรษณีย์',
+                        keyboardType: TextInputType.number,
+                        requiredField: false,
+                        readOnly: true,
+                      ),
+                      const SizedBox(height: 8),
+                      FormFieldWidget(
+                        controller: controllers['country']!,
+                        label: 'ประเทศ',
+                        icon: Icons.public,
+                        hint: 'ประเทศ',
+                        requiredField: false,
+                      ),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -1035,6 +1082,11 @@ class AuctionDialogs {
         prefs.getString('winner_sub_district_id') ?? '';
     controllers['sub']!.text = prefs.getString('winner_sub') ?? '';
     controllers['zipCode']!.text = prefs.getString('winner_zip_code') ?? '';
+    // โหลดข้อมูลที่อยู่ใหม่
+    controllers['village']!.text = prefs.getString('winner_village') ?? '';
+    controllers['road']!.text = prefs.getString('winner_road') ?? '';
+    controllers['postalCode']!.text = prefs.getString('winner_postal_code') ?? prefs.getString('winner_zip_code') ?? '';
+    controllers['country']!.text = prefs.getString('winner_country') ?? 'Thailand';
   }
 
   static Future<bool> _hasWinnerInfo(
@@ -1046,11 +1098,19 @@ class AuctionDialogs {
     final address = prefs.getString('winner_address') ?? '';
     final taxNumber = prefs.getString('winner_tax_number') ?? '';
 
-    return firstname.isNotEmpty &&
+    // ตรวจสอบข้อมูลที่จำเป็น
+    final hasRequiredInfo = firstname.isNotEmpty &&
         lastname.isNotEmpty &&
         phone.isNotEmpty &&
         address.isNotEmpty &&
         taxNumber.isNotEmpty;
+
+    // ตรวจสอบข้อมูลที่อยู่ใหม่ (ไม่บังคับ แต่แนะนำ)
+    final hasOptionalAddressInfo = prefs.getString('winner_village')?.isNotEmpty == true ||
+        prefs.getString('winner_road')?.isNotEmpty == true ||
+        prefs.getString('winner_postal_code')?.isNotEmpty == true;
+
+    return hasRequiredInfo;
   }
 }
 
@@ -1144,6 +1204,7 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // จังหวัด
+        const SizedBox(height: 8),
         Text('จังหวัด *',
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 4),
@@ -1264,8 +1325,10 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
               });
               widget.controllers['subDistrictId']!.text =
                   subDistrict?['id']?.toString() ?? '';
-              widget.controllers['zipCode']!.text =
-                  subDistrict?['zip_code']?.toString() ?? '';
+              final zipCode = subDistrict?['zip_code']?.toString() ?? '';
+              widget.controllers['zipCode']!.text = zipCode;
+              // ใส่ zipCode ลงใน postalCode ด้วย
+              widget.controllers['postalCode']!.text = zipCode;
             },
           ),
           if (subDistrictError != null)
@@ -1274,22 +1337,9 @@ class _CascadeAddressDropdownsState extends State<CascadeAddressDropdowns> {
               child: Text(subDistrictError!,
                   style: TextStyle(color: Colors.red, fontSize: 12)),
             ),
-          const SizedBox(height: 8),
+        
         ],
-        // รหัสไปรษณีย์
-        if (selectedSubDistrict != null) ...[
-          Text('รหัสไปรษณีย์',
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-          FormFieldWidget(
-            controller: widget.controllers['zipCode']!,
-            label: '',
-            icon: Icons.mail,
-            hint: 'รหัสไปรษณีย์',
-            keyboardType: TextInputType.number,
-            requiredField: false,
-          ),
-        ],
+        
       ],
     );
   }
@@ -1368,6 +1418,24 @@ Future<bool> validateWinnerInfo(BuildContext context) async {
     );
     return false;
   }
+  
+  // ตรวจสอบข้อมูลที่อยู่ใหม่ (ไม่บังคับ แต่แนะนำ)
+  final village = prefs.getString('winner_village') ?? '';
+  final road = prefs.getString('winner_road') ?? '';
+  final postalCode = prefs.getString('winner_postal_code') ?? '';
+  final country = prefs.getString('winner_country') ?? '';
+  
+  // แสดงคำแนะนำถ้าข้อมูลที่อยู่ใหม่ไม่ครบ
+  if (village.isEmpty || road.isEmpty || postalCode.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('แนะนำให้กรอกข้อมูลที่อยู่เพิ่มเติมเพื่อความสมบูรณ์'),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+  
   return true;
 }
 

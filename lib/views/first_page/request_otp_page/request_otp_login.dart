@@ -132,6 +132,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
         _refno = 'DEMO';
         _isPinVisible = true;
       });
+      _showOtpDialogWithResend();
       return;
     }
 
@@ -227,6 +228,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
           ),
         );
         _startCountdown();
+        // แสดง OTP Dialog อัตโนมัติ (แบบใหม่)
+        _showOtpDialogWithResend();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -494,7 +497,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
     final phoneNumber = _phoneController.text;
 
     // Demo Mode
-    if (phoneNumber == '0001112345' && pin == '123456') {
+    if (phoneNumber == '0001112345' && pin == '12345') {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('phone_number', '0001112345');
       await prefs.setString('token_otp', 'demo_token');
@@ -567,7 +570,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
     }
   }
 
-  void _requestNewOTP() async {
+  Future<void> _requestNewOTP() async {
     if (!_isRequestEnabled) return;
 
     final phoneNumber = _phoneController.text;
@@ -607,6 +610,171 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
       _phoneController.clear();
       _pinController.clear();
     });
+  }
+
+  // ===== เพิ่มฟังก์ชัน OTP Popup 5 หลัก =====
+  // ปรับฟังก์ชัน showOtpDialog5Digits ให้รับ callback ขอ OTP ใหม่ และ state สำหรับ countdown
+  Future<void> showOtpDialog5Digits(BuildContext context, void Function(String) onVerify, {
+    required VoidCallback onRequestNewOtp,
+    required bool isRequestEnabled,
+    required int countdown,
+  }) async {
+    final List<TextEditingController> controllers =
+        List.generate(5, (_) => TextEditingController());
+    final focusNodes = List.generate(5, (_) => FocusNode());
+
+    void _onChanged(int idx, String value) {
+      if (value.length == 1 && idx < 4) {
+        focusNodes[idx + 1].requestFocus();
+      }
+      if (value.isEmpty && idx > 0) {
+        focusNodes[idx - 1].requestFocus();
+      }
+    }
+
+    int localCountdown = 60;
+    bool localRequestEnabled = false;
+    Timer? timer;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // เริ่ม timer เฉพาะรอบแรก
+            if (timer == null) {
+              timer = Timer.periodic(Duration(seconds: 1), (t) {
+                if (localCountdown > 0) {
+                  setState(() => localCountdown--);
+                } else {
+                  setState(() => localRequestEnabled = true);
+                  t.cancel();
+                }
+              });
+            }
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.lock, size: 40, color: Colors.grey[700]),
+                  SizedBox(height: 16),
+                  Text('Enter your OTP code\nto sign in.', textAlign: TextAlign.center),
+                  SizedBox(height: 16),
+                  // ใน showOtpDialog5Digits ให้เปลี่ยน Container ของแต่ละ TextField เป็นแบบมีเงา ไม่มีขอบ
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (idx) {
+                      return Container(
+                        width: 36,
+                        margin: EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.12),
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: controllers[idx],
+                          focusNode: focusNodes[idx],
+                          maxLength: 1,
+                          textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            counterText: '',
+                            border: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onChanged: (val) => _onChanged(idx, val),
+                        ),
+                      );
+                    }),
+                  ),
+                  SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      final otp = controllers.map((c) => c.text).join();
+                      onVerify(otp);
+                      timer?.cancel();
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      minimumSize: Size(double.infinity, 44),
+                    ),
+                    child: Text('Verify'),
+                  ),
+                  SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: localRequestEnabled
+                        ? () {
+                            setState(() {
+                              localCountdown = 60;
+                              localRequestEnabled = false;
+                            });
+                            onRequestNewOtp();
+                            // รีเซ็ต timer
+                            timer?.cancel();
+                            timer = Timer.periodic(Duration(seconds: 1), (t) {
+                              if (localCountdown > 0) {
+                                setState(() => localCountdown--);
+                              } else {
+                                setState(() => localRequestEnabled = true);
+                                t.cancel();
+                              }
+                            });
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: localRequestEnabled ? Colors.blue : Colors.grey,
+                      foregroundColor: Colors.white,
+                      minimumSize: Size(double.infinity, 44),
+                    ),
+                    child: Text(
+                      localRequestEnabled
+                          ? 'ขอรหัสใหม่'
+                          : 'รอ $localCountdown s เพื่อขอใหม่ได้',
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+    timer?.cancel();
+  }
+  // ===== END เพิ่มฟังก์ชัน OTP Popup 5 หลัก =====
+
+  // เพิ่ม callback สำหรับขอ OTP ใหม่และเปิด dialog ใหม่
+  void _showOtpDialogWithResend() {
+    showOtpDialog5Digits(
+      context,
+      (otp) {
+        _pinController.text = otp;
+        _verifyOTP();
+      },
+      onRequestNewOtp: () async {
+        Navigator.of(context).pop(); // ปิด dialog เดิม
+        await _requestNewOTP(); // ส่ง OTP ใหม่
+        // รอ OTP ส่งเสร็จแล้วเปิด dialog ใหม่ (delay เล็กน้อยเพื่อให้ state หลักอัปเดต)
+        Future.delayed(Duration(milliseconds: 300), () {
+          _showOtpDialogWithResend();
+        });
+      },
+      isRequestEnabled: _isRequestEnabled,
+      countdown: _countdown,
+    );
   }
 
   @override
@@ -798,65 +966,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                     color: context.customTheme.primaryColor,
                                   ),
                                 ),
-                                TextField(
-                                  controller: _pinController,
-                                  decoration: InputDecoration(
-                                    labelText: 'กรอกรหัส PIN',
-                                    filled: true,
-                                    fillColor: Colors.white.withOpacity(0.5),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                          color:
-                                              context.customTheme.primaryColor),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                          color: context
-                                              .customTheme.primaryColor
-                                              .withOpacity(0.5)),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    labelStyle: TextStyle(
-                                        color:
-                                            context.customTheme.primaryColor),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                ),
                                 SizedBox(height: 10),
-                                ElevatedButton(
-                                  onPressed: _verifyOTP,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        context.customTheme.primaryColor,
-                                    foregroundColor: Colors.white,
-                                    minimumSize: Size(double.infinity, 50),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: Text("ยืนยัน"),
-                                ),
-                                SizedBox(height: 10),
-                                ElevatedButton(
-                                  onPressed:
-                                      _isRequestEnabled ? _requestNewOTP : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isRequestEnabled
-                                        ? context.customTheme.primaryColor
-                                        : context.customTheme.secondaryColor,
-                                    foregroundColor: Colors.white,
-                                    minimumSize: Size(double.infinity, 50),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    _isRequestEnabled
-                                        ? 'ขอรหัสใหม่'
-                                        : 'รอ ${_countdown}s เพื่อขอใหม่ได้',
-                                  ),
-                                ),
+                                // ลบปุ่มกรอก OTP ออก (ไม่ต้องให้ผู้ใช้กดเอง)
                               ],
                             ],
                           ],

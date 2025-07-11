@@ -281,7 +281,7 @@ class AuctionDialogs {
     BuildContext context,
     Map<String, dynamic> auction,
     Map<String, TextEditingController> controllers,
-    Future<void> Function() saveWinnerInfoToServer,
+    Future<bool> Function([Map<String, dynamic>?]) saveWinnerInfoToServer,
     bool Function() validateForm,
     void Function(String) showValidationError,
   ) async {
@@ -471,18 +471,20 @@ class AuctionDialogs {
                   onPressed: () async {
                     if (formKey.currentState?.validate() ?? false) {
                       try {
-                        await saveWinnerInfoToServer();
-                        Navigator.of(context).pop();
-                        // แสดง payment dialog หลังจากบันทึกข้อมูลสำเร็จ
-                        showPaymentDialog(context, auction);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                '${hasInfo ? 'แก้ไข' : 'บันทึก'}ข้อมูลเรียบร้อยแล้ว (${auction['auctionId']})'),
-                            backgroundColor: Colors.green,
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
+                        final success = await saveWinnerInfoToServer(auction);
+                        if (success) {
+                          Navigator.of(context).pop();
+                          // แสดง payment dialog หลังจากบันทึกข้อมูลสำเร็จ
+                          showPaymentDialog(context, auction);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  '${hasInfo ? 'แก้ไข' : 'บันทึก'}ข้อมูลเรียบร้อยแล้ว (${auction['auctionId']})'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

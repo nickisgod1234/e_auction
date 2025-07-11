@@ -89,6 +89,16 @@ class WinnerService {
   static List<Map<String, dynamic>> convertWinnersToAppFormat(
       List<dynamic> winners) {
     return winners.map((winner) {
+      // สร้างข้อมูลที่อยู่เต็มรูปแบบ
+      final addressData = {
+        'addr': winner['winner_address'] ?? winner['addr'] ?? '',
+        'village': winner['winner_village'] ?? winner['village'] ?? '',
+        'road': winner['winner_road'] ?? winner['road'] ?? '',
+        'sub': winner['winner_sub'] ?? winner['sub'] ?? '',
+        'postal_code': winner['winner_postal_code'] ?? winner['postal_code'] ?? '',
+        'country': winner['winner_country'] ?? winner['country'] ?? 'Thailand',
+      };
+
       return {
         'id': winner['quotation_more_information_id']?.toString() ?? '',
         'title': winner['short_text'] ??
@@ -117,6 +127,14 @@ class WinnerService {
         'winnerPhone': winner['winner_phone'] ?? '',
         'winnerEmail': winner['winner_email'] ?? '',
         'winnerAddress': winner['winner_address'] ?? '',
+        // ข้อมูลที่อยู่ใหม่
+        'winnerVillage': winner['winner_village'] ?? winner['village'] ?? '',
+        'winnerRoad': winner['winner_road'] ?? winner['road'] ?? '',
+        'winnerPostalCode': winner['winner_postal_code'] ?? winner['postal_code'] ?? '',
+        'winnerCountry': winner['winner_country'] ?? winner['country'] ?? 'Thailand',
+        'winnerSub': winner['winner_sub'] ?? winner['sub'] ?? '',
+        // สร้างที่อยู่เต็มรูปแบบ
+        'winnerFullAddress': buildFullAddress(addressData),
         'quotationSequence': winner['quotation_sequence'] ?? '',
         'quotationDescription': winner['quotation_description'] ?? '',
         'shortText': winner['short_text'] ?? '',
@@ -445,8 +463,13 @@ class WinnerService {
         winnerInfo['phone'] = cleanPhone;
       }
 
+      // ตรวจสอบและเพิ่มข้อมูลที่อยู่ที่จำเป็น
+      winnerInfo = _validateAndCompleteAddressInfo(winnerInfo);
+
       final url =
-          '${Config.apiUrl}/HR-API-morket/login_phone_auction/save_user.php';
+          '${Config.apiUrllocal}/HR-API-morket/login_phone_auction/save_user.php';
+
+      print('🔍 WINNER_SERVICE: Sending data to API: ${jsonEncode(winnerInfo)}');
 
       final response = await http.post(
         Uri.parse(url),
@@ -455,6 +478,9 @@ class WinnerService {
         },
         body: jsonEncode(winnerInfo),
       );
+
+      print('🔍 WINNER_SERVICE: API Response Status: ${response.statusCode}');
+      print('🔍 WINNER_SERVICE: API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -469,6 +495,180 @@ class WinnerService {
     } catch (e) {
       throw Exception('Error saving winner information: $e');
     }
+  }
+
+  // ฟังก์ชันใหม่: ตรวจสอบและเพิ่มข้อมูลที่อยู่ที่จำเป็น
+  static Map<String, dynamic> _validateAndCompleteAddressInfo(
+      Map<String, dynamic> winnerInfo) {
+    // ตรวจสอบและเพิ่มข้อมูลที่จำเป็น
+    winnerInfo['village'] = winnerInfo['village'] ?? '';
+    winnerInfo['road'] = winnerInfo['road'] ?? '';
+    winnerInfo['postal_code'] = winnerInfo['postal_code'] ?? '';
+    winnerInfo['country'] = winnerInfo['country'] ?? 'Thailand';
+
+    // ตรวจสอบและทำความสะอาดรหัสไปรษณีย์
+    if (winnerInfo['postal_code'] != null && winnerInfo['postal_code'].toString().isNotEmpty) {
+      final postalCode = winnerInfo['postal_code'].toString().trim();
+      if (postalCode.length == 5 && int.tryParse(postalCode) != null) {
+        winnerInfo['postal_code'] = postalCode;
+      } else {
+        print('⚠️ WINNER_SERVICE: Invalid postal code format: $postalCode');
+      }
+    }
+
+    return winnerInfo;
+  }
+
+  // ฟังก์ชันใหม่: สร้างที่อยู่เต็มรูปแบบ
+  static String buildFullAddress(Map<String, dynamic> customerData) {
+    final List<String> addressParts = [];
+
+    // เพิ่มส่วนต่างๆ ของที่อยู่
+    if (customerData['addr'] != null && customerData['addr'].toString().isNotEmpty) {
+      addressParts.add(customerData['addr'].toString());
+    }
+
+    if (customerData['village'] != null && customerData['village'].toString().isNotEmpty) {
+      addressParts.add('หมู่ ${customerData['village']}');
+    }
+
+    if (customerData['road'] != null && customerData['road'].toString().isNotEmpty) {
+      addressParts.add('ถนน${customerData['road']}');
+    }
+
+    if (customerData['sub'] != null && customerData['sub'].toString().isNotEmpty) {
+      addressParts.add('ซอย ${customerData['sub']}');
+    }
+
+    if (customerData['postal_code'] != null && customerData['postal_code'].toString().isNotEmpty) {
+      addressParts.add('${customerData['postal_code']}');
+    }
+
+    if (customerData['country'] != null && customerData['country'].toString().isNotEmpty) {
+      addressParts.add(customerData['country'].toString());
+    }
+
+    return addressParts.join(' ');
+  }
+
+  // ฟังก์ชันใหม่: ตรวจสอบความถูกต้องของข้อมูลที่อยู่
+  static Map<String, String> validateAddressData(Map<String, dynamic> addressData) {
+    final Map<String, String> errors = {};
+
+    // ตรวจสอบเบอร์โทรศัพท์
+    if (addressData['phone'] == null || addressData['phone'].toString().isEmpty) {
+      errors['phone'] = 'กรุณากรอกเบอร์โทรศัพท์';
+    } else {
+      final phone = addressData['phone'].toString().replaceAll(RegExp(r'[^0-9]'), '');
+      if (phone.length < 9 || phone.length > 10) {
+        errors['phone'] = 'เบอร์โทรศัพท์ไม่ถูกต้อง';
+      }
+    }
+
+    // ตรวจสอบอีเมล
+    if (addressData['email'] != null && addressData['email'].toString().isNotEmpty) {
+      final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+      if (!emailRegex.hasMatch(addressData['email'].toString())) {
+        errors['email'] = 'รูปแบบอีเมลไม่ถูกต้อง';
+      }
+    }
+
+    // ตรวจสอบรหัสไปรษณีย์
+    if (addressData['postal_code'] != null && addressData['postal_code'].toString().isNotEmpty) {
+      final postalCode = addressData['postal_code'].toString().trim();
+      if (postalCode.length != 5 || int.tryParse(postalCode) == null) {
+        errors['postal_code'] = 'รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก';
+      }
+    }
+
+    // ตรวจสอบชื่อ-นามสกุล
+    if (addressData['fullname'] == null || addressData['fullname'].toString().trim().isEmpty) {
+      errors['fullname'] = 'กรุณากรอกชื่อ-นามสกุล';
+    }
+
+    return errors;
+  }
+
+  // ฟังก์ชันใหม่: สร้างข้อมูลผู้ชนะจาก API response
+  static Map<String, dynamic> createWinnerFromApiResponse(Map<String, dynamic> apiData) {
+    // สร้างข้อมูลที่อยู่
+    final addressData = {
+      'addr': apiData['winner_address'] ?? apiData['addr'] ?? '',
+      'village': apiData['winner_village'] ?? apiData['village'] ?? '',
+      'road': apiData['winner_road'] ?? apiData['road'] ?? '',
+      'sub': apiData['winner_sub'] ?? apiData['sub'] ?? '',
+      'postal_code': apiData['winner_postal_code'] ?? apiData['postal_code'] ?? '',
+      'country': apiData['winner_country'] ?? apiData['country'] ?? 'Thailand',
+    };
+
+    return {
+      'customer_id': apiData['winner_bidder_id']?.toString() ?? '',
+      'fullname': '${apiData['winner_firstname'] ?? ''} ${apiData['winner_lastname'] ?? ''}'.trim(),
+      'email': apiData['winner_email'] ?? '',
+      'phone': apiData['winner_phone'] ?? '',
+      'addr': addressData['addr'],
+      'province_id': apiData['winner_province_id'] ?? apiData['province_id'] ?? '',
+      'district_id': apiData['winner_district_id'] ?? apiData['district_id'] ?? '',
+      'sub_district_id': apiData['winner_sub_district_id'] ?? apiData['sub_district_id'] ?? '',
+      'sub': addressData['sub'],
+      'type': apiData['winner_type'] ?? apiData['type'] ?? 'individual',
+      'company_id': apiData['winner_company_id'] ?? apiData['company_id'] ?? '1',
+      'tax_number': apiData['winner_tax_number'] ?? apiData['tax_number'] ?? '',
+      'name': apiData['winner_firstname'] ?? '',
+      'code': apiData['winner_code'] ?? apiData['code'] ?? '',
+      'village': addressData['village'],
+      'road': addressData['road'],
+      'postal_code': addressData['postal_code'],
+      'country': addressData['country'],
+      // ข้อมูลเพิ่มเติม
+      'winner_id': apiData['winner_id']?.toString() ?? '',
+      'auction_id': apiData['quotation_sequence'] ?? '',
+      'quotation_id': apiData['quotation_id']?.toString() ?? '',
+      'winning_amount': apiData['winning_amount']?.toString() ?? '',
+      'winner_announced_time': apiData['winner_announced_time'] ?? '',
+      'full_address': buildFullAddress(addressData),
+    };
+  }
+
+  // ฟังก์ชันใหม่: แปลงข้อมูลผู้ชนะเป็นรูปแบบสำหรับแสดงผล
+  static Map<String, dynamic> convertWinnerToDisplayFormat(Map<String, dynamic> winner) {
+    final addressData = {
+      'addr': winner['winner_address'] ?? winner['addr'] ?? '',
+      'village': winner['winner_village'] ?? winner['village'] ?? '',
+      'road': winner['winner_road'] ?? winner['road'] ?? '',
+      'sub': winner['winner_sub'] ?? winner['sub'] ?? '',
+      'postal_code': winner['winner_postal_code'] ?? winner['postal_code'] ?? '',
+      'country': winner['winner_country'] ?? winner['country'] ?? 'Thailand',
+    };
+
+    return {
+      'id': winner['quotation_more_information_id']?.toString() ?? '',
+      'title': winner['short_text'] ?? winner['quotation_description'] ?? 'ไม่ระบุชื่อสินค้า',
+      'finalPrice': double.tryParse(winner['winning_amount']?.toString() ?? '0') ?? 0,
+      'myBid': double.tryParse(winner['winning_amount']?.toString() ?? '0') ?? 0,
+      'completedDate': _formatCompletedDate(winner['winner_announced_time']),
+      'image': 'assets/images/noimage.jpg',
+      'status': 'won',
+      'sellerName': 'CloudmateTH',
+      'paymentStatus': 'pending',
+      // ข้อมูลผู้ชนะ
+      'winnerName': '${winner['winner_firstname'] ?? ''} ${winner['winner_lastname'] ?? ''}'.trim(),
+      'winnerPhone': winner['winner_phone'] ?? '',
+      'winnerEmail': winner['winner_email'] ?? '',
+      'winnerAddress': winner['winner_address'] ?? '',
+      'winnerVillage': addressData['village'],
+      'winnerRoad': addressData['road'],
+      'winnerPostalCode': addressData['postal_code'],
+      'winnerCountry': addressData['country'],
+      'winnerSub': addressData['sub'],
+      'winnerFullAddress': buildFullAddress(addressData),
+      // ข้อมูลการประมูล
+      'auctionId': winner['quotation_sequence'] ?? '',
+      'quotationId': winner['quotation_id']?.toString() ?? '',
+      'auctionEndTime': winner['auction_end_time'] ?? '',
+      'winnerAnnouncedTime': winner['winner_announced_time'] ?? '',
+      'description': winner['short_text'] ?? winner['quotation_description'] ?? 'ไม่มีคำอธิบาย',
+    };
   }
 
   // ฟังก์ชันใหม่: สร้างข้อมูลผู้ชนะจาก form
@@ -487,6 +687,10 @@ class WinnerService {
     String taxNumber = '',
     String name = '',
     String code = '',
+    String village = '',
+    String road = '',
+    String postalCode = '',
+    String country = 'Thailand',
   }) {
     // ทำความสะอาดเบอร์โทรศัพท์ - ลบเครื่องหมายที่ไม่ใช่ตัวเลข
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
@@ -506,6 +710,10 @@ class WinnerService {
       'tax_number': taxNumber,
       'name': name.isNotEmpty ? name : fullname.split(' ').first,
       'code': code.isNotEmpty ? code : 'CUST$customerId',
+      'village': village,
+      'road': road,
+      'postal_code': postalCode,
+      'country': country,
     };
   }
 }
