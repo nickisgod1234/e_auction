@@ -12,6 +12,7 @@ import 'dart:io';
 import 'package:http/io_client.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/services/winner_service.dart';
+import 'package:e_auction/views/first_page/widgets/auction_image_widget.dart';
 
 class AuctionDetailViewPage extends StatefulWidget {
   final Map<String, dynamic> auctionData;
@@ -313,20 +314,10 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: Image.asset(
+                                      child: _buildAuctionImage(
                                         widget.auctionData['image'],
                                         width: 60,
                                         height: 60,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            width: 60,
-                                            height: 60,
-                                            color: Colors.grey[200],
-                                            child: Icon(Icons.image_not_supported,
-                                                color: Colors.grey),
-                                          );
-                                        },
                                       ),
                                     ),
                                     SizedBox(width: 12),
@@ -345,7 +336,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                                           ),
                                           SizedBox(height: 4),
                                           Text(
-                                            'แบรนด์: ${widget.auctionData['brand'] ?? 'ไม่ระบุ'}',
+                                            // 'แบรนด์: ${widget.auctionData['brand'] ?? 'ไม่ระบุ'}',
+                                            'ผู้ขาย: Cloudmate',
                                             style: TextStyle(
                                               fontSize: 14,
                                               color: Colors.grey[600],
@@ -871,38 +863,12 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 
   Widget _buildAuctionImage(String? imagePath,
       {double width = double.infinity, double height = 300}) {
-    if (imagePath == null || imagePath.isEmpty) {
-      return Image.asset('assets/images/noimage.jpg',
-          width: width, height: height, fit: BoxFit.cover);
-    }
-
-    // ตรวจสอบว่าเป็น URL หรือไม่
-    final isUrl =
-        imagePath.startsWith('http://') || imagePath.startsWith('https://');
-
-    if (isUrl) {
-      return Image.network(
-        imagePath,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg',
-              width: width, height: height, fit: BoxFit.cover);
-        },
-      );
-    } else {
-      return Image.asset(
-        imagePath,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg',
-              width: width, height: height, fit: BoxFit.cover);
-        },
-      );
-    }
+    return AuctionImageWidget(
+      imagePath: imagePath,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+    );
   }
 
   Widget _buildProductInfo(BuildContext context) {

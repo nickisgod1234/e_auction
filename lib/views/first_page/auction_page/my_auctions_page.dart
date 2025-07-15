@@ -5,7 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/auth_service/auth_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
-import 'package:e_auction/views/first_page/widgets/my_auctions_widget.dart';
+import 'package:e_auction/views/first_page/widgets/my_auctions_widget.dart' as dialogs;
+import 'package:e_auction/views/first_page/widgets/my_auctions_widgets.dart' as widgets;
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/services/user_bid_history_service.dart';
 import 'package:e_auction/services/winner_service.dart';
@@ -435,7 +436,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                     final success = await _saveWinnerInfoToServer(auction);
                     if (success) {
                       Navigator.of(rootContext).pop(); // ปิด dialog หลัก
-                      AuctionDialogs.showPaymentDialog(rootContext, auction);
+                      dialogs.AuctionDialogs.showPaymentDialog(rootContext, auction);
                     }
                     // ถ้าไม่ success จะวน popup เดิมอีกครั้ง
                   } else {
@@ -746,7 +747,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                 _isLoadingActiveBids
                     ? Center(child: CircularProgressIndicator())
                     : filteredActiveBids.isEmpty
-                        ? buildEmptyState(
+                        ? widgets.buildEmptyState(
                             icon: Icons.gavel,
                             title: 'ไม่มีรายการที่กำลังประมูล',
                             subtitle: 'คุณยังไม่ได้เข้าร่วมการประมูลใดๆ',
@@ -763,7 +764,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                                 builder: (context, snapshot) {
                                   if (!snapshot.hasData) {
                                     auction['myBidRank'] = '-';
-                                    return ActiveBidCard(
+                                    return widgets.ActiveBidCard(
                                       auction: auction,
                                       onTap: () async {
                                         final productService = ProductService(
@@ -820,7 +821,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                                       } else {
                                         auction['myBidRank'] = '-';
                                       }
-                                      return ActiveBidCard(
+                                      return widgets.ActiveBidCard(
                                         auction: auction,
                                         onTap: () async {
                                           // ใช้ ProductService ในการจัดการรูปภาพ
@@ -889,7 +890,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                 _isLoadingWonAuctions
                     ? Center(child: CircularProgressIndicator())
                     : filteredWonAuctions.isEmpty
-                        ? buildEmptyState(
+                        ? widgets.buildEmptyState(
                             icon: Icons.emoji_events,
                             title: 'ยังไม่มีรายการที่ชนะ',
                             subtitle: 'เข้าร่วมการประมูลเพื่อมีโอกาสชนะ',
@@ -898,7 +899,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                             padding: EdgeInsets.symmetric(horizontal: 8),
                             itemCount: filteredWonAuctions.length,
                             itemBuilder: (context, index) {
-                              return buildWonAuctionCard(
+                              return widgets.buildWonAuctionCard(
                                   context,
                                   filteredWonAuctions[index],
                                   _hasWinnerInfo,
@@ -1186,12 +1187,12 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InfoRowWidget(
+                      dialogs.InfoRowWidget(
                         label: 'เลขที่ประมูล',
                         value: auction['auctionId'],
                         isMonospace: true,
                       ),
-                      InfoRowWidget(
+                      dialogs.InfoRowWidget(
                         label: 'ราคาที่ชนะ',
                         value: Format.formatCurrency(auction['finalPrice']),
                         isHighlight: true,
@@ -1217,20 +1218,20 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      InfoRowWidget(
+                      dialogs.InfoRowWidget(
                         label: 'ชื่อ-สกุล',
                         value: profile['fullname'] ?? '',
                       ),
-                      InfoRowWidget(
+                      dialogs.InfoRowWidget(
                         label: 'เบอร์โทร',
                         value: _formatPhoneWithZero(profile['phone']),
                       ),
                       if (profile['email']?.isNotEmpty == true)
-                        InfoRowWidget(
+                        dialogs.InfoRowWidget(
                           label: 'อีเมลล์',
                           value: profile['email'] ?? '',
                         ),
-                      InfoRowWidget(
+                      dialogs.InfoRowWidget(
                         label: 'ที่อยู่เต็ม',
                         value: _formatFullAddressWithZip(profile, zip),
                       ),
@@ -1265,7 +1266,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                     onPressed: () async {
                       Navigator.of(context).pop();
                       // โหลดข้อมูลล่าสุดจาก SharedPreferences ก่อนแสดงฟอร์ม
-                      AuctionDialogs.showWinnerInfoDialog(
+                      dialogs.AuctionDialogs.showWinnerInfoDialog(
                         context,
                         auction,
                         _controllers,
@@ -1290,7 +1291,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      AuctionDialogs.showPaymentDialog(context, auction);
+                      dialogs.AuctionDialogs.showPaymentDialog(context, auction);
                     },
                     icon: Icon(Icons.payment, color: Colors.white),
                     label: Text('ติดต่อชำระเงิน',
@@ -1396,7 +1397,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
               onPressed: () async {
                 Navigator.of(context).pop();
                 // โหลดข้อมูลล่าสุดจาก SharedPreferences ก่อนแสดงฟอร์ม
-                AuctionDialogs.showWinnerInfoDialog(
+                dialogs.AuctionDialogs.showWinnerInfoDialog(
                   context,
                   auction,
                   _controllers,
