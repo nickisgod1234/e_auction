@@ -1,18 +1,44 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 
 class WinnerService {
-  static const String baseUrl =
-      '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
-  static const String logsBaseUrl =
-      '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/auction_announcement_logs_controller.php';
+  static String get baseUrl {
+    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+    if (Platform.isAndroid) {
+      return url.replaceFirst('https://', 'http://');
+    }
+    return url;
+  }
+  
+  static String get logsBaseUrl {
+    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/auction_announcement_logs_controller.php';
+    if (Platform.isAndroid) {
+      return url.replaceFirst('https://', 'http://');
+    }
+    return url;
+  }
+
+  static http.Client _getHttpClient() {
+    if (Platform.isAndroid) {
+      final client = HttpClient();
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+        return true; // ยอมรับ certificate ทั้งหมด
+      };
+      return IOClient(client);
+    } else {
+      return http.Client();
+    }
+  }
 
   // ดึงข้อมูลผู้ชนะของแต่ละการประมูล
   static Future<Map<String, dynamic>> getWinnerByAuctionId(
       String auctionId) async {
     try {
-      final response = await http.get(
+      final client = _getHttpClient();
+      final response = await client.get(
         Uri.parse('$baseUrl?id=$auctionId&action=get_winner'),
       );
 
@@ -31,7 +57,8 @@ class WinnerService {
   // ดึงข้อมูลผู้ชนะตาม user_id
   static Future<Map<String, dynamic>> getWinnersByUserId(String userId) async {
     try {
-      final response = await http.get(
+      final client = _getHttpClient();
+      final response = await client.get(
         Uri.parse('$baseUrl?action=get_all_winners&winner_bidder_id=$userId'),
       );
 
@@ -69,7 +96,8 @@ class WinnerService {
   // ดึงข้อมูลผู้ชนะทั้งหมด
   static Future<Map<String, dynamic>> getAllWinners() async {
     try {
-      final response = await http.get(
+      final client = _getHttpClient();
+      final response = await client.get(
         Uri.parse('$baseUrl?action=get_all_winners'),
       );
 
@@ -198,7 +226,8 @@ class WinnerService {
         'user_id': int.tryParse(userId) ?? 0,
       };
 
-      final response = await http.post(
+      final client = _getHttpClient();
+      final response = await client.post(
         Uri.parse('$baseUrl?id=$auctionId&action=announce_winner'),
         headers: {
           'Content-Type': 'application/json',
@@ -228,7 +257,8 @@ class WinnerService {
       print('🔍 TRIGGER: Announced by user: $userId');
 
       // 1. ดึงข้อมูล auction details จาก API
-      final auctionResponse = await http.get(
+      final client = _getHttpClient();
+      final auctionResponse = await client.get(
         Uri.parse('$baseUrl?id=$auctionId&action=get_auction_details'),
       );
 
@@ -246,7 +276,7 @@ class WinnerService {
             // เช็คว่า auction หมดเวลาหรือยัง
             if (_isAuctionEnded(endDate)) {
               // 2. เช็คว่ามีผู้ชนะแล้วหรือยัง
-              final winnerResponse = await http.get(
+              final winnerResponse = await client.get(
                 Uri.parse('$baseUrl?id=$auctionId&action=get_winner'),
               );
 
@@ -274,7 +304,8 @@ class WinnerService {
       String auctionId, String userId) async {
     try {
       // ลองดึงข้อมูลจาก quotation API
-      final quotationResponse = await http.get(
+      final client = _getHttpClient();
+      final quotationResponse = await client.get(
         Uri.parse('$baseUrl?id=$auctionId&action=get_quotation_details'),
       );
 
@@ -292,7 +323,7 @@ class WinnerService {
           if (endDate != null && endDate.isNotEmpty) {
             if (_isAuctionEnded(endDate)) {
               // เช็คว่ามีผู้ชนะแล้วหรือยัง
-              final winnerResponse = await http.get(
+              final winnerResponse = await client.get(
                 Uri.parse('$baseUrl?id=$auctionId&action=get_winner'),
               );
 
@@ -392,7 +423,8 @@ class WinnerService {
 
       final uri = Uri.parse(logsBaseUrl).replace(queryParameters: queryParams);
 
-      final response = await http.get(uri);
+      final client = _getHttpClient();
+      final response = await client.get(uri);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -411,7 +443,8 @@ class WinnerService {
   static Future<bool> isWinnerAnnounced(
       String quotationMoreInformationId) async {
     try {
-      final response = await http.get(
+      final client = _getHttpClient();
+      final response = await client.get(
         Uri.parse('$baseUrl?id=$quotationMoreInformationId&action=get_winner'),
       );
 
@@ -432,7 +465,8 @@ class WinnerService {
   static Future<Map<String, dynamic>?> getWinnerData(
       String quotationMoreInformationId) async {
     try {
-      final response = await http.get(
+      final client = _getHttpClient();
+      final response = await client.get(
         Uri.parse('$baseUrl?id=$quotationMoreInformationId&action=get_winner'),
       );
 
@@ -467,11 +501,12 @@ class WinnerService {
       winnerInfo = _validateAndCompleteAddressInfo(winnerInfo);
 
       final url =
-          '${Config.apiUrllocal}/HR-API-morket/login_phone_auction/save_user.php';
+          '${Config.apiUrl}/HR-API-morket/login_phone_auction/save_user.php';
 
       print('🔍 WINNER_SERVICE: Sending data to API: ${jsonEncode(winnerInfo)}');
 
-      final response = await http.post(
+      final client = _getHttpClient();
+      final response = await client.post(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',

@@ -12,7 +12,7 @@ import 'package:e_auction/services/winner_service.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 
 class MyAuctionsPage extends StatefulWidget {
   const MyAuctionsPage({super.key});

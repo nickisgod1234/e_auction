@@ -1,10 +1,39 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
+import 'package:flutter/foundation.dart';
 
 class ProductService {
   final String baseUrl;
+  late http.Client _client;
 
-  ProductService({required this.baseUrl});
+  ProductService({required this.baseUrl}) {
+    _client = _createHttpClient();
+  }
+
+  http.Client _createHttpClient() {
+    if (Platform.isAndroid) {
+      // สำหรับ Android ให้ bypass SSL verification
+      final client = HttpClient();
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+        print('🔍 [DEBUG] Bypassing SSL certificate for: $host:$port');
+        return true; // ยอมรับ certificate ทั้งหมด
+      };
+      return IOClient(client);
+    } else {
+      // สำหรับ iOS และ platform อื่นๆ ใช้ default
+      return http.Client();
+    }
+  }
+
+  // แปลง HTTPS เป็น HTTP สำหรับ Android
+  String _getBaseUrl() {
+    if (Platform.isAndroid) {
+      return baseUrl.replaceFirst('https://', 'http://');
+    }
+    return baseUrl;
+  }
 
   // Helper function to safely convert any value to string
   String _safeToString(dynamic value) {
@@ -30,13 +59,17 @@ class ProductService {
   // เรียกรายการ quotation ทั้งหมด
   Future<List<Map<String, dynamic>>?> getAllQuotations() async {
     final url = Uri.parse(
-        '$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
+        '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
+
+
 
     try {
       final response = await http.get(
         url,
         headers: {'Content-Type': 'application/json'},
       );
+
+
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -423,7 +456,13 @@ class ProductService {
     }
 
     print('DEBUG: Clean image name: $cleanImageName');
-    return 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
+    final imageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
+    
+    // แปลง HTTPS เป็น HTTP สำหรับ Android
+    if (Platform.isAndroid) {
+      return imageUrl.replaceFirst('https://', 'http://');
+    }
+    return imageUrl;
   }
 
   // คืน URL รูปภาพ auction ที่ถูกต้อง (public)

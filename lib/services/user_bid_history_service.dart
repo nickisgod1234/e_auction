@@ -1,15 +1,35 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 
 class UserBidHistoryService {
-  static const String baseUrl =
-      '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+  static String get baseUrl {
+    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+    if (Platform.isAndroid) {
+      return url.replaceFirst('https://', 'http://');
+    }
+    return url;
+  }
+
+  static http.Client _getHttpClient() {
+    if (Platform.isAndroid) {
+      final client = HttpClient();
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+        return true; // ยอมรับ certificate ทั้งหมด
+      };
+      return IOClient(client);
+    } else {
+      return http.Client();
+    }
+  }
 
   // ดึงประวัติการประมูลของผู้ใช้
   static Future<Map<String, dynamic>> getUserBidHistory(String bidderId) async {
     try {
-      final response = await http.get(
+      final client = _getHttpClient();
+      final response = await client.get(
         Uri.parse('$baseUrl?action=user_bid_history&bidder_id=$bidderId'),
       );
 
@@ -46,7 +66,8 @@ class UserBidHistoryService {
   // ดึงสถิติการประมูลของผู้ใช้
   static Future<Map<String, dynamic>> getUserBidStats(String bidderId) async {
     try {
-      final response = await http.get(
+      final client = _getHttpClient();
+      final response = await client.get(
         Uri.parse('$baseUrl?action=user_bid_stats&bidder_id=$bidderId'),
       );
 
@@ -68,7 +89,8 @@ class UserBidHistoryService {
       final url =
           '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$auctionId&action=user_bid_ranking';
 
-      final response = await http.get(Uri.parse(url));
+      final client = _getHttpClient();
+      final response = await client.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -101,8 +123,12 @@ class UserBidHistoryService {
             images = imageData.cast<String>();
             if (images.isNotEmpty && images.first.isNotEmpty) {
               // สร้าง URL รูปภาพ
-              imageUrl =
-                  'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/${images.first}';
+              final baseImageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/${images.first}';
+              if (Platform.isAndroid) {
+                imageUrl = baseImageUrl.replaceFirst('https://', 'http://');
+              } else {
+                imageUrl = baseImageUrl;
+              }
             }
           }
         }
@@ -113,8 +139,12 @@ class UserBidHistoryService {
           // ใช้ quotation_id ไปดึงข้อมูลจาก API หลัก (เหมือนที่หน้า home ใช้)
           // แต่เนื่องจากเป็น static method จึงไม่สามารถใช้ async ได้
           // ให้ใช้ quotation_id เป็น fallback
-          imageUrl =
-              'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/img_6867a407860455.12296295.jpg';
+          final fallbackImageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/img_6867a407860455.12296295.jpg';
+          if (Platform.isAndroid) {
+            imageUrl = fallbackImageUrl.replaceFirst('https://', 'http://');
+          } else {
+            imageUrl = fallbackImageUrl;
+          }
         }
       } catch (e) {
         images = [];
