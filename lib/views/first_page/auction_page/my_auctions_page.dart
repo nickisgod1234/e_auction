@@ -664,7 +664,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
           'รายการประมูลของฉัน',
           style: TextStyle(
             color: Colors.black,
-            fontWeight: FontWeight.w600,
+           
             fontSize: 20,
           ),
         ),

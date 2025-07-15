@@ -261,6 +261,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
             context: context,
             builder: (BuildContext context) {
               return Dialog(
+                insetPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
                 child: Container(
@@ -268,6 +269,10 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                     maxHeight: MediaQuery.of(context).size.height * 0.8,
                   ),
                   child: SingleChildScrollView(
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 10,
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [

@@ -10,6 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
 import 'package:e_auction/views/first_page/widgets/my_auctions_widget.dart' as dialogs;
+import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
+import 'package:e_auction/views/first_page/detail_page/detail_completed.dart';
+import 'package:e_auction/services/winner_service.dart';
 
 // Helper method to build auction image
 Widget _buildAuctionImage(String? imagePath,
@@ -239,26 +242,55 @@ Widget buildWonAuctionCard(
         orElse: () => <String, dynamic>{},
       );
 
+      Map<String, dynamic> formattedAuctionData;
       if (matchingQuotation != null && matchingQuotation.isNotEmpty) {
-        // ใช้ข้อมูลจาก getAllQuotations() เหมือนหน้า home
-        final formattedAuctionData =
-            productService.convertToAppFormat(matchingQuotation);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                AuctionDetailViewPage(auctionData: formattedAuctionData),
-          ),
-        );
+        formattedAuctionData = productService.convertToAppFormat(matchingQuotation);
       } else {
-        // Fallback: ใช้ข้อมูลเดิม
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AuctionDetailViewPage(auctionData: auction),
-          ),
-        );
+        formattedAuctionData = Map<String, dynamic>.from(auction);
       }
+
+      // ดึงข้อมูลผู้ชนะจาก SharedPreferences (ข้อมูลที่ผู้ใช้กรอกในฟอร์ม)
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final firstname = prefs.getString('winner_firstname') ?? '';
+        final lastname = prefs.getString('winner_lastname') ?? '';
+        final phone = prefs.getString('winner_phone') ?? '';
+        
+        if (firstname.isNotEmpty || lastname.isNotEmpty) {
+          final fullName = '${firstname} ${lastname}'.trim();
+          // Map winner data to the keys that detail_completed.dart expects
+          formattedAuctionData['winner_firstname'] = firstname;
+          formattedAuctionData['winner_lastname'] = lastname;
+          formattedAuctionData['winner'] = fullName;
+          formattedAuctionData['winnerName'] = fullName;
+          formattedAuctionData['winner_name'] = fullName;
+          formattedAuctionData['winner_phone'] = phone;
+          formattedAuctionData['winnerPhone'] = phone;
+        } else {
+          // Fallback: ดึงข้อมูลผู้ชนะจาก WinnerService ถ้าไม่มีข้อมูลใน SharedPreferences
+          final winnerData = await WinnerService.getWinnerByAuctionId(quotationId.toString());
+          if (winnerData != null && winnerData['data'] != null) {
+            final winner = winnerData['data'];
+            formattedAuctionData['winner_firstname'] = winner['winner_firstname'];
+            formattedAuctionData['winner_lastname'] = winner['winner_lastname'];
+            formattedAuctionData['winner'] = '${winner['winner_firstname'] ?? ''} ${winner['winner_lastname'] ?? ''}'.trim();
+            formattedAuctionData['winnerName'] = '${winner['winner_firstname'] ?? ''} ${winner['winner_lastname'] ?? ''}'.trim();
+            formattedAuctionData['winner_name'] = '${winner['winner_firstname'] ?? ''} ${winner['winner_lastname'] ?? ''}'.trim();
+            formattedAuctionData['winner_phone'] = winner['winner_phone'];
+            formattedAuctionData['winnerPhone'] = winner['winner_phone'];
+          }
+        }
+      } catch (e) {
+        // ไม่ต้อง throw error ให้ user เห็น
+        print('Error fetching winner data: $e');
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DetailCompleted(auctionData: formattedAuctionData),
+        ),
+      );
     },
     child: Container(
       margin: EdgeInsets.only(bottom: 10),
