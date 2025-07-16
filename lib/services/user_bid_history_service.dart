@@ -24,7 +24,7 @@ class UserBidHistoryService {
       return http.Client();
     }
   }
-
+  
   // ดึงประวัติการประมูลของผู้ใช้
   static Future<Map<String, dynamic>> getUserBidHistory(String bidderId) async {
     try {
@@ -35,7 +35,7 @@ class UserBidHistoryService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
+        
         // Handle case where API returns List instead of Map
         if (data is List) {
           return {
@@ -114,7 +114,7 @@ class UserBidHistoryService {
       // แปลง quotation_image จาก JSON string เป็น List
       List<String> images = [];
       String imageUrl = 'assets/images/noimage.jpg';
-
+      
       try {
         if (bid['quotation_image'] != null &&
             bid['quotation_image'].toString().isNotEmpty) {
@@ -132,7 +132,7 @@ class UserBidHistoryService {
             }
           }
         }
-
+        
         // ถ้าไม่มีรูปภาพจาก quotation_image ให้ลองใช้ quotation_id ไปดึงข้อมูลจาก API หลัก
         if (imageUrl == 'assets/images/noimage.jpg' &&
             bid['quotation_id'] != null) {
@@ -205,7 +205,7 @@ class UserBidHistoryService {
   static Map<String, List<Map<String, dynamic>>> groupBidsByQuotation(
       List<Map<String, dynamic>> bidHistory) {
     final grouped = <String, List<Map<String, dynamic>>>{};
-
+    
     for (final bid in bidHistory) {
       final quotationId = bid['quotationId'] ?? '';
       if (!grouped.containsKey(quotationId)) {
@@ -213,7 +213,7 @@ class UserBidHistoryService {
       }
       grouped[quotationId]!.add(bid);
     }
-
+    
     return grouped;
   }
 
@@ -222,7 +222,7 @@ class UserBidHistoryService {
       List<Map<String, dynamic>> bidHistory) {
     final grouped = groupBidsByQuotation(bidHistory);
     final highestBids = <String, Map<String, dynamic>>{};
-
+    
     grouped.forEach((quotationId, bids) {
       if (bids.isNotEmpty) {
         // เรียงตาม bid_amount จากมากไปน้อย
@@ -231,7 +231,7 @@ class UserBidHistoryService {
         highestBids[quotationId] = bids.first;
       }
     });
-
+    
     return highestBids;
   }
-}
+} 

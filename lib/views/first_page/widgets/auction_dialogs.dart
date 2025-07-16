@@ -473,17 +473,17 @@ class AuctionDialogs {
                       try {
                         final success = await saveWinnerInfoToServer(auction);
                         if (success) {
-                          Navigator.of(context).pop();
-                          // แสดง payment dialog หลังจากบันทึกข้อมูลสำเร็จ
-                          showPaymentDialog(context, auction);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  '${hasInfo ? 'แก้ไข' : 'บันทึก'}ข้อมูลเรียบร้อยแล้ว (${auction['auctionId']})'),
-                              backgroundColor: Colors.green,
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
+                        Navigator.of(context).pop();
+                        // แสดง payment dialog หลังจากบันทึกข้อมูลสำเร็จ
+                        showPaymentDialog(context, auction);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                '${hasInfo ? 'แก้ไข' : 'บันทึก'}ข้อมูลเรียบร้อยแล้ว (${auction['auctionId']})'),
+                            backgroundColor: Colors.green,
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
                         }
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(

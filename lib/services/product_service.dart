@@ -62,7 +62,7 @@ class ProductService {
         '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
 
 
-
+    
     try {
       final response = await http.get(
         url,
@@ -73,7 +73,7 @@ class ProductService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
+        
         if (data is List) {
           return _parseQuotationList(data);
         } else {
@@ -146,9 +146,9 @@ class ProductService {
     return products.where((product) {
       final startDate = DateTime.tryParse(product['auction_start_date'] ?? '');
       final endDate = DateTime.tryParse(product['auction_end_date'] ?? '');
-
+      
       if (startDate == null || endDate == null) return false;
-
+      
       return now.isAfter(startDate) && now.isBefore(endDate);
     }).toList();
   }
@@ -161,9 +161,9 @@ class ProductService {
     final now = DateTime.now();
     return products.where((product) {
       final startDate = DateTime.tryParse(product['auction_start_date'] ?? '');
-
+      
       if (startDate == null) return false;
-
+      
       return now.isBefore(startDate);
     }).toList();
   }
@@ -176,9 +176,9 @@ class ProductService {
     final now = DateTime.now();
     return products.where((product) {
       final endDate = DateTime.tryParse(product['auction_end_date'] ?? '');
-
+      
       if (endDate == null) return false;
-
+      
       return now.isAfter(endDate);
     }).toList();
   }
@@ -186,7 +186,7 @@ class ProductService {
   // Parse รายการ quotation จาก API response
   List<Map<String, dynamic>> _parseQuotationList(List<dynamic> rawData) {
     final List<Map<String, dynamic>> quotations = [];
-
+    
     for (var item in rawData) {
       if (item is Map<String, dynamic>) {
         final quotation = {
@@ -216,7 +216,7 @@ class ProductService {
         quotations.add(quotation);
       }
     }
-
+    
     return quotations;
   }
 
@@ -246,14 +246,14 @@ class ProductService {
       // Parse รายการสินค้า
       if (rawData['items'] != null && rawData['items'] is List) {
         final List<Map<String, dynamic>> items = [];
-
+        
         for (var item in rawData['items']) {
           final parsedItem = _parseAuctionItem(item);
           if (parsedItem != null) {
             items.add(parsedItem);
           }
         }
-
+        
         product['items'] = items;
       }
 
@@ -287,7 +287,7 @@ class ProductService {
       // Parse tabs data
       if (rawItem['tabs'] != null && rawItem['tabs'] is Map) {
         final tabs = rawItem['tabs'] as Map<String, dynamic>;
-
+        
         // Material data
         if (tabs['material_data'] != null) {
           final materialData = tabs['material_data'] as Map<String, dynamic>;
@@ -412,10 +412,10 @@ class ProductService {
         imageName == '"[]"') {
       return 'assets/images/noimage.jpg';
     }
-
+    
     // ลบ escape characters และ quotes ที่ไม่จำเป็น
     String cleanImageName = imageName.trim();
-
+    
     // ถ้าเป็น JSON array string ให้ parse
     if (cleanImageName.startsWith('[') && cleanImageName.endsWith(']')) {
       try {
@@ -432,7 +432,7 @@ class ProductService {
         return 'assets/images/noimage.jpg';
       }
     }
-
+    
     // ลบ quotes และ escape characters ที่เหลืออยู่
     cleanImageName = cleanImageName
         .replaceAll('"', '')
@@ -440,7 +440,7 @@ class ProductService {
         .replaceAll('[', '')
         .replaceAll(']', '')
         .trim();
-
+    
     if (cleanImageName.isEmpty) {
       return 'assets/images/noimage.jpg';
     }
@@ -454,7 +454,7 @@ class ProductService {
       print('DEBUG: Invalid image extension: $cleanImageName');
       return 'assets/images/noimage.jpg';
     }
-
+    
     print('DEBUG: Clean image name: $cleanImageName');
     final imageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
     
@@ -530,18 +530,18 @@ class ProductService {
   // คำนวณเวลาที่เหลือ
   String _calculateTimeRemaining(String? endDate) {
     if (endDate == null || endDate.isEmpty) return 'ไม่ระบุ';
-
+    
     try {
       final end = DateTime.parse(endDate);
       final now = DateTime.now();
-
+      
       if (now.isAfter(end)) return 'หมดเวลาแล้ว';
-
+      
       final difference = end.difference(now);
       final days = difference.inDays;
       final hours = difference.inHours % 24;
       final minutes = difference.inMinutes % 60;
-
+      
       if (days > 0) {
         return 'เหลือ $days วัน $hours ชั่วโมง';
       } else if (hours > 0) {
@@ -557,16 +557,16 @@ class ProductService {
   // คำนวณจำนวนวันที่เหลือจนถึงวันเริ่มประมูล
   String _calculateDaysUntilStart(String? startDate) {
     if (startDate == null || startDate.isEmpty) return 'ไม่ระบุ';
-
+    
     try {
       final start = DateTime.parse(startDate);
       final now = DateTime.now();
-
+      
       if (now.isAfter(start)) return 'เริ่มแล้ว';
-
+      
       final difference = start.difference(now);
       final days = difference.inDays;
-
+      
       if (days == 0) {
         final hours = difference.inHours;
         if (hours == 0) {
@@ -616,4 +616,4 @@ class ProductService {
       return null;
     }
   }
-}
+} 

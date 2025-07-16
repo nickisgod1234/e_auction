@@ -253,15 +253,13 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
               int.tryParse(latestData['minimum_increase']?.toString() ?? '0') ??
                   0;
           final minBid = currentPrice + minimumIncrease;
-          final TextEditingController bidController = TextEditingController(
-            text: Format.formatNumber(minBid),
-          );
+          final TextEditingController bidController = TextEditingController();
 
           showDialog(
             context: context,
             builder: (BuildContext context) {
               return Dialog(
-                insetPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 5),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
                 child: Container(
@@ -271,7 +269,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                   child: SingleChildScrollView(
                     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom + 10,
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 1,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -414,56 +412,98 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                                         ),
                                       ],
                                     ),
+                                    SizedBox(height: 8),
+                                    // Row(
+                                    //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    //   children: [
+                                    //     Text(
+                                    //       'ขีดจำกัด ±10%:',
+                                    //       style: TextStyle(
+                                    //         fontSize: 14,
+                                    //         color: Colors.grey[600],
+                                    //       ),
+                                    //     ),
+                                    //     Text(
+                                    //       '${Format.formatCurrency((currentPrice * 0.9).round())} - ${Format.formatCurrency((currentPrice * 1.1).round())}',
+                                    //       style: TextStyle(
+                                    //         fontSize: 14,
+                                    //         fontWeight: FontWeight.w600,
+                                    //         color: Colors.red[700],
+                                    //       ),
+                                    //     ),
+                                    //   ],
+                                    // ),
                                   ],
                                 ),
                               ),
                               SizedBox(height: 20),
-                              TextField(
-                                controller: bidController,
-                                decoration: InputDecoration(
-                                  labelText: 'ราคาที่ต้องการประมูล (บาท)',
-                                  hintText: Format.formatNumber(minBid),
-                                  helperText: 'ขั้นต่ำ: ${Format.formatCurrency(minBid)}',
-                                  helperStyle: TextStyle(
-                                    color: Colors.orange[700],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(color: Colors.green, width: 2),
-                                  ),
-                                  prefixIcon:
-                                      Icon(Icons.attach_money, color: Colors.green),
-                                  filled: true,
-                                  fillColor: Colors.grey[50],
-                                ),
-                                keyboardType: TextInputType.number,
-                                style: TextStyle(fontSize: 16),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                ],
-                                onChanged: (value) {
-                                  // แปลงตัวเลขเป็นรูปแบบที่มี comma
-                                  if (value.isNotEmpty) {
-                                    final number = int.tryParse(value.replaceAll(',', ''));
-                                    if (number != null) {
-                                      final formattedValue = Format.formatNumber(number);
-                                      if (formattedValue != value) {
-                                        bidController.value = TextEditingValue(
-                                          text: formattedValue,
-                                          selection: TextSelection.collapsed(
-                                            offset: formattedValue.length,
-                                          ),
-                                        );
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextField(
+                                    controller: bidController,
+                                    decoration: InputDecoration(
+                                      labelText: 'ราคาที่ต้องการประมูล (บาท)',
+                                      hintText: Format.formatNumber(minBid),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: Colors.grey[300]!),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: Colors.green, width: 2),
+                                      ),
+                                      prefixIcon:
+                                          Icon(Icons.attach_money, color: Colors.green),
+                                      filled: true,
+                                      fillColor: Colors.grey[50],
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(fontSize: 16),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                    onChanged: (value) {
+                                      // แปลงตัวเลขเป็นรูปแบบที่มี comma
+                                      if (value.isNotEmpty) {
+                                        final number = int.tryParse(value.replaceAll(',', ''));
+                                        if (number != null) {
+                                          final formattedValue = Format.formatNumber(number);
+                                          if (formattedValue != value) {
+                                            bidController.value = TextEditingValue(
+                                              text: formattedValue,
+                                              selection: TextSelection.collapsed(
+                                                offset: formattedValue.length,
+                                              ),
+                                            );
+                                          }
+                                        }
                                       }
-                                    }
-                                  }
-                                },
+                                    },
+                                  ),
+                                  SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'ขั้นต่ำ: ${Format.formatCurrency(minBid)}',
+                                        style: TextStyle(
+                                          color: Colors.orange[700],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Text(
+                                        'สูงสุด: ${Format.formatCurrency((currentPrice * 1.1).round())}',
+                                        style: TextStyle(
+                                          color: Colors.orange[700],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -519,6 +559,24 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                                     if (bidAmount < minBid) {
                                       _showCustomToast(context,
                                           'ราคาต้องมากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}',
+                                          isSuccess: false);
+                                      return;
+                                    }
+                                    
+                                    // ตรวจสอบขีดจำกัด ±10% ของราคาปัจจุบัน
+                                    final maxBid = (currentPrice * 1.1).round();
+                                    final minBidLimit = (currentPrice * 0.9).round();
+                                    
+                                    if (bidAmount > maxBid) {
+                                      _showCustomToast(context,
+                                          'ราคาไม่สามารถเกิน ${Format.formatCurrency(maxBid)} ได้',
+                                          isSuccess: false);
+                                      return;
+                                    }
+                                    
+                                    if (bidAmount < minBidLimit) {
+                                      _showCustomToast(context,
+                                          'ราคาไม่สามารถต่ำกว่า ${Format.formatCurrency(minBidLimit)} ได้',
                                           isSuccess: false);
                                       return;
                                     }
