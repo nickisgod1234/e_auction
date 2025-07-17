@@ -15,7 +15,7 @@ import 'package:e_auction/services/winner_service.dart';
 import 'package:e_auction/views/first_page/widgets/auction_image_widget.dart';
 import 'package:e_auction/views/first_page/widgets/auction_bid_dialog.dart';
 import 'package:e_auction/views/first_page/widgets/auction_pending_bid_dialog.dart';
-import 'package:e_auction/utils/loading_service.dart';
+
 
 class AuctionDetailViewPage extends StatefulWidget {
   final Map<String, dynamic> auctionData;
@@ -185,10 +185,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
       final url =
           '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
 
-      final response = await LoadingService.showLoadingWhile(context, () async {
-        final client = _getHttpClient();
-        return await client.get(Uri.parse(url));
-      });
+      final client = _getHttpClient();
+      final response = await client.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -276,15 +274,13 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     try {
       final productService = ProductService(baseUrl: _getBaseUrl());
       
-      final result = await LoadingService.showLoadingWhile(context, () async {
-        return await productService.placeBid(
-          quotationId: _pendingBid!['quotationId'],
-          minimumIncrease: _pendingBid!['minimumIncrease'],
-          bidAmount: _pendingBid!['bidAmount'],
-          bidderId: _pendingBid!['bidderId'],
-          bidderName: _pendingBid!['bidderName'],
-        );
-      });
+      final result = await productService.placeBid(
+        quotationId: _pendingBid!['quotationId'],
+        minimumIncrease: _pendingBid!['minimumIncrease'],
+        bidAmount: _pendingBid!['bidAmount'],
+        bidderId: _pendingBid!['bidderId'],
+        bidderName: _pendingBid!['bidderName'],
+      );
 
               if (result != null && result['status'] == 'success') {
           // รอให้แน่ใจว่า loading dialog ปิดสนิทแล้ว
@@ -297,10 +293,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
           try {
             final latestUrl =
                 '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${_pendingBid!['quotationId']}';
-            final latestResponse = await LoadingService.showLoadingWhile(context, () async {
-              final client = _getHttpClient();
-              return await client.get(Uri.parse(latestUrl));
-            });
+            final client = _getHttpClient();
+            final latestResponse = await client.get(Uri.parse(latestUrl));
 
                       if (latestResponse.statusCode == 200) {
               final latestData = jsonDecode(latestResponse.body);

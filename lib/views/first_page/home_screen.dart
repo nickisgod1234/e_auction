@@ -19,7 +19,7 @@ import 'package:e_auction/views/first_page/auction_page/auction_result_page.dart
 import 'package:e_auction/views/first_page/notification_page/notification_page.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/marquee_runner.dart';
-import 'package:e_auction/utils/loading_service.dart';
+
 import 'package:e_auction/views/first_page/request_otp_page/request_otp_login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
@@ -257,12 +257,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _navigateToPage(BuildContext context, Widget page) async {
-    LoadingService.instance.show();
-    // Simulate a network delay or data fetching
-    await Future.delayed(const Duration(milliseconds: 300));
-    LoadingService.instance
-        .hide(); // Hide the loader BEFORE pushing the new page
-
     if (mounted) {
       await Navigator.push(
         context,
