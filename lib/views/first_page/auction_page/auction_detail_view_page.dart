@@ -30,69 +30,14 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 
   // Add a static variable to track the disclaimer popup state
   static bool _hideDisclaimer = false;
-
-  // Helper method to get HTTP client for Android
-  http.Client _getHttpClient() {
-    if (Platform.isAndroid) {
-      final client = HttpClient();
-      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
-        return true; // ยอมรับ certificate ทั้งหมด
-      };
-      return IOClient(client);
-    } else {
-      return http.Client();
-    }
-  }
-
-  // Helper method to get base URL for Android
-  String _getBaseUrl() {
-    final url = Config.apiUrlAuction;
-    if (Platform.isAndroid) {
-      return url.replaceFirst('https://', 'http://');
-    }
-    return url;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  // Helper method to get current price as int
-  int _getCurrentPriceAsInt() {
-    // ใช้ข้อมูลจาก real-time ถ้ามี หรือใช้ข้อมูลเดิม
-    if (_latestAuctionData != null) {
-      return int.tryParse(
-              _latestAuctionData!['current_price']?.toString() ?? '0') ??
-          0;
-    }
-
-    final currentPriceRaw = widget.auctionData['currentPrice'];
-    if (currentPriceRaw is double) {
-      return currentPriceRaw.round();
-    } else if (currentPriceRaw is int) {
-      return currentPriceRaw;
-    }
-    return 0;
-  }
-
-  // Helper method to get starting price as int
-  int _getStartingPriceAsInt() {
-    // ใช้ข้อมูลจาก real-time ถ้ามี หรือใช้ข้อมูลเดิม
-    if (_latestAuctionData != null) {
-      return int.tryParse(
-              _latestAuctionData!['star_price']?.toString() ?? '0') ??
-          0;
-    }
-
-    final startingPriceRaw = widget.auctionData['startingPrice'];
-    if (startingPriceRaw is double) {
-      return startingPriceRaw.round();
-    } else if (startingPriceRaw is int) {
-      return startingPriceRaw;
-    }
-    return 0;
-  }
+  
+  // Timer สำหรับอัปเดตเวลาที่เหลือในการยกเลิก
+  Timer? _cancelTimer;
+  
+  // เพิ่มตัวแปรสำหรับระบบ hold bid
+  Map<String, dynamic>? _pendingBid;
+  Timer? _pendingBidTimer;
+  bool _isPendingBidConfirmed = false;
 
   // แสดง Custom Toast Message
   void _showCustomToast(BuildContext context, String message,
@@ -581,65 +526,26 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                                       return;
                                     }
 
-                                    // Loading
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (_) =>
-                                          Center(child: CircularProgressIndicator()),
-                                    );
-
-                                    final prefs = await SharedPreferences.getInstance();
-                                    final bidderId = prefs.getString('id') ?? '';
-                                    final bidderName =
-                                        prefs.getString('phone_number') ?? '';
-
-                                    final result = await productService.placeBid(
-                                      quotationId: quotationId,
-                                      minimumIncrease: minimumIncrease.toString(),
-                                      bidAmount: bidAmount.toString(),
-                                      bidderId: bidderId,
-                                      bidderName: bidderName,
-                                    );
-
-                                    Navigator.pop(context); // ปิด loading
                                     Navigator.pop(context); // ปิด dialog
 
-                                    if (result != null &&
-                                        result['status'] == 'success') {
-                                      _showSuccessDialog(context,
-                                          'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}');
+                                    // เก็บข้อมูลการประมูลไว้ใน pending
+                                    final prefs = await SharedPreferences.getInstance();
+                                    final bidderId = prefs.getString('id') ?? '';
+                                    final bidderName = prefs.getString('phone_number') ?? '';
 
-                                      // ดึงข้อมูลล่าสุดและอัปเดต real-time
-                                      try {
-                                        final latestUrl =
-                                            '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
-                                        final client = _getHttpClient();
-                                        final latestResponse =
-                                            await client.get(Uri.parse(latestUrl));
+                                    _pendingBid = {
+                                      'quotationId': quotationId,
+                                      'minimumIncrease': minimumIncrease.toString(),
+                                      'bidAmount': bidAmount.toString(),
+                                      'bidderId': bidderId,
+                                      'bidderName': bidderName,
+                                      'currentPrice': currentPrice,
+                                      'productTitle': widget.auctionData['title'],
+                                      'timestamp': DateTime.now().toIso8601String(),
+                                    };
 
-                                        if (latestResponse.statusCode == 200) {
-                                          final latestData =
-                                              jsonDecode(latestResponse.body);
-                                          if (latestData != null &&
-                                              latestData[
-                                                      'quotation_more_information_id'] !=
-                                                  null) {
-                                            // อัปเดตข้อมูลใน state
-                                            setState(() {
-                                              _latestAuctionData = latestData;
-                                            });
-                                            // อัปเดต widget realtime
-                                            realtimePriceKey.currentState
-                                                ?.updateAuctionData(latestData);
-                                          }
-                                        }
-                                      } catch (e) {}
-                                    } else {
-                                      _showCustomToast(
-                                          context, 'เกิดข้อผิดพลาดในการประมูล',
-                                          isSuccess: false);
-                                    }
+                                    // แสดง dialog ยืนยันการประมูล
+                                    _showPendingBidConfirmationDialog(context);
                                   },
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -676,6 +582,229 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
       Navigator.pop(context); // ปิด loading
       _showCustomToast(context, 'เกิดข้อผิดพลาด: $e', isSuccess: false);
     }
+  }
+
+  // เพิ่มเมธอดสำหรับแสดง dialog ยืนยันการประมูลที่ pending
+  void _showPendingBidConfirmationDialog(BuildContext context) {
+    if (_pendingBid == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.timer, color: Colors.orange, size: 24),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'ยืนยันการประมูล',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'คุณต้องการยืนยันการประมูลหรือไม่?',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('สินค้า:', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                        Expanded(
+                          child: Text(
+                            _pendingBid!['productTitle'] ?? 'ไม่ระบุ',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.end,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('ราคาปัจจุบัน:', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                        Text(
+                          Format.formatCurrency(_pendingBid!['currentPrice'] ?? 0),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('ราคาที่ประมูล:', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                        Text(
+                          Format.formatCurrency(int.parse(_pendingBid!['bidAmount'])),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'กรุณาตรวจสอบราคาก่อนยืนยัน',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _cancelPendingBid();
+              },
+              child: Text(
+                'ยกเลิก',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                _confirmPendingBid(context);
+              },
+              child: Text('ยืนยันการประมูล'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // เพิ่มเมธอดสำหรับยืนยันการประมูลที่ pending
+  void _confirmPendingBid(BuildContext context) async {
+    if (_pendingBid == null) return;
+
+    setState(() {
+      _isPendingBidConfirmed = true;
+    });
+
+    // Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final productService = ProductService(baseUrl: _getBaseUrl());
+      
+      final result = await productService.placeBid(
+        quotationId: _pendingBid!['quotationId'],
+        minimumIncrease: _pendingBid!['minimumIncrease'],
+        bidAmount: _pendingBid!['bidAmount'],
+        bidderId: _pendingBid!['bidderId'],        bidderName: _pendingBid!['bidderName'],
+      );
+
+      Navigator.pop(context); // ปิด loading
+
+      if (result != null && result['status'] == 'success') {
+        _showSuccessDialog(context,
+            'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}');
+
+        // ดึงข้อมูลล่าสุดและอัปเดต real-time
+        try {
+          final latestUrl =
+              '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${_pendingBid!['quotationId']}';
+          final client = _getHttpClient();
+          final latestResponse = await client.get(Uri.parse(latestUrl));
+
+          if (latestResponse.statusCode == 200) {
+            final latestData = jsonDecode(latestResponse.body);
+            if (latestData != null &&
+                latestData['quotation_more_information_id'] != null) {
+              // อัปเดตข้อมูลใน state
+              setState(() {
+                _latestAuctionData = latestData;
+                _pendingBid = null; // ล้าง pending bid
+                _isPendingBidConfirmed = false;
+              });
+              // อัปเดต widget realtime
+              realtimePriceKey.currentState?.updateAuctionData(latestData);
+            }
+          }
+        } catch (e) {  }
+      } else {
+        _showCustomToast(context, 'เกิดข้อผิดพลาดในการประมูล', isSuccess: false);
+        setState(() {
+          _isPendingBidConfirmed = false;
+        });
+      }
+    } catch (e) {
+      Navigator.pop(context); // ปิด loading
+      _showCustomToast(context, 'เกิดข้อผิดพลาด: $e', isSuccess: false);
+      setState(() {
+        _isPendingBidConfirmed = false;
+      });
+    }
+  }
+
+  // เพิ่มเมธอดสำหรับยกเลิกการประมูลที่ pending
+  void _cancelPendingBid() {
+    setState(() {
+      _pendingBid = null;
+      _isPendingBidConfirmed = false;
+    });
+    _showCustomToast(context, 'ยกเลิกการประมูลสำเร็จ', isSuccess: true);
   }
 
   void _showDisclaimerDialog(BuildContext context, VoidCallback onAccept) {
@@ -759,6 +888,132 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     } else {
       _showDisclaimerDialog(context, () => _showBidDialog(context));
     }
+  }
+
+  // เพิ่มเมธอดสำหรับตรวจสอบว่าผู้ใช้เป็นผู้ประมูลล่าสุดหรือไม่
+  Future<bool> _isCurrentUserLatestBidder() async {
+    if (_latestAuctionData == null || _latestAuctionData!['bid_history'] == null) {
+      return false;
+    }
+    
+    final bidHistory = _latestAuctionData!['bid_history'] as List;
+    if (bidHistory.isEmpty) return false;
+    
+    final latestBid = bidHistory.last;
+    final prefs = await SharedPreferences.getInstance();
+    final userPhone = prefs.getString('phone_number') ?? '';
+    
+    // ตรวจสอบว่า bidder_name ตรงกับ phone_number ของผู้ใช้หรือไม่
+    return latestBid['bidder_name'] == userPhone;
+  }
+
+  // เพิ่มเมธอดสำหรับตรวจสอบเวลาที่เหลือในการยกเลิก
+  Future<bool> _canCancelBid() async {
+    final isLatestBidder = await _isCurrentUserLatestBidder();
+    if (!isLatestBidder) return false;
+    
+    if (_latestAuctionData == null || _latestAuctionData!['bid_history'] == null) {
+      return false;
+    }
+    
+    final bidHistory = _latestAuctionData!['bid_history'] as List;
+    if (bidHistory.isEmpty) return false;
+    
+    final latestBid = bidHistory.last;
+    final bidTime = latestBid['bid_time'];
+    if (bidTime == null) return false;
+    
+    try {
+      final bidDateTime = DateTime.parse(bidTime);
+      final now = DateTime.now();
+      final difference = now.difference(bidDateTime);
+      
+      // อนุญาตให้ยกเลิกได้ภายใน 30 นาที
+      return difference.inMinutes < 30;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // เพิ่มเมธอดสำหรับคำนวณเวลาที่เหลือ
+  String _getRemainingCancelTime() {
+    if (_latestAuctionData == null || _latestAuctionData!['bid_history'] == null) {
+      return '';
+    }
+    
+    final bidHistory = _latestAuctionData!['bid_history'] as List;
+    if (bidHistory.isEmpty) return '';
+    
+    final latestBid = bidHistory.last;
+    final bidTime = latestBid['bid_time'];
+    if (bidTime == null) return '';
+    
+    try {
+      final bidDateTime = DateTime.parse(bidTime);
+      final now = DateTime.now();
+      final difference = now.difference(bidDateTime);
+      final remainingMinutes = 30 - difference.inMinutes;
+      
+      if (remainingMinutes <= 0) return '';
+      
+      final remainingSeconds = 60 - difference.inSeconds % 60;
+      return '${remainingMinutes}:${remainingSeconds.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // เพิ่มเมธอดสำหรับแสดง dialog ยกเลิกการประมูล
+  void _showCancelBidDialog(BuildContext context) {
+    // ดึงข้อมูลการประมูลล่าสุด
+    String currentBidAmount = '0';
+    String previousPrice = '0';
+    
+    if (_latestAuctionData != null && _latestAuctionData!['bid_history'] != null) {
+      final bidHistory = _latestAuctionData!['bid_history'] as List;
+      if (bidHistory.isNotEmpty) {
+        currentBidAmount = Format.formatCurrency(
+          int.tryParse(bidHistory.last['bid_amount']?.toString() ?? '0') ?? 0
+        );
+        
+        // คำนวณราคาก่อนหน้า
+        if (bidHistory.length > 1) {
+          previousPrice = Format.formatCurrency(
+            int.tryParse(bidHistory[bidHistory.length - 2]['bid_amount']?.toString() ?? '0') ?? 0
+          );
+        } else {
+          previousPrice = Format.formatCurrency(
+            int.tryParse(_latestAuctionData!['star_price']?.toString() ?? '0') ?? 0
+          );
+        }
+      }
+    }
+    
+    
+  }
+
+
+
+  // Helper method to get HTTP client for Android/iOS
+  http.Client _getHttpClient() {
+    if (Platform.isAndroid) {
+      final client = HttpClient();
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+        return true; // Accept all certificates
+      };
+      return IOClient(client);
+    } else {
+      return http.Client();
+    }
+  }
+
+  // Helper method to get base URL for Android/iOS
+  String _getBaseUrl() {
+    final url = Config.apiUrlAuction;
+    if (Platform.isAndroid) {
+      return url.replaceFirst('https://', 'http://');
+    }
+    return url;
   }
 
   @override
@@ -908,6 +1163,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                 ),
               ),
             ),
+            // ปุ่มยกเลิกการประมูล (แสดงเฉพาะเมื่อเป็นผู้ประมูลล่าสุดและยังอยู่ในช่วง 30 นาที)
+           
           ],
         ),
       ),
