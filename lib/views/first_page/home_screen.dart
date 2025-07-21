@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/current_auction_card.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/upcoming_auction_card.dart';
 // import 'package:e_auction/views/first_page/widget_home_cm/completed_auction_card.dart';
@@ -302,6 +304,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _openPlayStore() async {
+    final url = Uri.parse('https://play.google.com/store/apps/details?id=com.cloudmate.th.e_auction');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      // Show error message if URL cannot be launched
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ไม่สามารถเปิด Play Store ได้'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildSearchField() {
     return TextField(
       controller: _searchController,
@@ -456,6 +475,47 @@ class _HomeScreenState extends State<HomeScreen> {
           //     ),
           //   ],
           // ),
+          if (Platform.isAndroid)
+            Container(
+              margin: EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF01875F), Color(0xFF00C851)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(15),
+                  onTap: _openPlayStore,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/images/google-play.png',
+                          width: 16,
+                          height: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'ให้คะแนนแอพนี้',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             icon: Icon(
               _isSearching ? Icons.close : Icons.search,
