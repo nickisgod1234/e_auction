@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:e_auction/utils/format.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AddAuctionPage extends StatefulWidget {
   const AddAuctionPage({super.key});
@@ -34,6 +36,12 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
   bool _isPercentage = false;
   double _percentageValue = 3.0; // Default 3%
   int _bidderCount = 0; // Default 0
+  
+  // ประเภทสินค้า
+  List<Map<String, dynamic>> _quotationTypes = [];
+  String? _selectedQuotationTypeId;
+  String? _selectedQuotationTypeName;
+  bool _isLoadingQuotationTypes = false;
 
   @override
   void initState() {
@@ -41,6 +49,9 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
     // Set default values
     _startingPriceController.text = '0';
     _minIncrementController.text = '100';
+    
+    // Load quotation types
+    _loadQuotationTypes();
   }
 
   @override
@@ -77,6 +88,60 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
     if (image != null) {
       setState(() {
         _selectedImage = File(image.path);
+      });
+    }
+  }
+
+  Future<void> _loadQuotationTypes() async {
+    setState(() {
+      _isLoadingQuotationTypes = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost/ERP-Cloudmate/modules/sales/controllers/quotation_type_controller.php'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        
+        // Debug: Print raw response
+        print('Raw API response: ${response.body}');
+        print('Parsed data: $data');
+        
+        setState(() {
+          _quotationTypes = data
+            .where((item) {
+              // กรองเฉพาะประเภทที่ขึ้นต้นด้วย "A" (Auction types)
+              final code = item['quotation_type_code']?.toString() ?? '';
+              return code.startsWith('A');
+            })
+            .map((item) {
+              // Debug: Print each item
+              print('Processing auction item: $item');
+              
+              return {
+                'id': item['quotation_type_id']?.toString() ?? '',
+                'name': item['quotation_type_code']?.toString() ?? '',
+                'description': item['description']?.toString() ?? '',
+                'code': item['quotation_type_code']?.toString() ?? '',
+              };
+            }).toList();
+          _isLoadingQuotationTypes = false;
+        });
+        
+        print('Loaded ${_quotationTypes.length} quotation types');
+        print('Quotation types: $_quotationTypes');
+      } else {
+        print('Failed to load quotation types: ${response.statusCode}');
+        setState(() {
+          _isLoadingQuotationTypes = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading quotation types: $e');
+      setState(() {
+        _isLoadingQuotationTypes = false;
       });
     }
   }
@@ -167,6 +232,7 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text('ประเภทสินค้า: ${_selectedQuotationTypeName ?? 'ไม่ระบุ'}'),
                     Text('ชื่อสินค้า: ${_productNameController.text}'),
                     Text('ราคาเริ่มต้น: ${Format.formatCurrency(int.tryParse(_startingPriceController.text) ?? 0)}'),
                     Text('เพิ่มขั้นต่ำ: ${_isPercentage ? '$_percentageValue%' : '${Format.formatCurrency(int.tryParse(_minIncrementController.text) ?? 0)}'}'),
@@ -227,16 +293,21 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 50),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // รูปภาพสินค้า
               _buildImageSection(),
               SizedBox(height: 24),
+
+              // ประเภทสินค้า
+              _buildQuotationTypeDropdown(),
+              SizedBox(height: 16),
 
               // ชื่อสินค้า
               _buildTextField(
@@ -334,8 +405,10 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                   ),
                 ),
               ),
+              SizedBox(height: 20), // เพิ่มระยะห่างด้านล่าง
             ],
           ),
+        ),
         ),
       ),
     );
@@ -839,6 +912,93 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuotationTypeDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ประเภทสินค้า *',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: _isLoadingQuotationTypes
+              ? Container(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 12),
+                      Text('กำลังโหลดประเภทสินค้า...'),
+                    ],
+                  ),
+                )
+              : DropdownButtonFormField<String>(
+                  value: _selectedQuotationTypeId?.isNotEmpty == true ? _selectedQuotationTypeId : null,
+                  decoration: InputDecoration(
+                    hintText: 'เลือกประเภทสินค้า',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  items: [
+                    DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('เลือกประเภทสินค้า'),
+                    ),
+                    ..._quotationTypes.map((type) {
+                      print('Creating dropdown item for: $type');
+                      final itemValue = type['id']?.toString() ?? '';
+                      print('Creating dropdown item with value: $itemValue');
+                      return DropdownMenuItem<String>(
+                        value: itemValue,
+                        child: Text(
+                          '${type['code']?.toString() ?? 'ไม่ระบุรหัส'} - ${type['description']?.toString() ?? ''}',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                  onChanged: (String? value) {
+                    print('Dropdown changed to: $value');
+                    setState(() {
+                      _selectedQuotationTypeId = value;
+                      if (value != null && value.isNotEmpty) {
+                        try {
+                          final selectedType = _quotationTypes.firstWhere(
+                            (type) => (type['id']?.toString() ?? '') == value,
+                          );
+                          _selectedQuotationTypeName = selectedType['code']?.toString() ?? 'ไม่ระบุรหัส';
+                          print('Found selected type: $selectedType');
+                        } catch (e) {
+                          print('Error finding selected type: $e');
+                          _selectedQuotationTypeName = 'ไม่พบข้อมูล';
+                        }
+                      } else {
+                        _selectedQuotationTypeName = null;
+                      }
+                    });
+                    print('Selected quotation type: $_selectedQuotationTypeId - $_selectedQuotationTypeName');
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'กรุณาเลือกประเภทสินค้า';
+                    }
+                    return null;
+                  },
+                ),
         ),
       ],
     );
