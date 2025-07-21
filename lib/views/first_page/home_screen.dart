@@ -19,6 +19,9 @@ import 'package:e_auction/views/first_page/auction_page/all_winner_announcements
 import 'package:e_auction/views/first_page/widget_home_cm/winner_announcement_card.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_result_page.dart';
 import 'package:e_auction/views/first_page/notification_page/notification_page.dart';
+import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auctions_page.dart';
+import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
+import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auction_detail_page.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/marquee_runner.dart';
 
@@ -47,8 +50,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // Data lists
   List<Map<String, dynamic>> _currentAuctions = [];
   List<Map<String, dynamic>> _upcomingAuctions = [];
+  List<Map<String, dynamic>> _quantityReductionAuctions = [];
   bool _isLoadingCurrent = true;
   bool _isLoadingUpcoming = true;
+  bool _isLoadingQuantityReduction = true;
   String? _errorMessage;
 
   @override
@@ -63,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.wait([
       _loadCurrentAuctions(),
       _loadUpcomingAuctions(),
+      _loadQuantityReductionAuctions(),
     ]);
   }
 
@@ -111,7 +117,13 @@ class _HomeScreenState extends State<HomeScreen> {
       final upcomingAuctions = await _productService.getUpcomingAuctions();
 
       if (upcomingAuctions != null) {
-        final formattedAuctions = upcomingAuctions.map((auction) {
+        // กรองเอา AS03 ออก (เพราะจะแสดงในส่วนประมูลสินค้าลดตามจำนวนแล้ว)
+        final filteredAuctions = upcomingAuctions.where((auction) {
+          final typeCode = auction['quotation_type_code']?.toString() ?? '';
+          return typeCode != 'AS03'; // ไม่แสดง AS03 ในส่วนนี้
+        }).toList();
+
+        final formattedAuctions = filteredAuctions.map((auction) {
           final formatted = _productService.convertToAppFormat(auction);
           print('DEBUG: HomeScreen - Upcoming auction formatted: ${formatted['title']} - image: ${formatted['image']}');
           return formatted;
@@ -132,6 +144,55 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _errorMessage = 'ไม่สามารถโหลดข้อมูลการประมูลที่กำลังจะมาถึงได้';
         _isLoadingUpcoming = false;
+      });
+    }
+  }
+
+  Future<void> _loadQuantityReductionAuctions() async {
+    try {
+      setState(() {
+        _isLoadingQuantityReduction = true;
+        _errorMessage = null;
+      });
+
+      final allAuctions = await _productService.getAllAuctionProducts();
+
+      if (allAuctions != null) {
+        // กรองเฉพาะ AS03 และที่ยังไม่เริ่มประมูล
+        final now = DateTime.now();
+        final as03UpcomingAuctions = allAuctions.where((auction) {
+          final typeCode = auction['quotation_type_code']?.toString() ?? '';
+          final startDate = DateTime.tryParse(auction['auction_start_date'] ?? '');
+          
+          return typeCode == 'AS03' && startDate != null && now.isBefore(startDate);
+        }).toList();
+
+        final formattedAuctions = as03UpcomingAuctions.map((auction) {
+          final formatted = _productService.convertToAppFormat(auction);
+          print('DEBUG: HomeScreen - AS03 upcoming auction formatted: ${formatted['title']} - image: ${formatted['image']}');
+          return formatted;
+        }).toList();
+
+        setState(() {
+          _quantityReductionAuctions = formattedAuctions;
+          _isLoadingQuantityReduction = false;
+        });
+        
+        // Debug print
+        print('DEBUG: Quantity Reduction Auctions loaded: ${formattedAuctions.length} items');
+        for (var auction in formattedAuctions) {
+          print('DEBUG: AS03 Auction - ${auction['title']} - Quantity: ${auction['quantity']} - Raw quantity: ${auction['quantity']}');
+        }
+      } else {
+        setState(() {
+          _quantityReductionAuctions = [];
+          _isLoadingQuantityReduction = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'ไม่สามารถโหลดข้อมูลการประมูลแบบลดจำนวนได้';
+        _isLoadingQuantityReduction = false;
       });
     }
   }
@@ -416,10 +477,285 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildQuantityReductionCard(Map<String, dynamic> auctionData) {
+    final quantity = auctionData['quantity'] ?? 0;
+    
+    // Debug print
+    print('DEBUG: Building Quantity Reduction Card - Title: ${auctionData['title']} - Quantity: $quantity');
+    print('DEBUG: Auction data keys: ${auctionData.keys.toList()}');
+    print('DEBUG: Raw quantity value: ${auctionData['quantity']}');
+    
+    return Container(
+      width: 300,
+      margin: EdgeInsets.only(right: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QuantityReductionAuctionDetailPage(auctionData: auctionData),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            // รูปภาพสินค้า
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 280,
+                width: 300,
+                child: _buildAuctionImage(auctionData['image']),
+              ),
+            ),
+            
+            // ป้ายสถานะและประเภท (อยู่บนรูป)
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ป้าย "ยังไม่เริ่ม"
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'ยังไม่เริ่ม',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  // ป้าย "ลดตามจำนวน"
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.trending_down,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'ลดตามจำนวน',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // ข้อมูลสินค้า (อยู่ด้านล่างรูป)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                      Colors.black.withOpacity(0.9),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                ),
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ชื่อสินค้า
+                    Text(
+                      auctionData['title'] ?? 'ไม่ระบุชื่อสินค้า',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    
+                    SizedBox(height: 8),
+                    
+                    // จำนวนสินค้า
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_2,
+                          color: Colors.purple[300],
+                          size: 16,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'จำนวน: $quantity รายการ',
+                          style: TextStyle(
+                            color: Colors.purple[300],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    SizedBox(height: 8),
+                    
+                    // ราคา
+                    Row(
+                      children: [
+                        Text(
+                          '฿${NumberFormat('#,###').format(auctionData['startingPrice'] ?? 0)}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[300],
+                          ),
+                        ),
+                        Spacer(),
+                        // ปุ่ม "รอเริ่ม"
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[600],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'รอเริ่ม',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAuctionImage(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.image_not_supported,
+                size: 32,
+                color: Colors.grey[400],
+              ),
+              SizedBox(height: 4),
+              Text(
+                'ไม่มีรูปภาพ',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Image.network(
+      imagePath,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: Colors.grey[200],
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image,
+                  size: 32,
+                  color: Colors.grey[400],
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'ไม่สามารถโหลดรูปภาพ',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: Colors.grey[200],
+          child: Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredCurrentAuctions = _getFilteredAuctions(_currentAuctions);
     final filteredUpcomingAuctions = _getFilteredAuctions(_upcomingAuctions);
+    
+    // Debug print
+    print('DEBUG: Build - Quantity Reduction Auctions: ${_quantityReductionAuctions.length}');
+    print('DEBUG: Build - Is Loading Quantity Reduction: $_isLoadingQuantityReduction');
+    print('DEBUG: Build - Error Message: $_errorMessage');
 
     return Scaffold(
       appBar: AppBar(
@@ -714,6 +1050,72 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
               ),
               SizedBox(height: 15),
+
+              // Quantity Reduction Auctions Section
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'ประมูลสินค้าลดตามจำนวน',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        _navigateToPage(context, QuantityReductionAuctionsPage());
+                      },
+                      child: Text(
+                        'ดูทั้งหมด',
+                        style: TextStyle(
+                          color: context.customTheme.primaryColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Quantity Reduction Auctions List
+              SizedBox(
+                height: 280,
+                child: _isLoadingQuantityReduction
+                    ? ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: 3,
+                        itemBuilder: (context, index) => _buildLoadingCard(),
+                      )
+                    : _errorMessage != null
+                        ? ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: 1,
+                            itemBuilder: (context, index) =>
+                                _buildErrorCard(_errorMessage!),
+                          )
+                        : _quantityReductionAuctions.isEmpty
+                            ? ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                itemCount: 1,
+                                itemBuilder: (context, index) =>
+                                    _buildEmptyCard('ไม่มีสินค้าประมูลแบบลดจำนวน'),
+                              )
+                            : ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                itemCount: _quantityReductionAuctions.length,
+                                itemBuilder: (context, index) {
+                                  return _buildQuantityReductionCard(
+                                      _quantityReductionAuctions[index]);
+                                },
+                              ),
+              ),
 
               // My Auctions Section
               Padding(

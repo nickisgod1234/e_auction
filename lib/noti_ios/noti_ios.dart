@@ -253,6 +253,56 @@ Future<void> triggerWinnerAnnouncementInBackground() async {
   }
 }
 
+/// ส่งแจ้งเตือนเมื่อเข้าร่วมการประมูลแบบลดจำนวนสำเร็จ
+Future<void> sendQuantityReductionJoinNotification(
+  FlutterLocalNotificationsPlugin plugin,
+  String productTitle,
+  String quantity,
+) async {
+  try {
+    print('🔔 QUANTITY_REDUCTION: Starting join notification...');
+    print('🔔 QUANTITY_REDUCTION: Product: $productTitle');
+    print('🔔 QUANTITY_REDUCTION: Quantity: $quantity');
+    
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'quantity_reduction_channel',
+      'Quantity Reduction Notifications',
+      channelDescription: 'Notifications for quantity reduction auctions',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      color: Color(0xFF9C27B0), // สีม่วงสำหรับการประมูลแบบลดจำนวน
+    );
+
+    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      sound: 'default',
+      interruptionLevel: InterruptionLevel.active,
+    );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
+    );
+
+    await plugin.show(
+      104, // ใช้ ID ที่ไม่ซ้ำกับ notifications อื่นๆ
+      '🎯 เข้าร่วมการประมูลสำเร็จ!',
+      'คุณได้เข้าร่วมการประมูล "$productTitle" (จำนวน: $quantity รายการ)',
+      platformChannelSpecifics,
+      payload: 'quantity_reduction_join',
+    );
+    
+    print('🎉 QUANTITY_REDUCTION: Join notification sent successfully!');
+  } catch (e) {
+    print('❌ QUANTITY_REDUCTION: Error sending notification: $e');
+  }
+}
+
 /// ส่งแจ้งเตือนเมื่อมีการ bid ราคาสำเร็จ (สำหรับทุกคนยกเว้นผู้ที่ bid เอง)
 Future<void> sendBidSuccessNotification(
   FlutterLocalNotificationsPlugin plugin,
