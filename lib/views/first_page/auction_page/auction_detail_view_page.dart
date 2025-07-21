@@ -13,6 +13,8 @@ import 'package:http/io_client.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/services/winner_service.dart';
 import 'package:e_auction/views/first_page/widgets/auction_image_widget.dart';
+import 'package:e_auction/noti_ios/noti_ios.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:e_auction/views/first_page/widgets/auction_bid_dialog.dart';
 import 'package:e_auction/views/first_page/widgets/auction_pending_bid_dialog.dart';
 
@@ -274,6 +276,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     try {
       final productService = ProductService(baseUrl: _getBaseUrl());
       
+      print('🔔 BID_SUCCESS: Starting bid process...');
       final result = await productService.placeBid(
         quotationId: _pendingBid!['quotationId'],
         minimumIncrease: _pendingBid!['minimumIncrease'],
@@ -281,12 +284,65 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
         bidderId: _pendingBid!['bidderId'],
         bidderName: _pendingBid!['bidderName'],
       );
+      print('🔔 BID_SUCCESS: Bid result: $result');
 
               if (result != null && result['status'] == 'success') {
+          print('🔔 BID_SUCCESS: Bid was successful!');
           // รอให้แน่ใจว่า loading dialog ปิดสนิทแล้ว
           await Future.delayed(Duration(milliseconds: 100));
           if (mounted) {
+            print('🔔 BID_SUCCESS: Showing success dialog...');
             _showSuccessDialog(context, 'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}');
+            
+            // ส่งแจ้งเตือนเมื่อ bid สำเร็จ
+            print('🔔 BID_SUCCESS: About to send notification...');
+            try {
+              print('🔔 BID_SUCCESS: Starting notification process...');
+              
+              final productTitle = widget.auctionData['title'] ?? 'สินค้า';
+              final latestPrice = Format.formatCurrency(int.tryParse(_pendingBid!['bidAmount']) ?? 0);
+              final bidderName = _pendingBid!['bidderName'] ?? '';
+              
+              print('🔔 BID_SUCCESS: Product: $productTitle');
+              print('🔔 BID_SUCCESS: Price: $latestPrice');
+              print('🔔 BID_SUCCESS: Bidder: $bidderName');
+              
+              // สร้าง plugin instance ใหม่
+              final FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
+              
+              // ตั้งค่า Android
+              const AndroidInitializationSettings initializationSettingsAndroid =
+                  AndroidInitializationSettings('@mipmap/ic_launcher');
+              
+              // ตั้งค่า iOS
+              const DarwinInitializationSettings initializationSettingsIOS =
+                  DarwinInitializationSettings(
+                requestAlertPermission: true,
+                requestBadgePermission: true,
+                requestSoundPermission: true,
+              );
+              
+              const InitializationSettings initializationSettings = InitializationSettings(
+                android: initializationSettingsAndroid,
+                iOS: initializationSettingsIOS,
+              );
+              
+              await plugin.initialize(initializationSettings);
+              print('🔔 BID_SUCCESS: Plugin initialized successfully');
+              
+              print('🔔 BID_SUCCESS: Calling sendBidSuccessNotification...');
+              await sendBidSuccessNotification(
+                plugin,
+                productTitle,
+                latestPrice,
+                bidderName,
+              );
+              
+              print('🎉 BID_SUCCESS: Notification sent successfully!');
+            } catch (e) {
+              print('❌ BID_SUCCESS: Error sending notification: $e');
+              print('❌ BID_SUCCESS: Error details: ${e.toString()}');
+            }
           }
 
           // ดึงข้อมูลล่าสุดและอัปเดต real-time
@@ -700,8 +756,45 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     return Container(
       width: double.infinity,
       height: 300,
-      child: _buildAuctionImage(widget.auctionData['image'],
-          width: double.infinity, height: 300),
+      child: Stack(
+        children: [
+          _buildAuctionImage(widget.auctionData['image'],
+              width: double.infinity, height: 300),
+          // ป้ายประเภทสินค้าในรูป
+          if (widget.auctionData['quotation_type_description'] != null && 
+              widget.auctionData['quotation_type_description'].toString().isNotEmpty)
+            Positioned(
+              top: 16,
+              left: 16,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.category,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      widget.auctionData['quotation_type_description'].toString(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

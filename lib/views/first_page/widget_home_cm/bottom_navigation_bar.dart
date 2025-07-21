@@ -26,7 +26,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.search),
-          label: 'ค้นหา',
+          label: 'เพิ่มสินค้าประมูล',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),

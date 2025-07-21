@@ -253,6 +253,58 @@ Future<void> triggerWinnerAnnouncementInBackground() async {
   }
 }
 
+/// ส่งแจ้งเตือนเมื่อมีการ bid ราคาสำเร็จ (สำหรับทุกคนยกเว้นผู้ที่ bid เอง)
+Future<void> sendBidSuccessNotification(
+  FlutterLocalNotificationsPlugin plugin,
+  String productTitle,
+  String latestPrice,
+  String bidderName,
+) async {
+  try {
+    print('🔔 BID_SUCCESS: Starting bid success notification...');
+    print('🔔 BID_SUCCESS: Product: $productTitle');
+    print('🔔 BID_SUCCESS: Latest Price: $latestPrice');
+    print('🔔 BID_SUCCESS: Bidder: $bidderName');
+    
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'bid_success_channel',
+      'Bid Success Notifications',
+      channelDescription: 'Notifications when someone successfully bids',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      color: Color(0xFF2196F3), // สีน้ำเงินสำหรับการ bid สำเร็จ
+    );
+
+    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      sound: 'default',
+      interruptionLevel: InterruptionLevel.active,
+    );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
+    );
+
+    await plugin.show(
+      103, // ใช้ ID ที่ไม่ซ้ำกับ notifications อื่นๆ
+      '💰 มีการประมูลใหม่!',
+      'สินค้า "$productTitle" ถูกประมูลในราคา $latestPrice',
+      platformChannelSpecifics,
+      payload: 'bid_success_auction',
+    );
+    
+    print('🎉 BID_SUCCESS: Notification sent successfully!');
+  } catch (e) {
+    print('❌ BID_SUCCESS: Error sending notification: $e');
+  }
+}
+
 /// ฟังก์ชันใหม่: ตั้งค่า background task สำหรับเวลา 09:00
 Future<void> setupBackgroundWinnerAnnouncement() async {
   try {

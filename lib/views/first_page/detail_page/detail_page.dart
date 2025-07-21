@@ -375,29 +375,65 @@ class _DetailPageState extends State<DetailPage> {
                     width: double.infinity,
                     height: 300,
                   ),
-                  // Auction Status Badge
+                  // Auction Status Badge และประเภทสินค้า
                   Positioned(
                     top: 16,
                     left: 16,
-                    child: Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: widget.auctionData['isActive'] == true
-                            ? Colors.green
-                            : Colors.orange,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        widget.auctionData['isActive'] == true
-                            ? 'กำลังประมูล'
-                            : 'กำลังจะเริ่ม',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ป้ายสถานะ
+                        Container(
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: widget.auctionData['isActive'] == true
+                                ? Colors.green
+                                : Colors.orange,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            widget.auctionData['isActive'] == true
+                                ? 'กำลังประมูล'
+                                : 'กำลังจะเริ่ม',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                      ),
+                        SizedBox(height: 4),
+                        // ป้ายประเภทสินค้า
+                        if (widget.auctionData['quotation_type_description'] != null && 
+                            widget.auctionData['quotation_type_description'].toString().isNotEmpty)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.category,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  widget.auctionData['quotation_type_description'].toString(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   // Time Remaining
