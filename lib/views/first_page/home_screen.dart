@@ -266,30 +266,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) async {
-    setState(() {
-      _selectedIndex = index;
-
-      // Reset search when home tab is tapped
-      if (index == 0) {
+    // Reset search when home tab is tapped
+    if (index == 0) {
+      setState(() {
+        _selectedIndex = index;
         _searchQuery = '';
         _searchController.clear();
         _isSearching = false;
-      }
-    });
-
-    // Navigate to different pages based on selected index
-    if (index == 2) {
+      });
+    } else if (index == 2) {
       // Settings tab
       await _navigateToPage(context, SettingPage());
       setState(() => _selectedIndex = 0); // Reset index after returning
     } else {
+      // Keep current index for other tabs
       setState(() {
-        _selectedIndex = index;
-        if (index == 0) {
-          _searchQuery = '';
-          _searchController.clear();
-          _isSearching = false;
-        }
+        _selectedIndex = 0; // Always stay on home tab
       });
     }
   }
