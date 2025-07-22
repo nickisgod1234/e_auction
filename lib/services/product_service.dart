@@ -51,17 +51,13 @@ class ProductService {
 
   // Helper function to safely convert any value to int
   int _safeToInt(dynamic value) {
-    print('DEBUG: _safeToInt called with value: $value (type: ${value.runtimeType})');
     if (value == null) {
-      print('DEBUG: _safeToInt returning 0 (null value)');
       return 0;
     }
     if (value is int) {
-      print('DEBUG: _safeToInt returning $value (already int)');
       return value;
     }
     final result = int.tryParse(value.toString()) ?? 0;
-    print('DEBUG: _safeToInt returning $result (parsed from string)');
     return result;
   }
 
@@ -495,7 +491,6 @@ class ProductService {
         // ใช้ข้อมูลจาก JSON ที่ user ส่งมา
         final shortText = product['short_text'] ?? '';
         if (shortText.contains('คอนเสิร์ต ลูกทุ่ง & Rock Aquaverse Music Fest')) {
-          print('DEBUG: Using fallback quantity 10 for AS03 concert');
           return 10;
         }
       }
@@ -511,14 +506,6 @@ class ProductService {
 
   // แปลงข้อมูลสินค้าเป็นรูปแบบที่ใช้ในแอพ
   Map<String, dynamic> convertToAppFormat(Map<String, dynamic> product) {
-    // Debug print เพื่อดูข้อมูลที่ได้รับจาก API
-    print('DEBUG: convertToAppFormat - Raw product data:');
-    print('DEBUG: quantity: ${product['quantity']}');
-    print('DEBUG: quantity_tab: ${product['quantity_tab']}');
-    print('DEBUG: item_number: ${product['item_number']}');
-    print('DEBUG: quotation_type_code: ${product['quotation_type_code']}');
-    print('DEBUG: All product keys: ${product.keys.toList()}');
-    print('DEBUG: Product data for AS03: ${product}');
     
     final imagePath = _getAuctionImageUrl(product['quotation_image']);
 
@@ -566,6 +553,7 @@ class ProductService {
       'minimum_increase': _safeToInt(product['minimum_increase']),
       'item_note': product['item_note'] ?? '',
       'quotation_type_description': product['quotation_type_description'] ?? '',
+      'quotation_type_code': product['quotation_type_code'] ?? '',
       'quantity': _getQuantityForAS03(product), // ใช้ method ใหม่สำหรับ AS03
       'brand': product['brand'] ?? 'ไม่ระบุ',
       'model': product['model'] ?? 'ไม่ระบุ',

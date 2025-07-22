@@ -22,19 +22,25 @@ class AuctionPendingBidDialog extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: (pendingBid['isReverseAuction'] == true) 
+                ? Colors.red.withOpacity(0.1) 
+                : Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.timer, color: Colors.orange, size: 24),
+            child: Icon(
+              (pendingBid['isReverseAuction'] == true) ? Icons.trending_down : Icons.timer, 
+              color: (pendingBid['isReverseAuction'] == true) ? Colors.red : Colors.orange, 
+              size: 24
+            ),
           ),
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'ยืนยันการประมูล',
+              (pendingBid['isReverseAuction'] == true) ? 'ยืนยันการเสนอราคา' : 'ยืนยันการประมูล',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.orange[700],
+                color: (pendingBid['isReverseAuction'] == true) ? Colors.red[700] : Colors.orange[700],
               ),
             ),
           ),
@@ -45,7 +51,9 @@ class AuctionPendingBidDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'คุณต้องการยืนยันการประมูลหรือไม่?',
+            (pendingBid['isReverseAuction'] == true) 
+              ? 'คุณต้องการยืนยันการเสนอราคาหรือไม่?'
+              : 'คุณต้องการยืนยันการประมูลหรือไม่?',
             style: TextStyle(fontSize: 16),
           ),
           SizedBox(height: 16),
@@ -86,10 +94,17 @@ class AuctionPendingBidDialog extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('ราคาที่ประมูล:', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                    Text(
+                      (pendingBid['isReverseAuction'] == true) ? 'ราคาที่เสนอ:' : 'ราคาที่ประมูล:', 
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600])
+                    ),
                     Text(
                       Format.formatCurrency(int.parse(pendingBid['bidAmount'])),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                      style: TextStyle(
+                        fontSize: 16, 
+                        fontWeight: FontWeight.bold, 
+                        color: (pendingBid['isReverseAuction'] == true) ? Colors.red : Colors.green
+                      ),
                     ),
                   ],
                 ),

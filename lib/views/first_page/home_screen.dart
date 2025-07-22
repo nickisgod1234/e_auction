@@ -178,11 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoadingQuantityReduction = false;
         });
         
-        // Debug print
-        print('DEBUG: Quantity Reduction Auctions loaded: ${formattedAuctions.length} items');
-        for (var auction in formattedAuctions) {
-          print('DEBUG: AS03 Auction - ${auction['title']} - Quantity: ${auction['quantity']} - Raw quantity: ${auction['quantity']}');
-        }
+       
       } else {
         setState(() {
           _quantityReductionAuctions = [];
@@ -480,10 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildQuantityReductionCard(Map<String, dynamic> auctionData) {
     final quantity = auctionData['quantity'] ?? 0;
     
-    // Debug print
-    print('DEBUG: Building Quantity Reduction Card - Title: ${auctionData['title']} - Quantity: $quantity');
-    print('DEBUG: Auction data keys: ${auctionData.keys.toList()}');
-    print('DEBUG: Raw quantity value: ${auctionData['quantity']}');
+    
     
     return Container(
       width: 300,
@@ -752,10 +745,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final filteredCurrentAuctions = _getFilteredAuctions(_currentAuctions);
     final filteredUpcomingAuctions = _getFilteredAuctions(_upcomingAuctions);
     
-    // Debug print
-    print('DEBUG: Build - Quantity Reduction Auctions: ${_quantityReductionAuctions.length}');
-    print('DEBUG: Build - Is Loading Quantity Reduction: $_isLoadingQuantityReduction');
-    print('DEBUG: Build - Error Message: $_errorMessage');
+ 
 
     return Scaffold(
       appBar: AppBar(

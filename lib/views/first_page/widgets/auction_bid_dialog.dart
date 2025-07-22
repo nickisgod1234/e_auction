@@ -26,6 +26,7 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
   late int currentPrice;
   late int minimumIncrease;
   late int minBid;
+  late bool isReverseAuction;
 
   @override
   void initState() {
@@ -36,7 +37,20 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
   void _initializeBidData() {
     currentPrice = int.tryParse(widget.latestData['current_price']?.toString() ?? '0') ?? 0;
     minimumIncrease = int.tryParse(widget.latestData['minimum_increase']?.toString() ?? '0') ?? 0;
-    minBid = currentPrice + minimumIncrease;
+    
+    // ตรวจสอบประเภทการประมูล
+    final quotationTypeCode = widget.auctionData['quotation_type_code']?.toString() ?? '';
+    isReverseAuction = quotationTypeCode == "AS02";
+    
+    // คำนวณราคาขั้นต่ำตามประเภทการประมูล
+    if (isReverseAuction) {
+      // Reverse Auction: ราคาลดลง
+      minBid = currentPrice - minimumIncrease;
+    } else {
+      // Normal Auction: ราคาขึ้น
+      minBid = currentPrice + minimumIncrease;
+    }
+    
     bidController.text = Format.formatNumber(minBid);
   }
 
@@ -65,19 +79,25 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                     Container(
                       padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
+                        color: isReverseAuction 
+                          ? Colors.red.withOpacity(0.1) 
+                          : Colors.green.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.gavel, color: Colors.green, size: 48),
+                      child: Icon(
+                        isReverseAuction ? Icons.trending_down : Icons.gavel, 
+                        color: isReverseAuction ? Colors.red : Colors.green, 
+                        size: 48
+                      ),
                     ),
                     SizedBox(height: 16),
                     Text(
-                      'ลงประมูลสินค้า',
+                      isReverseAuction ? 'เสนอราคา (Reverse Auction)' : 'ลงประมูลสินค้า',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
-                        color: Colors.green,
+                        color: isReverseAuction ? Colors.red : Colors.green,
                       ),
                     ),
                   ],
@@ -141,14 +161,20 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.green.withOpacity(0.1),
-                            Colors.blue.withOpacity(0.1)
+                            isReverseAuction 
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.green.withOpacity(0.1),
+                            isReverseAuction 
+                              ? Colors.orange.withOpacity(0.1)
+                              : Colors.blue.withOpacity(0.1)
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                        border: Border.all(color: isReverseAuction 
+                          ? Colors.red.withOpacity(0.3)
+                          : Colors.green.withOpacity(0.3)),
                       ),
                       child: Column(
                         children: [
@@ -168,7 +194,7 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green,
+                                  color: isReverseAuction ? Colors.red : Colors.green,
                                 ),
                               ),
                             ],
@@ -178,7 +204,7 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'ราคาขั้นต่ำ:',
+                                isReverseAuction ? 'ราคาสูงสุดที่เสนอได้:' : 'ราคาขั้นต่ำ:',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[600],
@@ -189,7 +215,7 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.orange,
+                                  color: isReverseAuction ? Colors.red : Colors.orange,
                                 ),
                               ),
                             ],
@@ -204,7 +230,9 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                         TextField(
                           controller: bidController,
                           decoration: InputDecoration(
-                            labelText: 'ราคาที่ต้องการประมูล (บาท)',
+                            labelText: isReverseAuction 
+                              ? 'ราคาที่ต้องการเสนอ (บาท)' 
+                              : 'ราคาที่ต้องการประมูล (บาท)',
                             hintText: Format.formatNumber(minBid),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -212,9 +240,15 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.green, width: 2),
+                              borderSide: BorderSide(
+                                color: isReverseAuction ? Colors.red : Colors.green, 
+                                width: 2
+                              ),
                             ),
-                            prefixIcon: Icon(Icons.attach_money, color: Colors.green),
+                            prefixIcon: Icon(
+                              Icons.attach_money, 
+                              color: isReverseAuction ? Colors.red : Colors.green
+                            ),
                             filled: true,
                             fillColor: Colors.grey[50],
                           ),
@@ -246,17 +280,21 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'ขั้นต่ำ: ${Format.formatCurrency(minBid)}',
+                              isReverseAuction 
+                                ? 'สูงสุด: ${Format.formatCurrency(minBid)}'
+                                : 'ขั้นต่ำ: ${Format.formatCurrency(minBid)}',
                               style: TextStyle(
-                                color: Colors.orange[700],
+                                color: isReverseAuction ? Colors.red[700] : Colors.orange[700],
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             Text(
-                              'สูงสุด: ${Format.formatCurrency((currentPrice * 1.1).round())}',
+                              isReverseAuction 
+                                ? 'ขั้นต่ำ: ${Format.formatCurrency((currentPrice * 0.9).round())}'
+                                : 'สูงสุด: ${Format.formatCurrency((currentPrice * 1.1).round())}',
                               style: TextStyle(
-                                color: Colors.orange[700],
+                                color: isReverseAuction ? Colors.red[700] : Colors.orange[700],
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -299,7 +337,7 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
+                          backgroundColor: isReverseAuction ? Colors.red : Colors.green,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
@@ -318,38 +356,66 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                             return;
                           }
                           
-                          if (bidAmount < minBid) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('ราคาต้องมากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
+                          if (isReverseAuction) {
+                            // Reverse Auction: ราคาต้องน้อยกว่าหรือเท่ากับ minBid (สูงสุดที่เสนอได้)
+                            if (bidAmount > minBid) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('ราคาต้องน้อยกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                          } else {
+                            // Normal Auction: ราคาต้องมากกว่าหรือเท่ากับ minBid
+                            if (bidAmount < minBid) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('ราคาต้องมากกว่าหรือเท่ากับ ${Format.formatCurrency(minBid)}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
                           }
                           
                           // ตรวจสอบขีดจำกัด ±10% ของราคาปัจจุบัน
                           final maxBid = (currentPrice * 1.1).round();
                           final minBidLimit = (currentPrice * 0.9).round();
                           
-                          if (bidAmount > maxBid) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('ราคาไม่สามารถเกิน ${Format.formatCurrency(maxBid)} ได้'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-                          
-                          if (bidAmount < minBidLimit) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('ราคาไม่สามารถต่ำกว่า ${Format.formatCurrency(minBidLimit)} ได้'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
+                          if (isReverseAuction) {
+                            // Reverse Auction: ตรวจสอบขีดจำกัด
+                            if (bidAmount < minBidLimit) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('ราคาไม่สามารถต่ำกว่า ${Format.formatCurrency(minBidLimit)} ได้'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                          } else {
+                            // Normal Auction: ตรวจสอบขีดจำกัด
+                            if (bidAmount > maxBid) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('ราคาไม่สามารถเกิน ${Format.formatCurrency(maxBid)} ได้'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            
+                            if (bidAmount < minBidLimit) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('ราคาไม่สามารถต่ำกว่า ${Format.formatCurrency(minBidLimit)} ได้'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
                           }
 
                           // ส่งข้อมูลการประมูลกลับไป
@@ -361,9 +427,9 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.gavel, size: 20),
+                            Icon(isReverseAuction ? Icons.trending_down : Icons.gavel, size: 20),
                             SizedBox(width: 8),
-                            Text('ยืนยัน',
+                            Text(isReverseAuction ? 'เสนอราคา' : 'ยืนยัน',
                                 style: TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.w600)),
                           ],

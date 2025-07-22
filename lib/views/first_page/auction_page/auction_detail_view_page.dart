@@ -31,6 +31,7 @@ class AuctionDetailViewPage extends StatefulWidget {
 class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
   final GlobalKey<_RealtimeAuctionPriceWidgetState> realtimePriceKey =
       GlobalKey<_RealtimeAuctionPriceWidgetState>();
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   Map<String, dynamic>? _latestAuctionData;
 
   // Add a static variable to track the disclaimer popup state
@@ -114,66 +115,72 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     }
   }
 
-  // แสดง Custom Success Dialog
+    // แสดง Custom Success Dialog
   void _showSuccessDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.check_circle, color: Colors.green, size: 48),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'สำเร็จ!',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[700],
-                ),
-              ),
-              SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: EdgeInsets.symmetric(vertical: 16),
+    print('🔍 DEBUG: _showSuccessDialog called with message: $message');
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        useRootNavigator: true,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    shape: BoxShape.circle,
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('ตกลง',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: Icon(Icons.check_circle, color: Colors.green, size: 48),
                 ),
-              ),
-            ],
+                SizedBox(height: 16),
+                Text(
+                  'สำเร็จ!',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('ตกลง',
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      print('🔍 DEBUG: Error showing success dialog: $e');
+    }
   }
 
   // เพิ่มเมธอดสำหรับแสดง dialog ลงประมูล
@@ -182,6 +189,15 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     final quotationId =
         widget.auctionData['quotation_more_information_id']?.toString() ??
             widget.auctionData['id'].toString();
+
+    // ตรวจสอบประเภทการประมูล
+    final quotationTypeCode = widget.auctionData['quotation_type_code']?.toString() ?? '';
+    
+    // ถ้าเป็น AS02 (Reverse Auction) ให้ใช้ dialog แบบราคาลด
+    if (quotationTypeCode == 'AS02') {
+      _showReverseAuctionBidDialog(context);
+      return;
+    }
 
     try {
       final url =
@@ -220,6 +236,76 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                     'currentPrice': int.tryParse(latestData['current_price']?.toString() ?? '0') ?? 0,
                     'productTitle': widget.auctionData['title'],
                     'timestamp': DateTime.now().toIso8601String(),
+                    'isReverseAuction': true, // เพิ่ม flag สำหรับ Reverse Auction
+                  };
+
+                  // แสดง dialog ยืนยันการประมูล
+                  _showPendingBidConfirmationDialog(context);
+                },
+                onCancel: () {
+                  Navigator.pop(context);
+                },
+              );
+            },
+          );
+        } else {
+          _showCustomToast(context, 'ไม่สามารถโหลดข้อมูลล่าสุดได้', isSuccess: false);
+        }
+      } else {
+        _showCustomToast(context, 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', isSuccess: false);
+      }
+    } catch (e) {
+      _showCustomToast(context, 'เกิดข้อผิดพลาด: $e', isSuccess: false);
+    }
+  }
+
+  // แสดง dialog สำหรับ Reverse Auction (AS02)
+  void _showReverseAuctionBidDialog(BuildContext context) async {
+    final productService = ProductService(baseUrl: _getBaseUrl());
+    final quotationId =
+        widget.auctionData['quotation_more_information_id']?.toString() ??
+            widget.auctionData['id'].toString();
+
+    try {
+      final url =
+          '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
+
+      final client = _getHttpClient();
+      final response = await client.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data != null && data['quotation_more_information_id'] != null) {
+          final latestData = data;
+
+
+
+          // แสดง dialog ลงประมูลโดยใช้ AuctionBidDialog (รองรับ AS02 แล้ว)
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AuctionBidDialog(
+                auctionData: widget.auctionData,
+                latestData: latestData,
+                onBidConfirmed: (bidData) async {
+                  Navigator.pop(context); // ปิด dialog
+
+                  // เก็บข้อมูลการประมูลไว้ใน pending
+                  final prefs = await SharedPreferences.getInstance();
+                  final bidderId = prefs.getString('id') ?? '';
+                  final bidderName = prefs.getString('phone_number') ?? '';
+
+                  _pendingBid = {
+                    'quotationId': quotationId,
+                    'minimumIncrease': bidData['minimumIncrease'].toString(),
+                    'bidAmount': bidData['bidAmount'].toString(),
+                    'bidderId': bidderId,
+                    'bidderName': bidderName,
+                    'currentPrice': int.tryParse(latestData['current_price']?.toString() ?? '0') ?? 0,
+                    'productTitle': widget.auctionData['title'],
+                    'timestamp': DateTime.now().toIso8601String(),
+                    'isReverseAuction': true, // เพิ่ม flag สำหรับ Reverse Auction
                   };
 
                   // แสดง dialog ยืนยันการประมูล
@@ -244,6 +330,8 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 
   // เพิ่มเมธอดสำหรับแสดง dialog ยืนยันการประมูลที่ pending
   void _showPendingBidConfirmationDialog(BuildContext context) {
+    print('🔍 DEBUG: _showPendingBidConfirmationDialog called');
+    print('🔍 DEBUG: _pendingBid: $_pendingBid');
     if (_pendingBid == null) return;
 
     showDialog(
@@ -276,7 +364,10 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     try {
       final productService = ProductService(baseUrl: _getBaseUrl());
       
-      print('🔔 BID_SUCCESS: Starting bid process...');
+      // ตรวจสอบว่าเป็น Reverse Auction หรือไม่
+      final isReverseAuction = _pendingBid!['isReverseAuction'] == true;
+      
+      print('🔔 BID_SUCCESS: Starting bid process... (Reverse Auction: $isReverseAuction)');
       final result = await productService.placeBid(
         quotationId: _pendingBid!['quotationId'],
         minimumIncrease: _pendingBid!['minimumIncrease'],
@@ -286,64 +377,72 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
       );
       print('🔔 BID_SUCCESS: Bid result: $result');
 
-              if (result != null && result['status'] == 'success') {
-          print('🔔 BID_SUCCESS: Bid was successful!');
-          // รอให้แน่ใจว่า loading dialog ปิดสนิทแล้ว
-          await Future.delayed(Duration(milliseconds: 100));
-          if (mounted) {
-            print('🔔 BID_SUCCESS: Showing success dialog...');
-            _showSuccessDialog(context, 'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}');
-            
-            // ส่งแจ้งเตือนเมื่อ bid สำเร็จ
-            print('🔔 BID_SUCCESS: About to send notification...');
-            try {
-              print('🔔 BID_SUCCESS: Starting notification process...');
-              
-              final productTitle = widget.auctionData['title'] ?? 'สินค้า';
-              final latestPrice = Format.formatCurrency(int.tryParse(_pendingBid!['bidAmount']) ?? 0);
-              final bidderName = _pendingBid!['bidderName'] ?? '';
-              
-              print('🔔 BID_SUCCESS: Product: $productTitle');
-              print('🔔 BID_SUCCESS: Price: $latestPrice');
-              print('🔔 BID_SUCCESS: Bidder: $bidderName');
-              
-              // สร้าง plugin instance ใหม่
-              final FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
-              
-              // ตั้งค่า Android
-              const AndroidInitializationSettings initializationSettingsAndroid =
-                  AndroidInitializationSettings('@mipmap/ic_launcher');
-              
-              // ตั้งค่า iOS
-              const DarwinInitializationSettings initializationSettingsIOS =
-                  DarwinInitializationSettings(
-                requestAlertPermission: true,
-                requestBadgePermission: true,
-                requestSoundPermission: true,
-              );
-              
-              const InitializationSettings initializationSettings = InitializationSettings(
-                android: initializationSettingsAndroid,
-                iOS: initializationSettingsIOS,
-              );
-              
-              await plugin.initialize(initializationSettings);
-              print('🔔 BID_SUCCESS: Plugin initialized successfully');
-              
-              print('🔔 BID_SUCCESS: Calling sendBidSuccessNotification...');
-              await sendBidSuccessNotification(
-                plugin,
-                productTitle,
-                latestPrice,
-                bidderName,
-              );
-              
-              print('🎉 BID_SUCCESS: Notification sent successfully!');
-            } catch (e) {
-              print('❌ BID_SUCCESS: Error sending notification: $e');
-              print('❌ BID_SUCCESS: Error details: ${e.toString()}');
-            }
-          }
+      if (result != null && result['status'] == 'success') {
+        print('🔔 BID_SUCCESS: Bid was successful!');
+        // รอให้แน่ใจว่า loading dialog ปิดสนิทแล้ว
+        await Future.delayed(Duration(milliseconds: 100));
+        
+        print('🔔 BID_SUCCESS: Showing success dialog...');
+        
+        // แสดงข้อความตามประเภทการประมูล
+        final successMessage = isReverseAuction 
+          ? 'เสนอราคาสำเร็จ! ${result['data']['calculation'] ?? ''}'
+          : 'ลงประมูลสำเร็จ! ${result['data']['calculation'] ?? ''}';
+        
+        // ใช้ print แทน dialog เพื่อหลีกเลี่ยง context issues
+        print('🎉 SUCCESS: $successMessage');
+        print('🔍 DEBUG: Success message logged to console');
+        
+        // ส่งแจ้งเตือนเมื่อ bid สำเร็จ
+        print('🔔 BID_SUCCESS: About to send notification...');
+        try {
+          print('🔔 BID_SUCCESS: Starting notification process...');
+          
+          final productTitle = widget.auctionData['title'] ?? 'สินค้า';
+          final latestPrice = Format.formatCurrency(int.tryParse(_pendingBid!['bidAmount']) ?? 0);
+          final bidderName = _pendingBid!['bidderName'] ?? '';
+          
+          print('🔔 BID_SUCCESS: Product: $productTitle');
+          print('🔔 BID_SUCCESS: Price: $latestPrice');
+          print('🔔 BID_SUCCESS: Bidder: $bidderName');
+          print('🔔 BID_SUCCESS: Is Reverse Auction: $isReverseAuction');
+          
+          // สร้าง plugin instance ใหม่
+          final FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
+          
+          // ตั้งค่า Android
+          const AndroidInitializationSettings initializationSettingsAndroid =
+              AndroidInitializationSettings('@mipmap/ic_launcher');
+          
+          // ตั้งค่า iOS
+          const DarwinInitializationSettings initializationSettingsIOS =
+              DarwinInitializationSettings(
+            requestAlertPermission: true,
+            requestBadgePermission: true,
+            requestSoundPermission: true,
+          );
+          
+          const InitializationSettings initializationSettings = InitializationSettings(
+            android: initializationSettingsAndroid,
+            iOS: initializationSettingsIOS,
+          );
+          
+          await plugin.initialize(initializationSettings);
+          print('🔔 BID_SUCCESS: Plugin initialized successfully');
+          
+          print('🔔 BID_SUCCESS: Calling sendBidSuccessNotification...');
+          await sendBidSuccessNotification(
+            plugin,
+            productTitle,
+            latestPrice,
+            bidderName,
+          );
+          
+          print('🎉 BID_SUCCESS: Notification sent successfully!');
+        } catch (e) {
+          print('❌ BID_SUCCESS: Error sending notification: $e');
+          print('❌ BID_SUCCESS: Error details: ${e.toString()}');
+        }
 
           // ดึงข้อมูลล่าสุดและอัปเดต real-time
           try {
@@ -596,6 +695,12 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     return url;
   }
 
+  // ตรวจสอบว่าเป็น Reverse Auction (AS02) หรือไม่
+  bool _isReverseAuction() {
+    final quotationTypeCode = widget.auctionData['quotation_type_code']?.toString() ?? '';
+    return quotationTypeCode == 'AS02';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -663,23 +768,25 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ข้อมูลราคาขั้นต่ำ
+            // ข้อมูลราคาขั้นต่ำ (ปรับตามประเภทการประมูล)
             Container(
               margin: EdgeInsets.only(bottom: 8),
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.9),
+                color: _isReverseAuction() ? Colors.red.withOpacity(0.9) : Colors.blue.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: _isReverseAuction() ? Colors.red.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
                     blurRadius: 8,
                     offset: Offset(0, 2),
                   ),
                 ],
               ),
               child: Text(
-                'ขั้นต่ำ: ${Format.formatCurrency(_latestAuctionData?['minimum_increase'] ?? widget.auctionData['minimum_increase'] ?? 0)}',
+                _isReverseAuction() 
+                  ? 'ลดขั้นต่ำ: ${Format.formatCurrency(_latestAuctionData?['minimum_increase'] ?? widget.auctionData['minimum_increase'] ?? 0)}'
+                  : 'ขั้นต่ำ: ${Format.formatCurrency(_latestAuctionData?['minimum_increase'] ?? widget.auctionData['minimum_increase'] ?? 0)}',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -687,20 +794,22 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                 ),
               ),
             ),
-            // ปุ่มลงประมูลหลัก
+            // ปุ่มลงประมูลหลัก (ปรับสีตามประเภทการประมูล)
             Container(
               width: 200,
               height: 56,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.green, Colors.green.shade700],
+                  colors: _isReverseAuction() 
+                    ? [Colors.red, Colors.red.shade700]
+                    : [Colors.green, Colors.green.shade700],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.4),
+                    color: _isReverseAuction() ? Colors.red.withOpacity(0.4) : Colors.green.withOpacity(0.4),
                     blurRadius: 16,
                     offset: Offset(0, 8),
                   ),
@@ -725,14 +834,14 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        Icons.gavel,
+                        _isReverseAuction() ? Icons.trending_down : Icons.gavel,
                         color: Colors.white,
                         size: 20,
                       ),
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'ลงประมูล',
+                      _isReverseAuction() ? 'เสนอราคา' : 'ลงประมูล',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
