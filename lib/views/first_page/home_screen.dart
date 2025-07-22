@@ -29,6 +29,7 @@ import 'package:e_auction/views/first_page/request_otp_page/request_otp_login.da
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
+import 'package:e_auction/utils/time_calculator.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -159,12 +160,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (allAuctions != null) {
         // กรองเฉพาะ AS03 และที่ยังไม่เริ่มประมูล
-        final now = DateTime.now();
         final as03UpcomingAuctions = allAuctions.where((auction) {
           final typeCode = auction['quotation_type_code']?.toString() ?? '';
           final startDate = DateTime.tryParse(auction['auction_start_date'] ?? '');
+          final endDate = DateTime.tryParse(auction['auction_end_date'] ?? '');
           
-          return typeCode == 'AS03' && startDate != null && now.isBefore(startDate);
+          // ใช้ TimeCalculator เพื่อตรวจสอบสถานะ
+          final status = TimeCalculator.getAuctionStatus(
+            startDate: startDate,
+            endDate: endDate,
+          );
+          
+          return typeCode == 'AS03' && status == 'upcoming';
         }).toList();
 
         final formattedAuctions = as03UpcomingAuctions.map((auction) {
@@ -476,7 +483,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildQuantityReductionCard(Map<String, dynamic> auctionData) {
     final quantity = auctionData['quantity'] ?? 0;
     
+    // Debug: ดูข้อมูลวันที่
+    print('🔍 QUANTITY_REDUCTION_CARD: Title: ${auctionData['title']}');
+    print('🔍 QUANTITY_REDUCTION_CARD: auction_start_date: ${auctionData['auction_start_date']}');
+    print('🔍 QUANTITY_REDUCTION_CARD: auction_end_date: ${auctionData['auction_end_date']}');
+    print('🔍 QUANTITY_REDUCTION_CARD: status: ${auctionData['status']}');
     
+    // คำนวณเวลาที่เหลือ
+    final startDate = _parseDateTime(auctionData['auction_start_date']);
+    final endDate = _parseDateTime(auctionData['auction_end_date']);
+    final status = auctionData['status'] ?? 'unknown';
+    final timeRemaining = TimeCalculator.calculateTimeRemaining(
+      startDate: startDate,
+      endDate: endDate,
+      status: status,
+    );
+    
+    print('🔍 QUANTITY_REDUCTION_CARD: Parsed startDate: $startDate');
+    print('🔍 QUANTITY_REDUCTION_CARD: Parsed endDate: $endDate');
+    print('🔍 QUANTITY_REDUCTION_CARD: timeRemaining: $timeRemaining');
     
     return Container(
       width: 300,
@@ -567,6 +592,38 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+            
+            // ป้ายแสดงเวลาที่เหลือ (อยู่บนขวา)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      timeRemaining,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             
@@ -666,6 +723,33 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  // Helper method to parse date time
+  DateTime? _parseDateTime(dynamic dateTimeValue) {
+    print('🔍 HOME_PARSEDATETIME: Input: $dateTimeValue (${dateTimeValue.runtimeType})');
+    
+    if (dateTimeValue == null) {
+      print('🔍 HOME_PARSEDATETIME: Input is null');
+      return null;
+    }
+    
+    if (dateTimeValue is DateTime) {
+      print('🔍 HOME_PARSEDATETIME: Already DateTime: $dateTimeValue');
+      return dateTimeValue;
+    } else if (dateTimeValue is String) {
+      try {
+        final parsed = DateTime.parse(dateTimeValue);
+        print('🔍 HOME_PARSEDATETIME: Successfully parsed: $parsed');
+        return parsed;
+      } catch (e) {
+        print('🔍 HOME_PARSEDATETIME: Failed to parse: $e');
+        return null;
+      }
+    }
+    
+    print('🔍 HOME_PARSEDATETIME: Unsupported type, returning null');
+    return null;
   }
 
   Widget _buildAuctionImage(String? imagePath) {

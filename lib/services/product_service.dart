@@ -93,13 +93,34 @@ class ProductService {
     }
   }
 
-  // กรองเฉพาะ quotation ที่เป็น auction (AS นำหน้า)
+  // กรองเฉพาะ quotation ที่เป็น auction (AS นำหน้า) และ status = 1
   List<Map<String, dynamic>> _filterAuctionQuotations(
       List<Map<String, dynamic>> quotations) {
-    return quotations.where((quotation) {
+    print('🔍 FILTER: จำนวน quotations ทั้งหมด: ${quotations.length}');
+    
+    final filteredQuotations = quotations.where((quotation) {
       final typeCode = _safeToString(quotation['quotation_type_code']);
-      return typeCode.startsWith('AS');
+      final status = _safeToInt(quotation['status']);
+      final title = _safeToString(quotation['short_text']);
+      
+      print('🔍 FILTER: $title - typeCode: $typeCode, status: $status');
+      
+      // กรองเฉพาะ auction types (AS นำหน้า) และ status = 1 (เปิดใช้งาน)
+      final isAuction = typeCode.startsWith('AS');
+      final isActive = status == 1;
+      final shouldInclude = isAuction && isActive;
+      
+      if (!shouldInclude) {
+        print('🔍 FILTER: ❌ ไม่รวม $title (isAuction: $isAuction, isActive: $isActive)');
+      } else {
+        print('🔍 FILTER: ✅ รวม $title');
+      }
+      
+      return shouldInclude;
     }).toList();
+    
+    print('🔍 FILTER: จำนวน quotations หลังกรอง: ${filteredQuotations.length}');
+    return filteredQuotations;
   }
 
   // เรียกข้อมูลสินค้าประมูลทั้งหมด (ขั้นตอนใหม่)
@@ -218,6 +239,7 @@ class ProductService {
           'minimum_increase': _safeToInt(item['minimum_increase']),
           'number_bidders': _safeToInt(item['number_bidders']),
           'remaining_time': _safeToString(item['remaining_time']),
+          'status': _safeToInt(item['status']), // เพิ่ม status field
         };
         quotations.add(quotation);
       }

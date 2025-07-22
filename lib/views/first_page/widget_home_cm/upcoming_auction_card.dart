@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/utils/format.dart';
+import 'package:e_auction/utils/time_calculator.dart';
 
 class UpcomingAuctionCard extends StatelessWidget {
   final Map<String, dynamic> auctionData;
@@ -20,6 +21,34 @@ class UpcomingAuctionCard extends StatelessWidget {
       return startingPriceRaw;
     }
     return 0; // default value
+  }
+
+  // Helper method to parse date time
+  DateTime? _parseDateTime(dynamic dateTimeValue) {
+    print(
+        '🔍 UPCOMING_PARSEDATETIME: Input: $dateTimeValue (${dateTimeValue.runtimeType})');
+
+    if (dateTimeValue == null) {
+      print('🔍 UPCOMING_PARSEDATETIME: Input is null');
+      return null;
+    }
+
+    if (dateTimeValue is DateTime) {
+      print('🔍 UPCOMING_PARSEDATETIME: Already DateTime: $dateTimeValue');
+      return dateTimeValue;
+    } else if (dateTimeValue is String) {
+      try {
+        final parsed = DateTime.parse(dateTimeValue);
+        print('🔍 UPCOMING_PARSEDATETIME: Successfully parsed: $parsed');
+        return parsed;
+      } catch (e) {
+        print('🔍 UPCOMING_PARSEDATETIME: Failed to parse: $e');
+        return null;
+      }
+    }
+
+    print('🔍 UPCOMING_PARSEDATETIME: Unsupported type, returning null');
+    return null;
   }
 
   Color _getStatusColor(String status) {
@@ -51,12 +80,28 @@ class UpcomingAuctionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = auctionData['status'] ?? 'unknown';
-    
-    // Print เพื่อดูข้อมูล quotation_type_description
-    print('🔍 UPCOMING_AUCTION_CARD: Auction title: ${auctionData['title']}');
-    print('🔍 UPCOMING_AUCTION_CARD: quotation_type_description: ${auctionData['quotation_type_description']}');
-    print('🔍 UPCOMING_AUCTION_CARD: quotation_type_description type: ${auctionData['quotation_type_description'].runtimeType}');
-    print('🔍 UPCOMING_AUCTION_CARD: All auction data keys: ${auctionData.keys.toList()}');
+
+    // Debug: ดูข้อมูลวันที่
+    print('🔍 UPCOMING_AUCTION_CARD: Title: ${auctionData['title']}');
+    print(
+        '🔍 UPCOMING_AUCTION_CARD: auction_start_date: ${auctionData['auction_start_date']}');
+    print(
+        '🔍 UPCOMING_AUCTION_CARD: auction_end_date: ${auctionData['auction_end_date']}');
+    print('🔍 UPCOMING_AUCTION_CARD: status: $status');
+
+    // คำนวณเวลาที่เหลือ
+    final startDate = _parseDateTime(auctionData['auction_start_date']);
+    final endDate = _parseDateTime(auctionData['auction_end_date']);
+    final timeRemaining = TimeCalculator.calculateTimeRemaining(
+      startDate: startDate,
+      endDate: endDate,
+      status: status,
+    );
+
+    print('🔍 UPCOMING_AUCTION_CARD: Parsed startDate: $startDate');
+    print('🔍 UPCOMING_AUCTION_CARD: Parsed endDate: $endDate');
+    print('🔍 UPCOMING_AUCTION_CARD: timeRemaining: $timeRemaining');
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -126,10 +171,13 @@ class UpcomingAuctionCard extends StatelessWidget {
                   ),
                   SizedBox(height: 4),
                   // ป้ายประเภทสินค้า
-                  if (auctionData['quotation_type_description'] != null && 
-                      auctionData['quotation_type_description'].toString().isNotEmpty)
+                  if (auctionData['quotation_type_description'] != null &&
+                      auctionData['quotation_type_description']
+                          .toString()
+                          .isNotEmpty)
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.blue.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(12),
@@ -144,7 +192,8 @@ class UpcomingAuctionCard extends StatelessWidget {
                           ),
                           SizedBox(width: 4),
                           Text(
-                            auctionData['quotation_type_description'].toString(),
+                            auctionData['quotation_type_description']
+                                .toString(),
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -175,7 +224,7 @@ class UpcomingAuctionCard extends StatelessWidget {
                     ),
                     SizedBox(width: 4),
                     Text(
-                      'จะเริ่มในอีก ${auctionData['timeUntilStart'] ?? '-'}',
+                      timeRemaining,
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -231,7 +280,8 @@ class UpcomingAuctionCard extends StatelessWidget {
                           ),
                         ),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
@@ -262,10 +312,11 @@ class UpcomingAuctionCard extends StatelessWidget {
     if (imagePath == null || imagePath.isEmpty) {
       return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
     }
-    
+
     // ตรวจสอบว่าเป็น URL หรือไม่
-    final isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
-    
+    final isUrl =
+        imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
     if (isUrl) {
       return Image.network(
         imagePath,
@@ -284,4 +335,4 @@ class UpcomingAuctionCard extends StatelessWidget {
       );
     }
   }
-} 
+}

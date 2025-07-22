@@ -2,14 +2,61 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/utils/format.dart';
+import 'package:e_auction/utils/time_calculator.dart';
+import 'dart:async';
 
-class CurrentAuctionCard extends StatelessWidget {
+class CurrentAuctionCard extends StatefulWidget {
   final Map<String, dynamic> auctionData;
 
   const CurrentAuctionCard({
     super.key,
     required this.auctionData,
   });
+
+  @override
+  State<CurrentAuctionCard> createState() => _CurrentAuctionCardState();
+}
+
+class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
+  Timer? _timer;
+  String _timeRemaining = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTimeRemaining();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      _updateTimeRemaining();
+    });
+  }
+
+  void _updateTimeRemaining() {
+    final startDate = _parseDateTime(widget.auctionData['auction_start_date']);
+    final endDate = _parseDateTime(widget.auctionData['auction_end_date']);
+    final status = widget.auctionData['status'] ?? 'unknown';
+    
+    final timeRemaining = TimeCalculator.calculateTimeRemaining(
+      startDate: startDate,
+      endDate: endDate,
+      status: status,
+    );
+    
+    if (mounted) {
+      setState(() {
+        _timeRemaining = timeRemaining;
+      });
+    }
+  }
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -39,7 +86,7 @@ class CurrentAuctionCard extends StatelessWidget {
 
   // Helper method to get current price as int
   int _getCurrentPriceAsInt() {
-    final currentPriceRaw = auctionData['currentPrice'];
+    final currentPriceRaw = widget.auctionData['currentPrice'];
     if (currentPriceRaw is double) {
       return currentPriceRaw.round();
     } else if (currentPriceRaw is int) {
@@ -48,17 +95,54 @@ class CurrentAuctionCard extends StatelessWidget {
     return 850000; // default value
   }
 
+  // Helper method to parse date time
+  DateTime? _parseDateTime(dynamic dateTimeValue) {
+    print('🔍 PARSEDATETIME: Input: $dateTimeValue (${dateTimeValue.runtimeType})');
+    
+    if (dateTimeValue == null) {
+      print('🔍 PARSEDATETIME: Input is null');
+      return null;
+    }
+    
+    if (dateTimeValue is DateTime) {
+      print('🔍 PARSEDATETIME: Already DateTime: $dateTimeValue');
+      return dateTimeValue;
+    } else if (dateTimeValue is String) {
+      try {
+        final parsed = DateTime.parse(dateTimeValue);
+        print('🔍 PARSEDATETIME: Successfully parsed: $parsed');
+        return parsed;
+      } catch (e) {
+        print('🔍 PARSEDATETIME: Failed to parse: $e');
+        return null;
+      }
+    }
+    
+    print('🔍 PARSEDATETIME: Unsupported type, returning null');
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final status = auctionData['status'] ?? 'unknown';
+    final status = widget.auctionData['status'] ?? 'unknown';
     
-    // Print เพื่อดูข้อมูล quotation_type_description
+    // Debug: ดูข้อมูลวันที่
+    print('🔍 CURRENT_AUCTION_CARD: Title: ${widget.auctionData['title']}');
+    print('🔍 CURRENT_AUCTION_CARD: auction_start_date: ${widget.auctionData['auction_start_date']}');
+    print('🔍 CURRENT_AUCTION_CARD: auction_end_date: ${widget.auctionData['auction_end_date']}');
+    print('🔍 CURRENT_AUCTION_CARD: status: $status');
+    
+    // ใช้ _timeRemaining ที่อัปเดตจาก Timer
+    final timeRemaining = _timeRemaining.isNotEmpty ? _timeRemaining : 'กำลังโหลด...';
+    
+    print('🔍 CURRENT_AUCTION_CARD: timeRemaining: $timeRemaining');
+    
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AuctionDetailViewPage(auctionData: auctionData),
+            builder: (context) => AuctionDetailViewPage(auctionData: widget.auctionData),
           ),
         );
       },
@@ -84,7 +168,7 @@ class CurrentAuctionCard extends StatelessWidget {
               child: SizedBox(
                 width: 300,
                 height: 200,
-                child: _buildAuctionImage(auctionData['image']),
+                child: _buildAuctionImage(widget.auctionData['image']),
               ),
             ),
             Positioned(
@@ -122,8 +206,8 @@ class CurrentAuctionCard extends StatelessWidget {
                   ),
                   SizedBox(height: 4),
                   // ป้ายประเภทสินค้า
-                  if (auctionData['quotation_type_description'] != null && 
-                      auctionData['quotation_type_description'].toString().isNotEmpty)
+                                    if (widget.auctionData['quotation_type_description'] != null &&
+                      widget.auctionData['quotation_type_description'].toString().isNotEmpty)
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -140,7 +224,7 @@ class CurrentAuctionCard extends StatelessWidget {
                           ),
                           SizedBox(width: 4),
                           Text(
-                            auctionData['quotation_type_description'].toString(),
+                            widget.auctionData['quotation_type_description'].toString(),
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -171,7 +255,7 @@ class CurrentAuctionCard extends StatelessWidget {
                     ),
                     SizedBox(width: 4),
                     Text(
-                      auctionData['timeRemaining'] ?? '-',
+                      timeRemaining,
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -205,12 +289,14 @@ class CurrentAuctionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      auctionData['title'] ?? 'Rolex Submariner',
-                      style: TextStyle(
+                      widget.auctionData['title'] ?? 'Rolex Submariner',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 4),
                     Row(
@@ -231,7 +317,7 @@ class CurrentAuctionCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${auctionData['bidCount'] ?? 12} รายการ',
+                            '${widget.auctionData['bidCount'] ?? 12} รายการ',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -254,32 +340,25 @@ class CurrentAuctionCard extends StatelessWidget {
 
 // เพิ่มฟังก์ชัน helper สำหรับแสดงรูป
 Widget _buildAuctionImage(String? imagePath) {
-  
-  
   if (imagePath == null || imagePath.isEmpty) {
-   
     return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
   }
   
   // Check if the image path is a network URL
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-   
     return Image.network(
       imagePath,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
-       
         return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
       },
     );
   } else {
     // Treat as local asset
-   
     return Image.asset(
       imagePath,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
-       
         return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
       },
     );
