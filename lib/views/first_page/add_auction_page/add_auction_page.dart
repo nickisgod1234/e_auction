@@ -193,13 +193,15 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
 
             
 
-              // Starting Price
-              AddAuctionWidgets.buildTextField(
-                label: 'ราคาเริ่มต้น (บาท) *',
-                controller: _state.startingPriceController,
-                keyboardType: TextInputType.number,
-                validator: AddAuctionMethods.validatePrice,
-                onChanged: (value) {
+              // Combined Price Section
+              AddAuctionWidgets.buildCombinedPriceSection(
+                startingPriceController: _state.startingPriceController,
+                minIncrementController: _state.minIncrementController,
+                isPercentage: _state.isPercentage,
+                percentageValue: _state.percentageValue,
+                currentPrice: _state.getCurrentPrice(),
+                hasStartingPrice: _state.getCurrentPrice() > 0,
+                onStartingPriceChanged: (value) {
                   // อัปเดตราคาปัจจุบันเมื่อราคาเริ่มต้นเปลี่ยน
                   final currentPrice = _state.getCurrentPrice();
                   final minIncrement = _state.getMinIncrement();
@@ -211,29 +213,12 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                   
                   setState(() {});
                 },
-              ),
-
-              // Min Increment Section
-              AddAuctionWidgets.buildMinIncrementSection(
-                isPercentage: _state.isPercentage,
-                percentageValue: _state.percentageValue,
-                minIncrementController: _state.minIncrementController,
-                onPercentageChanged: _updatePercentageMode,
-                onPercentageValueChanged: _updatePercentageValue,
-                currentPrice: _state.getCurrentPrice(),
                 onMinIncrementChanged: (value) {
                   // อัปเดตขั้นต่ำการเพิ่มเมื่อจำนวนเงินคงที่เปลี่ยน
                   setState(() {});
                 },
-              ),
-
-              // Current Price Section
-              AddAuctionWidgets.buildCurrentPriceSection(
-                startingPriceController: _state.startingPriceController,
-                isPercentage: _state.isPercentage,
-                percentageValue: _state.percentageValue,
-                currentPrice: _state.getCurrentPrice(),
-                minIncrementController: _state.minIncrementController,
+                onPercentageChanged: _updatePercentageMode,
+                onPercentageValueChanged: _updatePercentageValue,
               ),
 
               // Bidder Count Section

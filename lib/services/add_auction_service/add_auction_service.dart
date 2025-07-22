@@ -1,42 +1,66 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
 import 'package:e_auction/views/config/config_prod.dart';
 
 class AddAuctionService {
   // Base URL for API - using config
-  static String get baseUrl => '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers';
-  
+  static String get baseUrl {
+    final url = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers';
+
+    return url;
+  }
+
   // Load Quotation Types
   static Future<List<Map<String, dynamic>>> loadQuotationTypes() async {
     try {
+      final url = '$baseUrl/quotation_type_controller.php';
+
       final response = await http.get(
-        Uri.parse('$baseUrl/quotation_type_controller.php'),
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('Request timeout after 30 seconds');
+        },
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        
+
         // Filter only auction types (starting with 'A')
-        final auctionTypes = data
-            .where((item) {
-              final code = item['quotation_type_code']?.toString() ?? '';
-              return code.startsWith('A');
-            })
-            .map((item) {
-              return {
-                'id': item['quotation_type_id']?.toString() ?? '',
-                'name': item['description']?.toString() ?? '', // ใช้ description เป็นชื่อ
-                'description': item['description']?.toString() ?? '',
-                'code': item['quotation_type_code']?.toString() ?? '',
-              };
-            }).toList();
-            
+        final auctionTypes = data.where((item) {
+          final code = item['quotation_type_code']?.toString() ?? '';
+          return code.startsWith('A');
+        }).map((item) {
+          return {
+            'id': item['quotation_type_id']?.toString() ?? '',
+            'name': item['description']?.toString() ??
+                '', // ใช้ description เป็นชื่อ
+            'description': item['description']?.toString() ?? '',
+            'code': item['quotation_type_code']?.toString() ?? '',
+          };
+        }).toList();
+
         return auctionTypes.cast<Map<String, dynamic>>();
       } else {
-        throw Exception('Failed to load quotation types: ${response.statusCode}');
+        throw Exception(
+            'Failed to load quotation types: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      throw Exception('Error loading quotation types: $e');
+      if (e is SocketException) {
+        throw Exception(
+            'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+      } else if (e is TimeoutException) {
+        throw Exception('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง');
+      } else {
+        throw Exception('Error loading quotation types: $e');
+      }
     }
   }
 
@@ -45,22 +69,41 @@ class AddAuctionService {
     required Map<String, dynamic> auctionData,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/add_auction_controller.php'),
+      final url = '$baseUrl/add_auction_controller.php';
+
+      final response = await http
+          .post(
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: jsonEncode(auctionData),
+      )
+          .timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('Request timeout after 30 seconds');
+        },
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> result = jsonDecode(response.body);
+
         return result;
       } else {
-        throw Exception('Failed to save auction: ${response.statusCode}');
+        throw Exception(
+            'Failed to save auction: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      throw Exception('Error saving auction: $e');
+      if (e is SocketException) {
+        throw Exception(
+            'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+      } else if (e is TimeoutException) {
+        throw Exception('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง');
+      } else {
+        throw Exception('Error saving auction: $e');
+      }
     }
   }
 
@@ -78,48 +121,49 @@ class AddAuctionService {
   // Validate Auction Data
   static Map<String, dynamic> validateAuctionData(Map<String, dynamic> data) {
     final errors = <String, String>{};
-    
+
     // Required fields validation
     if (data['product_name']?.toString().isEmpty ?? true) {
       errors['product_name'] = 'กรุณากรอกชื่อสินค้า';
     }
-    
+
     if (data['description']?.toString().isEmpty ?? true) {
       errors['description'] = 'กรุณากรอกรายละเอียดสินค้า';
     }
-    
-    if (data['starting_price'] == null || (data['starting_price'] as num) <= 0) {
+
+    if (data['starting_price'] == null ||
+        (data['starting_price'] as num) <= 0) {
       errors['starting_price'] = 'กรุณากรอกราคาเริ่มต้น';
     }
-    
+
     if (data['start_date']?.toString().isEmpty ?? true) {
       errors['start_date'] = 'กรุณาเลือกวันที่เริ่มต้น';
     }
-    
+
     if (data['end_date']?.toString().isEmpty ?? true) {
       errors['end_date'] = 'กรุณาเลือกวันที่สิ้นสุด';
     }
-    
+
     if (data['seller_name']?.toString().isEmpty ?? true) {
       errors['seller_name'] = 'กรุณากรอกชื่อผู้ขาย';
     }
-    
+
     if (data['seller_phone']?.toString().isEmpty ?? true) {
       errors['seller_phone'] = 'กรุณากรอกเบอร์โทรศัพท์';
     }
-    
+
     if (data['seller_address']?.toString().isEmpty ?? true) {
       errors['seller_address'] = 'กรุณากรอกที่อยู่';
     }
-    
+
     if (data['seller_id_card']?.toString().isEmpty ?? true) {
       errors['seller_id_card'] = 'กรุณากรอกเลขบัตรประชาชน';
     }
-    
+
     if (data['quotation_type_id']?.toString().isEmpty ?? true) {
       errors['quotation_type_id'] = 'กรุณาเลือกประเภทสินค้า';
     }
-    
+
     return {
       'isValid': errors.isEmpty,
       'errors': errors,
@@ -127,7 +171,8 @@ class AddAuctionService {
   }
 
   // Format Auction Data for API
-  static Map<String, dynamic> formatAuctionDataForAPI(Map<String, dynamic> data) {
+  static Map<String, dynamic> formatAuctionDataForAPI(
+      Map<String, dynamic> data) {
     return {
       'product_name': data['product_name']?.toString() ?? '',
       'description': data['description']?.toString() ?? '',
@@ -151,4 +196,4 @@ class AddAuctionService {
       'created_at': DateTime.now().toIso8601String(),
     };
   }
-} 
+}

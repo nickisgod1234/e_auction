@@ -490,7 +490,7 @@ class AddAuctionWidgets {
                       onChanged: hasStartingPrice ? (value) => onPercentageChanged(value!) : null,
                     ),
                     Text(
-                      'จำนวนเงินคงที่',
+                      'เพิ่มแบบระบุจำนวน',
                       style: TextStyle(
                         color: hasStartingPrice ? Colors.black : Colors.grey,
                       ),
@@ -609,20 +609,24 @@ class AddAuctionWidgets {
     );
   }
 
-  // Current Price Section Widget
-  static Widget buildCurrentPriceSection({
+  // Combined Price Section Widget
+  static Widget buildCombinedPriceSection({
     required TextEditingController startingPriceController,
+    required TextEditingController minIncrementController,
     required bool isPercentage,
     required double percentageValue,
     required double currentPrice,
-    required TextEditingController minIncrementController,
+    required bool hasStartingPrice,
+    required Function(String) onStartingPriceChanged,
+    required Function(String) onMinIncrementChanged,
+    required ValueChanged<bool> onPercentageChanged,
+    required ValueChanged<double> onPercentageValueChanged,
   }) {
     // คำนวณขั้นต่ำการเพิ่ม
     double minIncrement;
     if (isPercentage) {
       minIncrement = currentPrice * percentageValue / 100;
     } else {
-      // ใช้ค่าจาก controller หรือ default 100
       try {
         minIncrement = double.tryParse(minIncrementController.text) ?? 0;
       } catch (e) {
@@ -636,7 +640,7 @@ class AddAuctionWidgets {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'ราคาปัจจุบัน',
+            'ข้อมูลราคา',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -646,80 +650,244 @@ class AddAuctionWidgets {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue[50]!, Colors.blue[100]!],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue[200]!),
+              border: Border.all(color: Colors.grey[300]!),
             ),
             child: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Starting Price Input
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'ราคาเริ่มต้น:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    RichText(
+                      text: const TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'ราคาเริ่มต้น (บาท)',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' *',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Text(
-                      Format.formatCurrency(currentPrice),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[700],
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: startingPriceController,
+                      keyboardType: TextInputType.number,
+                      onChanged: onStartingPriceChanged,
+                      validator: AddAuctionMethods.validatePrice,
+                      inputFormatters: [SimpleNumberInputFormatter()],
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'ราคาปัจจุบัน:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                
+                const SizedBox(height: 16),
+                
+                // Current Price Display
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue[50]!, Colors.blue[100]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    Text(
-                      Format.formatCurrency(currentPrice),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green[700],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'ราคาปัจจุบัน:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                      Text(
+                        Format.formatCurrency(currentPrice),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                
+                const SizedBox(height: 16),
+                
+                // Min Increment Section
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'ขั้นต่ำการเพิ่ม:',
+                      'ขั้นต่ำการเพิ่มราคา',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      isPercentage
-                          ? '${Format.formatCurrency(minIncrement)} (${percentageValue.toStringAsFixed(1)}%)'
-                          : (minIncrement > 0 
-                              ? Format.formatCurrency(minIncrement)
-                              : '฿0'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.green[700],
-                      ),
+                    const SizedBox(height: 8),
+                    
+                    // Radio Buttons
+                    Row(
+                      children: [
+                        Radio<bool>(
+                          value: false,
+                          groupValue: isPercentage,
+                          onChanged: hasStartingPrice ? (value) => onPercentageChanged(value!) : null,
+                        ),
+                        Text(
+                          'จำนวนเงินคงที่',
+                          style: TextStyle(
+                            color: hasStartingPrice ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Radio<bool>(
+                          value: true,
+                          groupValue: isPercentage,
+                          onChanged: hasStartingPrice ? (value) => onPercentageChanged(value!) : null,
+                        ),
+                        Text(
+                          'เปอร์เซ็นต์',
+                          style: TextStyle(
+                            color: hasStartingPrice ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
+                    
+                    const SizedBox(height: 12),
+                    
+                    // Input Fields
+                    if (isPercentage) ...[
+                      // Percentage Slider
+                      Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('${percentageValue.toInt()}%'),
+                              Text('฿${NumberFormat('#,###').format(currentPrice * percentageValue / 100)}'),
+                            ],
+                          ),
+                          Slider(
+                            value: percentageValue,
+                            min: 1.0,
+                            max: 20.0,
+                            divisions: 19, // เปลี่ยนจาก 199 เป็น 19 เพื่อให้เพิ่มทีละ 1
+                            onChanged: hasStartingPrice ? (value) => onPercentageValueChanged(value) : null,
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: const [
+                              Text('1%'),
+                              Text('20%'),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      // Fixed Amount Input
+                      TextFormField(
+                        controller: minIncrementController,
+                        keyboardType: TextInputType.number,
+                        onChanged: hasStartingPrice ? onMinIncrementChanged : null,
+                        enabled: hasStartingPrice,
+                        validator: (value) => hasStartingPrice
+                            ? AddAuctionMethods.validateMinIncrement(value, currentPrice)
+                            : null,
+                        inputFormatters: hasStartingPrice ? [SimpleNumberInputFormatter()] : null,
+                        decoration: InputDecoration(
+                          labelText: 'ขั้นต่ำการเพิ่มราคา (บาท)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          prefixText: '฿',
+                          hintText: hasStartingPrice ? null : 'กรุณากรอกราคาเริ่มต้นก่อน',
+                        ),
+                      ),
+                    ],
+                    
+                    // Info Card
+                    if (hasStartingPrice) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green[200]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.green[600], size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'ขั้นต่ำการเพิ่ม: ${Format.formatCurrency(minIncrement)}${isPercentage ? ' (${percentageValue.toInt()}%)' : ''}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green[800],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange[200]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.orange[600], size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'กรุณากรอกราคาเริ่มต้นก่อนเพื่อตั้งค่าขั้นต่ำการเพิ่ม',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.orange[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
