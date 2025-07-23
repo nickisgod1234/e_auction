@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
+import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auction_detail_page.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/time_calculator.dart';
@@ -94,12 +95,26 @@ class UpcomingAuctionCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailPage(auctionData: auctionData),
-          ),
-        );
+        // ตรวจสอบประเภทการประมูล
+        final quotationTypeCode = auctionData['quotation_type_code']?.toString() ?? '';
+        
+        // ถ้าเป็น AS03 ให้ไปหน้า Quantity Reduction Auction Detail
+        if (quotationTypeCode == 'AS03') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QuantityReductionAuctionDetailPage(auctionData: auctionData),
+            ),
+          );
+        } else {
+          // ประเภทอื่นๆ ไปหน้า Detail ปกติ
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DetailPage(auctionData: auctionData),
+            ),
+          );
+        }
       },
       child: Container(
         width: 300,
@@ -160,11 +175,12 @@ class UpcomingAuctionCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 4),
-                  // ป้ายประเภทสินค้า
+                  // ป้ายประเภทสินค้า (ไม่แสดงสำหรับ AS03)
                   if (auctionData['quotation_type_description'] != null &&
                       auctionData['quotation_type_description']
                           .toString()
-                          .isNotEmpty)
+                          .isNotEmpty &&
+                      auctionData['quotation_type_code'] != 'AS03')
                     Container(
                       padding:
                           EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -184,6 +200,35 @@ class UpcomingAuctionCard extends StatelessWidget {
                           Text(
                             auctionData['quotation_type_description']
                                 .toString(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  // ป้ายพิเศษสำหรับ AS03 (ประมูลลดตามจำนวน)
+                  if (auctionData['quotation_type_code'] == 'AS03')
+                    Container(
+                      margin: EdgeInsets.only(top: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.trending_down,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'ลดตามจำนวน',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -258,6 +303,37 @@ class UpcomingAuctionCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 4),
+                    // แสดงจำนวนสินค้าสำหรับ AS03
+                    if (auctionData['quotation_type_code'] == 'AS03')
+                      Container(
+                        margin: EdgeInsets.only(bottom: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.inventory_2,
+                              color: Colors.purple[300],
+                              size: 14,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'จำนวน: ${auctionData['quantity'] ?? 0} รายการ',
+                              style: TextStyle(
+                                color: Colors.purple[300],
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (auctionData['quotation_type_code'] == 'AS03')
+                      SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
