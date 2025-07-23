@@ -80,7 +80,6 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.getThemeForClient(AppTheme.currentClient),
       home: RequestOtpLoginPage(),
       debugShowCheckedModeBanner: false,
-
     );
   }
 }

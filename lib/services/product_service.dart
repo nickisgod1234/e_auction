@@ -17,7 +17,6 @@ class ProductService {
       // สำหรับ Android ให้ bypass SSL verification
       final client = HttpClient();
       client.badCertificateCallback = (X509Certificate cert, String host, int port) {
-        print('🔍 [DEBUG] Bypassing SSL certificate for: $host:$port');
         return true; // ยอมรับ certificate ทั้งหมด
       };
       return IOClient(client);
@@ -65,10 +64,7 @@ class ProductService {
   Future<List<Map<String, dynamic>>?> getAllQuotations() async {
     final url = Uri.parse(
         '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
-
-
-    
-    try {
+   try {
       final response = await http.get(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -96,30 +92,25 @@ class ProductService {
   // กรองเฉพาะ quotation ที่เป็น auction (AS นำหน้า) และ status = 1
   List<Map<String, dynamic>> _filterAuctionQuotations(
       List<Map<String, dynamic>> quotations) {
-    print('🔍 FILTER: จำนวน quotations ทั้งหมด: ${quotations.length}');
     
     final filteredQuotations = quotations.where((quotation) {
       final typeCode = _safeToString(quotation['quotation_type_code']);
       final status = _safeToInt(quotation['status']);
       final title = _safeToString(quotation['short_text']);
-      
-      print('🔍 FILTER: $title - typeCode: $typeCode, status: $status');
-      
+           
       // กรองเฉพาะ auction types (AS นำหน้า) และ status = 1 (เปิดใช้งาน)
       final isAuction = typeCode.startsWith('AS');
       final isActive = status == 1;
       final shouldInclude = isAuction && isActive;
       
       if (!shouldInclude) {
-        print('🔍 FILTER: ❌ ไม่รวม $title (isAuction: $isAuction, isActive: $isActive)');
       } else {
-        print('🔍 FILTER: ✅ รวม $title');
       }
       
       return shouldInclude;
     }).toList();
     
-    print('🔍 FILTER: จำนวน quotations หลังกรอง: ${filteredQuotations.length}');
+
     return filteredQuotations;
   }
 
@@ -132,8 +123,6 @@ class ProductService {
 
       // กรองเฉพาะ auction quotations
       final auctionQuotations = _filterAuctionQuotations(allQuotations);
-      print('พบ auction quotations: ${auctionQuotations.length} รายการ');
-
       return auctionQuotations;
     } catch (e) {
       return null;
@@ -479,11 +468,11 @@ class ProductService {
         cleanImageName.toLowerCase().endsWith(ext));
     
     if (!hasValidExtension) {
-      print('DEBUG: Invalid image extension: $cleanImageName');
+
       return 'assets/images/noimage.jpg';
     }
     
-    print('DEBUG: Clean image name: $cleanImageName');
+  
     final imageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
     
     // แปลง HTTPS เป็น HTTP สำหรับ Android

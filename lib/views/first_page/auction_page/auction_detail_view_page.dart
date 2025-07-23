@@ -117,7 +117,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 
     // แสดง Custom Success Dialog
   void _showSuccessDialog(BuildContext context, String message) {
-    print('🔍 DEBUG: _showSuccessDialog called with message: $message');
+
     try {
       showDialog(
         context: context,

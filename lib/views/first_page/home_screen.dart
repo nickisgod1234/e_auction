@@ -483,12 +483,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildQuantityReductionCard(Map<String, dynamic> auctionData) {
     final quantity = auctionData['quantity'] ?? 0;
     
-    // Debug: ดูข้อมูลวันที่
-    print('🔍 QUANTITY_REDUCTION_CARD: Title: ${auctionData['title']}');
-    print('🔍 QUANTITY_REDUCTION_CARD: auction_start_date: ${auctionData['auction_start_date']}');
-    print('🔍 QUANTITY_REDUCTION_CARD: auction_end_date: ${auctionData['auction_end_date']}');
-    print('🔍 QUANTITY_REDUCTION_CARD: status: ${auctionData['status']}');
-    
+
+
     // คำนวณเวลาที่เหลือ
     final startDate = _parseDateTime(auctionData['auction_start_date']);
     final endDate = _parseDateTime(auctionData['auction_end_date']);
@@ -498,10 +494,7 @@ class _HomeScreenState extends State<HomeScreen> {
       endDate: endDate,
       status: status,
     );
-    
-    print('🔍 QUANTITY_REDUCTION_CARD: Parsed startDate: $startDate');
-    print('🔍 QUANTITY_REDUCTION_CARD: Parsed endDate: $endDate');
-    print('🔍 QUANTITY_REDUCTION_CARD: timeRemaining: $timeRemaining');
+
     
     return Container(
       width: 300,
@@ -727,28 +720,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Helper method to parse date time
   DateTime? _parseDateTime(dynamic dateTimeValue) {
-    print('🔍 HOME_PARSEDATETIME: Input: $dateTimeValue (${dateTimeValue.runtimeType})');
+
     
     if (dateTimeValue == null) {
-      print('🔍 HOME_PARSEDATETIME: Input is null');
+
       return null;
     }
     
     if (dateTimeValue is DateTime) {
-      print('🔍 HOME_PARSEDATETIME: Already DateTime: $dateTimeValue');
+
       return dateTimeValue;
     } else if (dateTimeValue is String) {
       try {
         final parsed = DateTime.parse(dateTimeValue);
-        print('🔍 HOME_PARSEDATETIME: Successfully parsed: $parsed');
+
         return parsed;
       } catch (e) {
-        print('🔍 HOME_PARSEDATETIME: Failed to parse: $e');
+
         return null;
       }
     }
     
-    print('🔍 HOME_PARSEDATETIME: Unsupported type, returning null');
+  
     return null;
   }
 

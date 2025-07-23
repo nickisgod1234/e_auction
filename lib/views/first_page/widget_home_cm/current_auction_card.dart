@@ -97,28 +97,28 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
 
   // Helper method to parse date time
   DateTime? _parseDateTime(dynamic dateTimeValue) {
-    print('🔍 PARSEDATETIME: Input: $dateTimeValue (${dateTimeValue.runtimeType})');
+
     
     if (dateTimeValue == null) {
-      print('🔍 PARSEDATETIME: Input is null');
+
       return null;
     }
     
     if (dateTimeValue is DateTime) {
-      print('🔍 PARSEDATETIME: Already DateTime: $dateTimeValue');
+
       return dateTimeValue;
     } else if (dateTimeValue is String) {
       try {
         final parsed = DateTime.parse(dateTimeValue);
-        print('🔍 PARSEDATETIME: Successfully parsed: $parsed');
+
         return parsed;
       } catch (e) {
-        print('🔍 PARSEDATETIME: Failed to parse: $e');
+
         return null;
       }
     }
     
-    print('🔍 PARSEDATETIME: Unsupported type, returning null');
+
     return null;
   }
 
@@ -126,16 +126,12 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
   Widget build(BuildContext context) {
     final status = widget.auctionData['status'] ?? 'unknown';
     
-    // Debug: ดูข้อมูลวันที่
-    print('🔍 CURRENT_AUCTION_CARD: Title: ${widget.auctionData['title']}');
-    print('🔍 CURRENT_AUCTION_CARD: auction_start_date: ${widget.auctionData['auction_start_date']}');
-    print('🔍 CURRENT_AUCTION_CARD: auction_end_date: ${widget.auctionData['auction_end_date']}');
-    print('🔍 CURRENT_AUCTION_CARD: status: $status');
+
     
     // ใช้ _timeRemaining ที่อัปเดตจาก Timer
     final timeRemaining = _timeRemaining.isNotEmpty ? _timeRemaining : 'กำลังโหลด...';
     
-    print('🔍 CURRENT_AUCTION_CARD: timeRemaining: $timeRemaining');
+
     
     return GestureDetector(
       onTap: () {

@@ -9,14 +9,8 @@ class TimeCalculator {
   }) {
     final now = DateTime.now();
     
-    print('🔍 TIMECALCULATOR: now: $now');
-    print('🔍 TIMECALCULATOR: startDate: $startDate');
-    print('🔍 TIMECALCULATOR: endDate: $endDate');
-    print('🔍 TIMECALCULATOR: status: $status');
-    
     // ถ้าไม่มีวันที่เริ่มหรือสิ้นสุด
     if (startDate == null || endDate == null) {
-      print('🔍 TIMECALCULATOR: Missing dates, returning "ไม่ระบุเวลา"');
       return 'ไม่ระบุเวลา';
     }
     

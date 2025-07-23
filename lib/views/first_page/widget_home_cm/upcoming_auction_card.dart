@@ -25,29 +25,27 @@ class UpcomingAuctionCard extends StatelessWidget {
 
   // Helper method to parse date time
   DateTime? _parseDateTime(dynamic dateTimeValue) {
-    print(
-        '🔍 UPCOMING_PARSEDATETIME: Input: $dateTimeValue (${dateTimeValue.runtimeType})');
 
     if (dateTimeValue == null) {
-      print('🔍 UPCOMING_PARSEDATETIME: Input is null');
+
       return null;
     }
 
     if (dateTimeValue is DateTime) {
-      print('🔍 UPCOMING_PARSEDATETIME: Already DateTime: $dateTimeValue');
+
       return dateTimeValue;
     } else if (dateTimeValue is String) {
       try {
         final parsed = DateTime.parse(dateTimeValue);
-        print('🔍 UPCOMING_PARSEDATETIME: Successfully parsed: $parsed');
+
         return parsed;
       } catch (e) {
-        print('🔍 UPCOMING_PARSEDATETIME: Failed to parse: $e');
+
         return null;
       }
     }
 
-    print('🔍 UPCOMING_PARSEDATETIME: Unsupported type, returning null');
+
     return null;
   }
 
@@ -81,13 +79,7 @@ class UpcomingAuctionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = auctionData['status'] ?? 'unknown';
 
-    // Debug: ดูข้อมูลวันที่
-    print('🔍 UPCOMING_AUCTION_CARD: Title: ${auctionData['title']}');
-    print(
-        '🔍 UPCOMING_AUCTION_CARD: auction_start_date: ${auctionData['auction_start_date']}');
-    print(
-        '🔍 UPCOMING_AUCTION_CARD: auction_end_date: ${auctionData['auction_end_date']}');
-    print('🔍 UPCOMING_AUCTION_CARD: status: $status');
+
 
     // คำนวณเวลาที่เหลือ
     final startDate = _parseDateTime(auctionData['auction_start_date']);
@@ -98,9 +90,7 @@ class UpcomingAuctionCard extends StatelessWidget {
       status: status,
     );
 
-    print('🔍 UPCOMING_AUCTION_CARD: Parsed startDate: $startDate');
-    print('🔍 UPCOMING_AUCTION_CARD: Parsed endDate: $endDate');
-    print('🔍 UPCOMING_AUCTION_CARD: timeRemaining: $timeRemaining');
+  
 
     return GestureDetector(
       onTap: () {

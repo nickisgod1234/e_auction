@@ -37,7 +37,7 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
       _state.updateQuotationTypes(types);
     } catch (e) {
       // Handle error
-      print('Error loading quotation types: $e');
+
     } finally {
       _state.updateLoadingQuotationTypes(false);
       setState(() {});
