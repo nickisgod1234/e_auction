@@ -93,23 +93,30 @@ class ProductService {
   List<Map<String, dynamic>> _filterAuctionQuotations(
       List<Map<String, dynamic>> quotations) {
     
+    print('DEBUG: ProductService - Filtering ${quotations.length} quotations');
+    
     final filteredQuotations = quotations.where((quotation) {
       final typeCode = _safeToString(quotation['quotation_type_code']);
-      final status = _safeToInt(quotation['status']);
+      final status = _safeToString(quotation['status']); // เปลี่ยนเป็น string
       final title = _safeToString(quotation['short_text']);
            
-      // กรองเฉพาะ auction types (AS นำหน้า) และ status = 1 (เปิดใช้งาน)
+      // กรองเฉพาะ auction types (AS นำหน้า) และ status = "1" (เปิดใช้งาน)
       final isAuction = typeCode.startsWith('AS');
-      final isActive = status == 1;
+      final isActive = status == "1"; // เปรียบเทียบกับ string "1"
       final shouldInclude = isAuction && isActive;
       
+      print('DEBUG: ProductService - Quotation: $title, Type: $typeCode, Status: $status, Include: $shouldInclude');
+      
       if (!shouldInclude) {
+        print('DEBUG: ProductService - Excluded: $title (Type: $typeCode, Status: $status)');
       } else {
+        print('DEBUG: ProductService - Included: $title (Type: $typeCode, Status: $status)');
       }
       
       return shouldInclude;
     }).toList();
     
+    print('DEBUG: ProductService - Filtered to ${filteredQuotations.length} auction quotations');
 
     return filteredQuotations;
   }
@@ -228,7 +235,149 @@ class ProductService {
           'minimum_increase': _safeToInt(item['minimum_increase']),
           'number_bidders': _safeToInt(item['number_bidders']),
           'remaining_time': _safeToString(item['remaining_time']),
-          'status': _safeToInt(item['status']), // เพิ่ม status field
+          'status': _safeToString(item['status']), // เปลี่ยนเป็น string
+          'quantity': _safeToInt(item['quantity']), // เพิ่ม quantity field
+          // เพิ่มคีย์ใหม่จาก API response
+          'quotation_description': _safeToString(item['quotation_description']),
+          'item_number': _safeToString(item['item_number']),
+          'accounting_category_id': _safeToString(item['accounting_category_id']),
+          'item_category_id': _safeToString(item['item_category_id']),
+          'material_id': _safeToString(item['material_id']),
+          'count_unit_id': _safeToString(item['count_unit_id']),
+          'ind_type_id': _safeToString(item['ind_type_id']),
+          'warehouse_id': _safeToString(item['warehouse_id']),
+          'procurement_group_id': _safeToString(item['procurement_group_id']),
+          'updated_at': _safeToString(item['updated_at']),
+          'created_by': _safeToString(item['created_by']),
+          'updated_by': _safeToString(item['updated_by']),
+          'is_deleted': _safeToString(item['is_deleted']),
+          'quotation_main_id': _safeToString(item['quotation_main_id']),
+          'sourcing': _safeToString(item['sourcing']),
+          'additional_notes': _safeToString(item['additional_notes']),
+          'quotation_note': _safeToString(item['quotation_note']),
+          'quotation_social': _safeToString(item['quotation_social']),
+          'vendor_id': _safeToString(item['vendor_id']),
+          'quotation_type_id': _safeToString(item['quotation_type_id']),
+          'quotation_path_image': _safeToString(item['quotation_path_image']),
+          'noti': _safeToString(item['noti']),
+          'customer_id': _safeToString(item['customer_id']),
+          // Material data
+          'quotation_material_data_id': _safeToString(item['quotation_material_data_id']),
+          'material_id_tab': _safeToString(item['material_id_tab']),
+          'short_text_tab': _safeToString(item['short_text_tab']),
+          'mpn_material': _safeToString(item['mpn_material']),
+          'manuf_part_no': _safeToString(item['manuf_part_no']),
+          'batch': _safeToString(item['batch']),
+          'revision_level': _safeToString(item['revision_level']),
+          'assessment_value': _safeToString(item['assessment_value']),
+          'material_group_id': _safeToString(item['material_group_id']),
+          'iuid_relevant': _safeToString(item['iuid_relevant']),
+          'supplier_material': _safeToString(item['supplier_material']),
+          'product_category_group': _safeToString(item['product_category_group']),
+          'manufacturer': _safeToString(item['manufacturer']),
+          'ext_man': _safeToString(item['ext_man']),
+          'mfr_part_profile': _safeToString(item['mfr_part_profile']),
+          // Quantity date
+          'quotation_quantity_date_id': _safeToString(item['quotation_quantity_date_id']),
+          'quantity_tab': _safeToInt(item['quantity_tab']),
+          'delivery_date': _safeToString(item['delivery_date']),
+          'ordered_quantity': _safeToString(item['ordered_quantity']),
+          'request_date': _safeToString(item['request_date']),
+          'pending_quantity': _safeToString(item['pending_quantity']),
+          'approval_date': _safeToString(item['approval_date']),
+          'closed_status': _safeToString(item['closed_status']),
+          'planned_delivery_time': _safeToString(item['planned_delivery_time']),
+          'fixed_id': _safeToString(item['fixed_id']),
+          'transfer_time': _safeToString(item['transfer_time']),
+          'quantity_confirm': _safeToString(item['quantity_confirm']),
+          'conf_date': _safeToString(item['conf_date']),
+          // Valuation
+          'quotation_valuation_id': _safeToString(item['quotation_valuation_id']),
+          'currency_id': _safeToString(item['currency_id']),
+          'per': _safeToString(item['per']),
+          'promotion': _safeToString(item['promotion']),
+          'tax_code': _safeToString(item['tax_code']),
+          'assessment_value2': _safeToString(item['assessment_value2']),
+          'quotation_price': _safeToString(item['quotation_price']),
+          'goods_receipt': _safeToString(item['goods_receipt']),
+          'invoice_receipt': _safeToString(item['invoice_receipt']),
+          'gr_non_valuation': _safeToString(item['gr_non_valuation']),
+          // Account assignment
+          'quotation_account_assignment_id': _safeToString(item['quotation_account_assignment_id']),
+          'accounting_category_id_tab': _safeToString(item['accounting_category_id_tab']),
+          'distribution': _safeToString(item['distribution']),
+          'company_id': _safeToString(item['company_id']),
+          'penalty_value': _safeToString(item['penalty_value']),
+          'recipient': _safeToString(item['recipient']),
+          'central_general_ledger_id': _safeToString(item['central_general_ledger_id']),
+          'control_area': _safeToString(item['control_area']),
+          'fund_center_id': _safeToString(item['fund_center_id']),
+          'product': _safeToString(item['product']),
+          'budget_source_id': _safeToString(item['budget_source_id']),
+          'grant_amount': _safeToString(item['grant_amount']),
+          'functional_area': _safeToString(item['functional_area']),
+          'funds_ctr': _safeToString(item['funds_ctr']),
+          'commitment_item': _safeToString(item['commitment_item']),
+          'service_document': _safeToString(item['service_document']),
+          // Procurement source
+          'quotation_procurement_source_id': _safeToString(item['quotation_procurement_source_id']),
+          'agreement': _safeToString(item['agreement']),
+          'organization_id': _safeToString(item['organization_id']),
+          'count_unit_id_tab': _safeToString(item['count_unit_id_tab']),
+          'framework_order': _safeToString(item['framework_order']),
+          'requirement_urgency': _safeToString(item['requirement_urgency']),
+          'requirement_priority': _safeToString(item['requirement_priority']),
+          'designated_vendor': _safeToString(item['designated_vendor']),
+          'ind_type_id_tab': _safeToString(item['ind_type_id_tab']),
+          'data_record': _safeToString(item['data_record']),
+          'issuing_stor_loc': _safeToString(item['issuing_stor_loc']),
+          'desired_vendor': _safeToString(item['desired_vendor']),
+          'mpn_material2': _safeToString(item['mpn_material2']),
+          'vendor_material_number': _safeToString(item['vendor_material_number']),
+          // Status
+          'quotation_status_id': _safeToString(item['quotation_status_id']),
+          'status_pmp': _safeToString(item['status_pmp']),
+          'ordered_qty': _safeToString(item['ordered_qty']),
+          'kg': _safeToString(item['kg']),
+          'block_id': _safeToString(item['block_id']),
+          'blocking_text': _safeToString(item['blocking_text']),
+          'ext_apprvl_stat': _safeToString(item['ext_apprvl_stat']),
+          'central_approval': _safeToString(item['central_approval']),
+          // Contact person
+          'quotation_contact_person_id': _safeToString(item['quotation_contact_person_id']),
+          'created_by_person': _safeToString(item['created_by_person']),
+          'changed_at': _safeToString(item['changed_at']),
+          'creat_ind': _safeToString(item['creat_ind']),
+          'quotation_requester': _safeToString(item['quotation_requester']),
+          'tracking_number': _safeToString(item['tracking_number']),
+          'procurement_group_id_tab': _safeToString(item['procurement_group_id_tab']),
+          'phone_number': _safeToString(item['phone_number']),
+          'fax_number': _safeToString(item['fax_number']),
+          'mrp_controller': _safeToString(item['mrp_controller']),
+          'phone_number2': _safeToString(item['phone_number2']),
+          // Message
+          'quotation_message_id': _safeToString(item['quotation_message_id']),
+          'delivery_message': _safeToString(item['delivery_message']),
+          'order_message': _safeToString(item['order_message']),
+          // Delivery address
+          'quotation_delivery_address_id': _safeToString(item['quotation_delivery_address_id']),
+          'name': _safeToString(item['name']),
+          'company_id2': _safeToString(item['company_id2']),
+          'house_number': _safeToString(item['house_number']),
+          'village': _safeToString(item['village']),
+          'road': _safeToString(item['road']),
+          'sub_district': _safeToString(item['sub_district']),
+          'district': _safeToString(item['district']),
+          'province': _safeToString(item['province']),
+          'postal_code': _safeToString(item['postal_code']),
+          'country': _safeToString(item['country']),
+          // Auction specific fields
+          'auction_type': _safeToString(item['auction_type']),
+          'quantity_discount_enabled': _safeToString(item['quantity_discount_enabled']),
+          'discount_tiers': _safeToString(item['discount_tiers']),
+          'current_quantity_sold': _safeToInt(item['current_quantity_sold']),
+          'max_quantity_available': _safeToInt(item['max_quantity_available']),
+          'quantity_discount_rules': _safeToString(item['quantity_discount_rules']),
         };
         quotations.add(quotation);
       }
@@ -535,6 +684,11 @@ class ProductService {
       }
     }
 
+    // แปลงข้อมูลให้เป็น type ที่ถูกต้อง
+    final currentPrice = _safeToInt(product['current_price']);
+    final startingPrice = _safeToInt(product['star_price']);
+    final quantity = _safeToInt(product['quantity']);
+
     // ใช้ข้อมูลจาก API response โดยตรง
     return {
       'id': product['quotation_more_information_id'] ??
@@ -546,8 +700,8 @@ class ProductService {
               '',
       'title':
           product['short_text'] ?? product['description'] ?? 'สินค้าไม่ระบุ',
-      'currentPrice': _safeToInt(product['current_price']),
-      'startingPrice': _safeToInt(product['star_price']),
+      'currentPrice': currentPrice,
+      'startingPrice': startingPrice,
       'timeRemaining': product['remaining_time'] ??
           _calculateTimeRemaining(product['auction_end_date']),
       'timeUntilStart': _calculateDaysUntilStart(product['auction_start_date']),
@@ -565,7 +719,7 @@ class ProductService {
       'item_note': product['item_note'] ?? '',
       'quotation_type_description': product['quotation_type_description'] ?? '',
       'quotation_type_code': product['quotation_type_code'] ?? '',
-      'quantity': _getQuantityForAS03(product), // ใช้ method ใหม่สำหรับ AS03
+      'quantity': quantity, // ใช้ข้อมูลจาก API โดยตรง
       'brand': product['brand'] ?? 'ไม่ระบุ',
       'model': product['model'] ?? 'ไม่ระบุ',
       'material': product['material'] ?? 'ไม่ระบุ',

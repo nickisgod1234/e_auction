@@ -25,55 +25,94 @@ class QuantityReductionAuctionDetailPage extends StatefulWidget {
 }
 
 class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAuctionDetailPage> {
-  final GlobalKey<_QuantityReductionRealtimeWidgetState> realtimeKey =
-      GlobalKey<_QuantityReductionRealtimeWidgetState>();
   Map<String, dynamic>? _latestAuctionData;
   bool _isJoining = false;
   bool _hasJoined = false;
   Timer? _timer;
+  late ProductService _productService;
+  
+  // เพิ่มตัวแปรสำหรับ countdown
+  bool _isCountdownActive = false;
+  int _countdownSeconds = 60;
+  Timer? _countdownTimer;
+  int? _pendingBookingQuantity;
 
   @override
   void initState() {
     super.initState();
+    _productService = ProductService(baseUrl: Config.apiUrlAuction);
     _checkIfUserHasJoined();
-    _startTimer();
+    // โหลดข้อมูลทันทีเมื่อเปิดหน้า
+    _loadLatestData();
+    print('DEBUG: initState - Loading latest data for AS03');
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     super.dispose();
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 5), (timer) {
-      _loadLatestData();
-    });
+    _countdownTimer?.cancel();
   }
 
   Future<void> _loadLatestData() async {
     try {
-      final client = _getHttpClient();
-      final baseUrl = _getBaseUrl();
-      final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? 
-                         widget.auctionData['id'].toString();
+      final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ??
+          widget.auctionData['id'].toString();
       
-      final response = await client.get(
-        Uri.parse('$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map<String, dynamic> && data['quotation_more_information_id'] != null) {
+      // ใช้ ProductService ในการโหลดข้อมูลใหม่
+      final allQuotations = await _productService.getAllQuotations();
+      if (allQuotations != null) {
+        // หา quotation ที่ตรงกับ ID
+        final targetQuotation = allQuotations.firstWhere(
+          (quotation) => quotation['quotation_more_information_id'] == quotationId,
+          orElse: () => {},
+        );
+        
+        if (targetQuotation.isNotEmpty) {
+          // เรียก API bid history แยก
+          final bidHistoryData = await _loadBidHistory(quotationId);
+          
           setState(() {
-            _latestAuctionData = data;
+            _latestAuctionData = targetQuotation;
+            // เพิ่ม bid_history จาก API แยก
+            if (bidHistoryData != null) {
+              _latestAuctionData!['bid_history'] = bidHistoryData;
+            }
           });
-          realtimeKey.currentState?.updateData(data);
+          print('DEBUG: _loadLatestData - Loaded data from ProductService: $_latestAuctionData');
+        } else {
+          print('DEBUG: Quotation not found with ID: $quotationId');
+        }
+      } else {
+        print('DEBUG: Failed to load quotations from ProductService');
+      }
+    } catch (e) {
+      print('DEBUG: Error loading latest data: $e');
+    }
+  }
+
+  Future<List<dynamic>?> _loadBidHistory(String quotationId) async {
+    try {
+      final url = '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId&action=bid_history';
+      
+      print('DEBUG: Calling bid history API: $url');
+      final response = await _getHttpClient().get(Uri.parse(url));
+      
+      print('DEBUG: Bid history response status: ${response.statusCode}');
+      print('DEBUG: Bid history response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('DEBUG: Bid History API Response: $data');
+        
+        if (data is List) {
+          print('DEBUG: Bid history is List with ${data.length} items');
+          return data;
         }
       }
     } catch (e) {
-      print('Error loading latest data: $e');
+      print('DEBUG: Error loading bid history: $e');
     }
+    return null;
   }
 
   Future<void> _checkIfUserHasJoined() async {
@@ -87,16 +126,186 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
     // ตรวจสอบจาก SharedPreferences หรือ API
     final joinedAuctions = prefs.getStringList('joined_quantity_reduction_auctions') ?? [];
     
-    // ดึงจำนวนสินค้าที่เหลือจาก SharedPreferences
-    final remainingQuantity = prefs.getInt('quantity_${quotationId}') ?? widget.auctionData['quantity'] ?? 0;
-    
     setState(() {
       _hasJoined = joinedAuctions.contains(quotationId);
-      // อัปเดตจำนวนสินค้าใน _latestAuctionData ถ้ามี
-      if (_latestAuctionData != null) {
-        _latestAuctionData!['remaining_quantity'] = remainingQuantity;
-      }
     });
+  }
+
+  Future<void> _joinAuction(int quantity) async {
+    setState(() {
+      _isJoining = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? 
+                         widget.auctionData['id'].toString();
+      final userId = prefs.getString('id') ?? '';
+      final phoneNumber = prefs.getString('phone') ?? '';
+      
+      // ตรวจสอบว่าเป็น AS03 หรือไม่
+      final typeCode = widget.auctionData['quotation_type_code'];
+      if (typeCode == 'AS03') {
+        // ส่ง POST request ไปยัง API สำหรับการจอง
+        final client = _getHttpClient();
+        final baseUrl = _getBaseUrl();
+        final currentPrice = _latestAuctionData?['current_price'] ?? widget.auctionData['currentPrice'] ?? 500;
+        
+        print('DEBUG: Sending booking request to: $baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
+        print('DEBUG: Request body: {"bidder_id": $userId, "bidder_name": "$phoneNumber", "bid_amount": $currentPrice, "quantity_requested": $quantity}');
+        
+        final response = await client.post(
+          Uri.parse('$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'bidder_id': int.tryParse(userId) ?? 0,
+            'bidder_name': phoneNumber,
+            'bid_amount': double.tryParse(currentPrice.toString()) ?? 500.0,
+            'quantity_requested': quantity,
+          }),
+        );
+
+        print('DEBUG: Response status: ${response.statusCode}');
+        print('DEBUG: Response body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+          print('DEBUG: Booking response: $responseData');
+          
+          if (responseData['status'] == 'success') {
+            // อัปเดตข้อมูลจาก response
+            setState(() {
+              _latestAuctionData = responseData['data'];
+            });
+            
+            // อัปเดตข้อมูลจาก API เพื่อให้ข้อมูลเป็นปัจจุบัน
+            await _loadLatestData();
+            
+            // อัปเดต realtime widget ด้วย
+            // realtimeKey.currentState?.updateData(responseData['data']); // Removed realtimeKey
+            
+            // เพิ่มการเข้าร่วมใน SharedPreferences
+            final joinedAuctions = prefs.getStringList('joined_quantity_reduction_auctions') ?? [];
+            if (!joinedAuctions.contains(quotationId)) {
+              joinedAuctions.add(quotationId);
+              await prefs.setStringList('joined_quantity_reduction_auctions', joinedAuctions);
+            }
+            await prefs.setInt('booked_quantity_${quotationId}', quantity);
+
+            setState(() {
+              _hasJoined = true;
+              _isJoining = false;
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('จองสินค้าสำเร็จ! จำนวน: $quantity รายการ'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            throw Exception('Booking failed: ${responseData['message'] ?? 'Unknown error'}');
+          }
+        } else {
+          throw Exception('HTTP ${response.statusCode}: ${response.body}');
+        }
+      } else {
+        // สำหรับ auction types อื่นๆ ใช้ logic เดิม
+        // เพิ่มการเข้าร่วมใน SharedPreferences
+        final joinedAuctions = prefs.getStringList('joined_quantity_reduction_auctions') ?? [];
+        if (!joinedAuctions.contains(quotationId)) {
+          joinedAuctions.add(quotationId);
+          await prefs.setStringList('joined_quantity_reduction_auctions', joinedAuctions);
+        }
+
+        // ตั้งค่าจำนวนสินค้าเริ่มต้น
+        final initialQuantity = widget.auctionData['quantity'] ?? 0;
+        await prefs.setInt('quantity_${quotationId}', initialQuantity);
+        await prefs.setInt('booked_quantity_${quotationId}', quantity);
+
+        setState(() {
+          _hasJoined = true;
+          _isJoining = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('จองสินค้าสำเร็จ! จำนวน: $quantity รายการ'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isJoining = false;
+      });
+      
+      print('DEBUG: Booking error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาด: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showResetConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('รีเซทการเข้าร่วม'),
+        content: Text('คุณต้องการรีเซทการเข้าร่วมการประมูลนี้หรือไม่?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _resetAuctionParticipation();
+            },
+            child: Text('รีเซท'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetAuctionParticipation() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? 
+                         widget.auctionData['id'].toString();
+      
+      // ลบการเข้าร่วมจาก SharedPreferences
+      final joinedAuctions = prefs.getStringList('joined_quantity_reduction_auctions') ?? [];
+      joinedAuctions.remove(quotationId);
+      await prefs.setStringList('joined_quantity_reduction_auctions', joinedAuctions);
+      
+      // ลบข้อมูลจำนวนสินค้า
+      await prefs.remove('quantity_${quotationId}');
+      await prefs.remove('booked_quantity_${quotationId}');
+
+      setState(() {
+        _hasJoined = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('รีเซทการจองสำเร็จ'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาด: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   // แสดง Custom Toast Message
@@ -168,273 +377,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
     }
   }
 
-  // แสดง Dialog ยืนยันการเข้าร่วม
-  void _showJoinConfirmationDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.trending_down, color: Colors.purple, size: 24),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'ยืนยันการเข้าร่วม',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple[700],
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'คุณต้องการเข้าร่วมการประมูลแบบลดจำนวนนี้หรือไม่?',
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 12),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.purple.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '📋 กติกาการประมูล:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple[700],
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text('• เมื่อเข้าร่วมแล้ว ไม่สามารถยกเลิกได้'),
-                  Text('• ราคาจะลดลงอัตโนมัติตามเวลาที่กำหนด'),
-                  Text('• ผู้ที่เข้าร่วมก่อนจะได้สิทธิ์ซื้อก่อน'),
-                  Text('• จำนวนสินค้าจำกัด: ${widget.auctionData['quantity'] ?? 0} รายการ'),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('ยกเลิก', style: TextStyle(color: Colors.grey[600])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _joinAuction();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text('เข้าร่วม'),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // เข้าร่วมการประมูล
-  Future<void> _joinAuction() async {
-    if (_isJoining) return;
-
-    setState(() {
-      _isJoining = true;
-    });
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('id') ?? '';
-      final userPhone = prefs.getString('phone_number') ?? '';
-      final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? 
-                         widget.auctionData['id'].toString();
-
-      // TODO: เรียก API เพื่อเข้าร่วมการประมูลและลดจำนวนสินค้า
-      // final productService = ProductService(baseUrl: _getBaseUrl());
-      // final result = await productService.joinQuantityReductionAuction(
-      //   quotationId: quotationId,
-      //   userId: userId,
-      //   userPhone: userPhone,
-      // );
-
-      // จำลองการเข้าร่วมสำเร็จและลดจำนวนสินค้า
-      await Future.delayed(Duration(seconds: 2));
-
-      // ลดจำนวนสินค้าในข้อมูลปัจจุบัน
-      final currentQuantity = _latestAuctionData?['remaining_quantity'] ?? widget.auctionData['quantity'] ?? 0;
-      final newQuantity = currentQuantity - 1;
-      
-      // อัปเดตข้อมูลใน SharedPreferences
-      final joinedAuctions = prefs.getStringList('joined_quantity_reduction_auctions') ?? [];
-      if (!joinedAuctions.contains(quotationId)) {
-        joinedAuctions.add(quotationId);
-        await prefs.setStringList('joined_quantity_reduction_auctions', joinedAuctions);
-      }
-
-      // อัปเดตจำนวนสินค้าใน SharedPreferences
-      await prefs.setInt('quantity_${quotationId}', newQuantity);
-
-      setState(() {
-        _hasJoined = true;
-        _isJoining = false;
-        // อัปเดตข้อมูลใน _latestAuctionData
-        if (_latestAuctionData != null) {
-          _latestAuctionData!['remaining_quantity'] = newQuantity;
-        }
-      });
-
-      _showCustomToast(context, 'เข้าร่วมการประมูลสำเร็จ! จำนวนสินค้าเหลือ $newQuantity รายการ', isSuccess: true);
-
-      // ส่งแจ้งเตือน
-      _sendJoinNotification();
-
-    } catch (e) {
-      setState(() {
-        _isJoining = false;
-      });
-      _showCustomToast(context, 'เกิดข้อผิดพลาดในการเข้าร่วม', isSuccess: false);
-    }
-  }
-
-  // แสดง Dialog ยืนยันการรีเซท
-  void _showResetConfirmationDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.refresh, color: Colors.orange, size: 24),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'รีเซทการเข้าร่วม',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange[700],
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'คุณต้องการรีเซทการเข้าร่วมการประมูลนี้หรือไม่?',
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 12),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '⚠️ คำเตือน (สำหรับทดสอบเท่านั้น):',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange[700],
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text('• จะลบสถานะการเข้าร่วมออก'),
-                  Text('• จะรีเซทจำนวนสินค้ากลับเป็นค่าเริ่มต้น'),
-                  Text('• สามารถเข้าร่วมใหม่ได้'),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('ยกเลิก', style: TextStyle(color: Colors.grey[600])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _resetJoinStatus();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text('รีเซท'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // รีเซทสถานะการเข้าร่วม
-  Future<void> _resetJoinStatus() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? 
-                         widget.auctionData['id'].toString();
-      final originalQuantity = widget.auctionData['quantity'] ?? 0;
-
-      // ลบการเข้าร่วมออกจาก SharedPreferences
-      final joinedAuctions = prefs.getStringList('joined_quantity_reduction_auctions') ?? [];
-      joinedAuctions.remove(quotationId);
-      await prefs.setStringList('joined_quantity_reduction_auctions', joinedAuctions);
-
-      // รีเซทจำนวนสินค้ากลับเป็นค่าเริ่มต้น
-      await prefs.remove('quantity_${quotationId}');
-
-      setState(() {
-        _hasJoined = false;
-        // อัปเดตข้อมูลใน _latestAuctionData
-        if (_latestAuctionData != null) {
-          _latestAuctionData!['remaining_quantity'] = originalQuantity;
-        }
-      });
-
-      _showCustomToast(context, 'รีเซทการเข้าร่วมสำเร็จ! จำนวนสินค้า: $originalQuantity รายการ', isSuccess: true);
-
-    } catch (e) {
-      _showCustomToast(context, 'เกิดข้อผิดพลาดในการรีเซท', isSuccess: false);
-    }
-  }
 
   // ส่งแจ้งเตือนเมื่อเข้าร่วมสำเร็จ
   Future<void> _sendJoinNotification() async {
@@ -483,19 +426,95 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
 
   // Helper method to get base URL for Android/iOS
   String _getBaseUrl() {
-    final url = Config.apiUrlAuction;
+    final url = Config.apiUrllocal;
     if (Platform.isAndroid) {
       return url.replaceFirst('https://', 'http://');
     }
     return url;
   }
 
+  // Helper method to parse any value to double
+  double _parseToDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  int? _safeToInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      // ลบ whitespace และ quotes
+      final cleanValue = value.trim().replaceAll('"', '').replaceAll("'", '');
+      print('DEBUG: _safeToInt - Original: "$value", Cleaned: "$cleanValue"');
+      return int.tryParse(cleanValue);
+    }
+    return null;
+  }
+
+  String _formatBidTime(String bidTime) {
+    try {
+      final dateTime = DateTime.parse(bidTime);
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+
+      if (difference.inSeconds < 60) {
+        return '${difference.inSeconds} วินาทีที่ผ่านมา';
+      } else if (difference.inMinutes < 60) {
+        return '${difference.inMinutes} นาทีที่ผ่านมา';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours} ชั่วโมงที่ผ่านมา';
+      } else {
+        return '${difference.inDays} วันที่ผ่านมา';
+      }
+    } catch (e) {
+      return bidTime; // Return original if parsing fails
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentPrice = _latestAuctionData?['current_price'] ?? widget.auctionData['currentPrice'] ?? 0;
-    final startingPrice = _latestAuctionData?['star_price'] ?? widget.auctionData['startingPrice'] ?? 0;
-    final quantity = widget.auctionData['quantity'] ?? 0;
-    final remainingQuantity = _latestAuctionData?['remaining_quantity'] ?? quantity;
+    // แปลงข้อมูลให้เป็น type ที่ถูกต้อง
+    final currentPriceRaw = _latestAuctionData?['current_price'] ?? widget.auctionData['currentPrice'] ?? 0;
+    final startingPriceRaw = _latestAuctionData?['star_price'] ?? widget.auctionData['startingPrice'] ?? 0;
+    
+    // ใช้ข้อมูลจาก ProductService
+    int maxQuantity, currentQuantitySold, remainingQuantity;
+    
+    if (_latestAuctionData != null) {
+      // ใช้ข้อมูลจาก ProductService
+      maxQuantity = _safeToInt(_latestAuctionData!['max_quantity_available']) ?? 
+                   _safeToInt(widget.auctionData['quantity']) ?? 0;
+      currentQuantitySold = _safeToInt(_latestAuctionData!['current_quantity_sold']) ?? 0;
+      remainingQuantity = maxQuantity - currentQuantitySold;
+      
+      print('DEBUG: ProductService Data - max_quantity_available: ${_latestAuctionData!['max_quantity_available']}, current_quantity_sold: ${_latestAuctionData!['current_quantity_sold']}');
+      print('DEBUG: Calculated - maxQuantity: $maxQuantity, currentQuantitySold: $currentQuantitySold, remainingQuantity: $remainingQuantity');
+      
+      // ถ้าไม่มีข้อมูลใน API ให้ใช้ข้อมูลจาก widget
+      if (maxQuantity == 0) {
+        maxQuantity = widget.auctionData['quantity'] ?? 0;
+        remainingQuantity = maxQuantity;
+      }
+      if (remainingQuantity < 0) {
+        remainingQuantity = 0;
+      }
+    } else {
+      print('DEBUG: _latestAuctionData is null, using widget data');
+      // ใช้ข้อมูลจาก widget
+      maxQuantity = widget.auctionData['quantity'] ?? 0;
+      currentQuantitySold = 0;
+      remainingQuantity = maxQuantity;
+    }
+
+    // แปลงเป็น double
+    final currentPrice = _parseToDouble(currentPriceRaw);
+    final startingPrice = _parseToDouble(startingPriceRaw);
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -516,13 +535,13 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
         ),
         actions: [
           // ปุ่มรีเซทสำหรับทดสอบ
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.orange),
-            onPressed: () {
-              _showResetConfirmationDialog();
-            },
-            tooltip: 'รีเซทการเข้าร่วม (สำหรับทดสอบ)',
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.refresh, color: Colors.orange),
+          //   onPressed: () {
+          //     _showResetConfirmationDialog();
+          //   },
+          //   tooltip: 'รีเซทการเข้าร่วม (สำหรับทดสอบ)',
+          // ),
           IconButton(
             icon: const Icon(Icons.share, color: Colors.black),
             onPressed: () {
@@ -541,16 +560,8 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
             // Product Info
             _buildProductInfo(),
 
-            // Realtime Price Widget
-            QuantityReductionRealtimeWidget(
-              key: realtimeKey,
-              quotationId: widget.auctionData['quotation_more_information_id']?.toString() ?? 
-                          widget.auctionData['id'].toString(),
-              baseUrl: Config.apiUrlAuction,
-            ),
-
-            // Quantity Info
-            _buildQuantityInfo(remainingQuantity, quantity),
+            // Basic Info (แสดงข้อมูลพื้นฐานก่อน)
+            _buildBasicInfo(currentPrice, startingPrice, maxQuantity, remainingQuantity, currentQuantitySold),
 
             // Product Details
             _buildProductDetails(),
@@ -566,115 +577,125 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
           ],
         ),
       ),
-      floatingActionButton: Container(
-        margin: EdgeInsets.only(bottom: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ข้อมูลจำนวนสินค้า
-            Container(
-              margin: EdgeInsets.only(bottom: 8),
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.purple.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
+      floatingActionButton: _isCountdownActive 
+        ? Container(
+            margin: EdgeInsets.only(bottom: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // แสดง countdown และจำนวนที่กำลังจะจอง
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.inventory_2, color: Colors.white, size: 16),
-                  SizedBox(width: 8),
-                  Text(
-                    'จำนวนสินค้า: $remainingQuantity รายการ',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // ปุ่มเข้าร่วมหลัก
-            Container(
-              width: 200,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _hasJoined 
-                    ? [Colors.grey, Colors.grey.shade600]
-                    : [Colors.purple, Colors.purple.shade700],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: (_hasJoined ? Colors.grey : Colors.purple).withOpacity(0.4),
-                    blurRadius: 16,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                onPressed: _hasJoined ? null : (_isJoining ? null : _showJoinConfirmationDialog),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_isJoining)
-                      Container(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          _hasJoined ? Icons.check_circle : Icons.trending_down,
+                  child: Column(
+                    children: [
+                      Text(
+                        'ยกเลิกได้ใน $_countdownSeconds วินาที',
+                        style: TextStyle(
                           color: Colors.white,
-                          size: 20,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
                       ),
-                    SizedBox(width: 8),
-                    Text(
-                      _hasJoined ? 'เข้าร่วมแล้ว' : (_isJoining ? 'กำลังเข้าร่วม...' : 'เข้าร่วมประมูล'),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                      if (_pendingBookingQuantity != null)
+                        Text(
+                          'กำลังจอง: $_pendingBookingQuantity รายการ',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+                SizedBox(height: 8),
+                // ปุ่มยกเลิก
+                FloatingActionButton.extended(
+                  onPressed: _cancelBooking,
+                  backgroundColor: Colors.red,
+                  icon: Icon(Icons.cancel),
+                  label: Text('ยกเลิกการจอง'),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+          )
+        : FutureBuilder<int>(
+            future: _getBookedQuantity(),
+            builder: (context, snapshot) {
+              final bookedQuantity = snapshot.data ?? 0;
+              return Container(
+                margin: EdgeInsets.only(bottom: 16),
+                child: FloatingActionButton.extended(
+                  onPressed: _hasJoined ? null : _showBookingDialog,
+                  backgroundColor: _hasJoined ? Colors.grey : Colors.purple,
+                  icon: Icon(_hasJoined ? Icons.check : Icons.book_online),
+                  label: Text(_hasJoined ? 'จองแล้ว ($bookedQuantity รายการ)' : 'เข้าร่วมการจอง'),
+                ),
+              );
+            },
+          ),
     );
+  }
+
+  Future<int> _getBookedQuantity() async {
+    if (!_hasJoined) return 0;
+    
+    // คำนวณจำนวนรวมจาก bid history ของ user นี้
+    if (_latestAuctionData != null && _latestAuctionData!['bid_history'] != null) {
+      int totalBookedQuantity = 0;
+      final bidHistory = _latestAuctionData!['bid_history'] as List;
+      
+      // ใช้ bidder_id ที่เก็บไว้ใน SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserId = prefs.getString('id') ?? '';
+      
+      for (var bid in bidHistory) {
+        final bidderId = bid['bidder_id']?.toString();
+        if (bidderId == currentUserId) { // ใช้ bidder_id ของ user ปัจจุบัน
+          final quantityRequested = _safeToInt(bid['quantity_requested']) ?? 0;
+          totalBookedQuantity += quantityRequested;
+          print('DEBUG: Adding bid quantity: $quantityRequested for bidder_id: $bidderId');
+        }
+      }
+      
+      print('DEBUG: Total booked quantity calculated: $totalBookedQuantity for user: $currentUserId');
+      return totalBookedQuantity;
+    }
+    
+    // Fallback: ใช้ข้อมูลจาก SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final quotationId = widget.auctionData['quotation_more_information_id']?.toString() ?? 
+                       widget.auctionData['id'].toString();
+    return prefs.getInt('booked_quantity_${quotationId}') ?? 0;
+  }
+
+  // คำนวณยอดรวมที่จองไปแล้ว
+  Future<double> _getTotalBookedAmount() async {
+    if (_latestAuctionData != null && _latestAuctionData!['bid_history'] != null) {
+      double totalAmount = 0.0;
+      final bidHistory = _latestAuctionData!['bid_history'] as List;
+      
+      // ใช้ bidder_id ที่เก็บไว้ใน SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserId = prefs.getString('id') ?? '';
+      
+      for (var bid in bidHistory) {
+        final bidderId = bid['bidder_id']?.toString();
+        if (bidderId == currentUserId) { // ใช้ bidder_id ของ user ปัจจุบัน
+          final totalAmountFromBid = _parseToDouble(bid['total_amount']);
+          totalAmount += totalAmountFromBid;
+          print('DEBUG: Adding bid total_amount: $totalAmountFromBid for bidder_id: $bidderId');
+        }
+      }
+      
+      print('DEBUG: Total amount calculated: $totalAmount for user: $currentUserId');
+      return totalAmount;
+    }
+    return 0.0;
   }
 
   Widget _buildProductImage() {
@@ -752,58 +773,271 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
     );
   }
 
-  Widget _buildQuantityInfo(int remainingQuantity, int totalQuantity) {
+  Widget _buildBasicInfo(dynamic currentPrice, dynamic startingPrice, dynamic maxQuantity, dynamic remainingQuantity, int currentQuantitySold) {
+    // Convert to proper types
+    final currentPriceDouble = (currentPrice is int) ? currentPrice.toDouble() : (currentPrice is double) ? currentPrice : 0.0;
+    final startingPriceDouble = (startingPrice is int) ? startingPrice.toDouble() : (startingPrice is double) ? startingPrice : 0.0;
+    
+    // ใช้ข้อมูลจาก ProductService
+    int quantityInt, remainingQuantityInt;
+    
+    if (_latestAuctionData != null) {
+      // ใช้ maxQuantity ที่ส่งมาจาก build method
+      quantityInt = _safeToInt(maxQuantity) ?? 0;
+      remainingQuantityInt = _safeToInt(remainingQuantity) ?? 0;
+      
+      print('DEBUG: _buildBasicInfo - maxQuantity received: $maxQuantity');
+      print('DEBUG: _buildBasicInfo - quantityInt: $quantityInt');
+      print('DEBUG: _buildBasicInfo - remainingQuantityInt: $remainingQuantityInt');
+    } else {
+      quantityInt = _safeToInt(maxQuantity) ?? 0;
+      remainingQuantityInt = _safeToInt(remainingQuantity) ?? 0;
+    }
+    
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16),
-      padding: EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple.withOpacity(0.1), Colors.blue.withOpacity(0.1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.purple.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.inventory_2, color: Colors.purple, size: 24),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.attach_money, color: Colors.purple, size: 24),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ราคาปัจจุบัน',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple[700],
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      Format.formatCurrency(currentPriceDouble),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 40, color: Colors.grey[300]),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ยอดรวมที่จอง',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple[700],
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    FutureBuilder<double>(
+                      future: _getTotalBookedAmount(),
+                      builder: (context, snapshot) {
+                        final totalAmount = snapshot.data ?? 0.0;
+                        return Text(
+                          Format.formatCurrency(totalAmount),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple[700],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'จำนวนสินค้า',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.purple[700],
-                  ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'เหลือ $remainingQuantity จาก $totalQuantity รายการ',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                child: Icon(Icons.inventory_2, color: Colors.purple, size: 24),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'จำนวนสินค้า',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple[700],
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'เหลือ $remainingQuantityInt จาก $quantityInt รายการ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (currentQuantitySold > 0)
+                      Text(
+                        'ขายแล้ว: $currentQuantitySold รายการ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    // แสดงจำนวนที่ผู้ใช้จองไปแล้ว
+                    FutureBuilder<int>(
+                      future: _getBookedQuantity(),
+                      builder: (context, snapshot) {
+                        final myBookedQuantity = snapshot.data ?? 0;
+                        if (myBookedQuantity > 0) {
+                          return Container(
+                            margin: EdgeInsets.only(top: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.person_pin, color: Colors.purple, size: 14),
+                                SizedBox(width: 4),
+                                Text(
+                                  'คุณจองแล้ว: $myBookedQuantity รายการ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.purple[700],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return SizedBox.shrink();
+                      },
+                    ),
+                    // แสดงข้อมูล bidder ล่าสุด
+                    if (_latestAuctionData != null && _latestAuctionData!['bid_history'] != null && _latestAuctionData!['bid_history'].isNotEmpty)
+                      Container(
+                        margin: EdgeInsets.only(top: 8),
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.person, color: Colors.blue, size: 16),
+                                SizedBox(width: 4),
+                                Text(
+                                  'ผู้จองล่าสุด:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 4),
+                            ...(_latestAuctionData!['bid_history'] as List).take(3).map((bid) {
+                              final bidderName = bid['bidder_name']?.toString() ?? 'ไม่ระบุ';
+                              final quantityRequested = _safeToInt(bid['quantity_requested']) ?? 0;
+                              final bidTime = bid['bid_time']?.toString() ?? '';
+                              
+                              // จัดรูปแบบเบอร์โทรศัพท์ให้มี 0 นำหน้าและปิดด้วย XXXX
+                              String formattedBidderName = bidderName;
+                              if (bidderName.length == 9 && !bidderName.startsWith('0')) {
+                                // ถ้าเป็นเบอร์ 9 หลักและไม่มี 0 นำหน้า ให้เพิ่ม 0 นำหน้า
+                                formattedBidderName = '0$bidderName';
+                              } else if (bidderName.length == 10 && bidderName.startsWith('0')) {
+                                // ถ้าเป็นเบอร์ 10 หลักและมี 0 นำหน้าแล้ว ให้ใช้ตามเดิม
+                                formattedBidderName = bidderName;
+                              } else if (bidderName.length == 10 && !bidderName.startsWith('0')) {
+                                // ถ้าเป็นเบอร์ 10 หลักและไม่มี 0 นำหน้า ให้เพิ่ม 0 นำหน้า
+                                formattedBidderName = '0$bidderName';
+                              }
+                              
+                              // ปิดเบอร์ด้วย XXXX 4 ตัวท้าย
+                              if (formattedBidderName.length >= 6) {
+                                final prefix = formattedBidderName.substring(0, formattedBidderName.length - 4);
+                                formattedBidderName = '${prefix}XXXX';
+                              }
+                              
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: 2),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      '• $formattedBidderName: $quantityRequested ชิ้น',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.blue[600],
+                                      ),
+                                    ),
+                                    if (bidTime.isNotEmpty) ...[
+                                      Spacer(),
+                                      Text(
+                                        _formatBidTime(bidTime),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+                    SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: quantityInt > 0 ? (quantityInt - remainingQuantityInt) / quantityInt : 0.0,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (totalQuantity - remainingQuantity) / totalQuantity,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1017,286 +1251,251 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
       ),
     );
   }
-}
 
-class QuantityReductionRealtimeWidget extends StatefulWidget {
-  final String quotationId;
-  final String baseUrl;
-
-  const QuantityReductionRealtimeWidget({
-    Key? key,
-    required this.quotationId,
-    required this.baseUrl,
-  }) : super(key: key);
-
-  @override
-  _QuantityReductionRealtimeWidgetState createState() => _QuantityReductionRealtimeWidgetState();
-}
-
-class _QuantityReductionRealtimeWidgetState extends State<QuantityReductionRealtimeWidget> {
-  Timer? _timer;
-  Map<String, dynamic>? _auctionData;
-  bool isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAuctionData();
-    _startTimer();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 5), (timer) {
-      _loadAuctionData();
-    });
-  }
-
-  Future<void> _loadAuctionData() async {
-    try {
-      final client = _getHttpClient();
-      final baseUrl = _getBaseUrl();
-      final response = await client.get(
-        Uri.parse('$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${widget.quotationId}'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          if (data is Map<String, dynamic> && data['quotation_more_information_id'] != null) {
-            _auctionData = data;
-          } else {
-            _auctionData = null;
-          }
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-        });
+  // แสดง Dialog สำหรับการจอง
+  void _showBookingDialog() {
+    final TextEditingController quantityController = TextEditingController();
+    
+    // ใช้ข้อมูลจาก ProductService
+    int availableQuantity;
+    
+    if (_latestAuctionData != null) {
+      // คำนวณจาก max_quantity_available - current_quantity_sold
+      final maxQuantity = _safeToInt(_latestAuctionData!['max_quantity_available']) ?? 0;
+      final currentQuantitySold = _safeToInt(_latestAuctionData!['current_quantity_sold']) ?? 0;
+      availableQuantity = maxQuantity - currentQuantitySold;
+      
+      // ถ้าไม่มีข้อมูลใน API ให้ใช้ข้อมูลจาก widget
+      if (availableQuantity <= 0) {
+        availableQuantity = widget.auctionData['quantity'] ?? 0;
       }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  void updateData(Map<String, dynamic> newData) {
-    setState(() {
-      _auctionData = newData;
-      isLoading = false;
-    });
-  }
-
-  // Helper method to get HTTP client for Android
-  http.Client _getHttpClient() {
-    if (Platform.isAndroid) {
-      final client = HttpClient();
-      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
-        return true;
-      };
-      return IOClient(client);
     } else {
-      return http.Client();
+      availableQuantity = widget.auctionData['quantity'] ?? 0;
     }
-  }
-
-  // Helper method to get base URL for Android
-  String _getBaseUrl() {
-    if (Platform.isAndroid) {
-      return widget.baseUrl.replaceFirst('https://', 'http://');
-    }
-    return widget.baseUrl;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading) {
-      return Container(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple.withOpacity(0.1), Colors.blue.withOpacity(0.1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.book_online, color: Colors.purple, size: 24),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'เข้าร่วมการจอง',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple[700],
+                ),
+              ),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.purple.withOpacity(0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.2),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'คุณต้องการจองสินค้า ${widget.auctionData['title']} หรือไม่?',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'จำนวนที่ต้องการจอง:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            SizedBox(height: 8),
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: 'ระบุจำนวน (สูงสุด $availableQuantity)',
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.inventory_2, color: Colors.purple, size: 20),
+                prefixIcon: Icon(Icons.shopping_cart),
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'จำนวนสินค้า (Real-time)',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.purple[800],
-                  ),
-                ),
+            ),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.purple.withOpacity(0.2)),
               ),
-            ],
-          ),
-          SizedBox(height: 16),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('จำนวนสินค้า',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                    SizedBox(height: 4),
-                    Text(
-                      '${_auctionData?['remaining_quantity'] ?? 0} รายการ',
-                      style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.purple[700]),
-                    ),
-                    if (_auctionData?['remaining_time'] != null &&
-                        (_auctionData?['remaining_time'] as String).isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6.0),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.timer, size: 16, color: Colors.orange),
-                              SizedBox(width: 6),
-                              Text(
-                                _auctionData?['remaining_time'] ?? '-',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.orange[800],
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
-                Column(
-                  children: [
-                    Text('ราคาเริ่มต้น',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    SizedBox(height: 4),
-                    Text(
-                      Format.formatCurrency(_auctionData?['star_price'] ?? 0),
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange[700]),
-                    ),
-                  ],
-                ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
-                Column(
-                  children: [
-                    Text('ผู้เข้าร่วม',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    SizedBox(height: 4),
-                    Text(
-                      '${_auctionData?['number_bidders'] ?? '0'} คน',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blue[700]),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 12),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.people, size: 16, color: Colors.purple),
-                    SizedBox(width: 6),
-                    Text(
-                      'ผู้เข้าร่วม: ${_auctionData?['number_bidders'] ?? '0'} คน',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    'Live',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '📋 กติกาการจอง:',
                     style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.purple[700],
-                        fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple[700],
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 8),
+                  Text('• จำนวนสินค้าที่มี: $availableQuantity รายการ'),
+                  Text('• เมื่อจองแล้ว จะมีเวลา 60 วินาทีในการยกเลิก'),
+                  Text('• ราคาจะลดลงอัตโนมัติตามเวลาที่กำหนด'),
+                  Text('• ผู้ที่จองก่อนจะได้สิทธิ์ซื้อก่อน'),
+                  SizedBox(height: 8),
+                  Text(
+                    '💰 ราคาปัจจุบัน: ${Format.formatCurrency(_latestAuctionData?['current_price'] ?? widget.auctionData['currentPrice'] ?? 0)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple[700],
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('ยกเลิก', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final quantity = int.tryParse(quantityController.text) ?? 0;
+              if (quantity <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('กรุณาระบุจำนวนที่ต้องการจอง'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              if (quantity > availableQuantity) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('จำนวนที่จองเกินกว่าที่มี (สูงสุด $availableQuantity)'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              _startBookingCountdown(quantity);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('จองเลย'),
           ),
         ],
       ),
     );
+  }
+
+  double _calculateTotalAmount() {
+    if (_latestAuctionData != null && _latestAuctionData!['bid_history'] != null) {
+      // คำนวณ total_amount จาก bid_history ของ bidder_id: 13
+      double totalAmount = 0.0;
+      final bidHistory = _latestAuctionData!['bid_history'] as List;
+      
+      for (var bid in bidHistory) {
+        final bidderId = bid['bidder_id']?.toString();
+        if (bidderId == '13') { // ใช้เฉพาะ bidder_id: 13
+          final totalAmountFromBid = _parseToDouble(bid['total_amount']);
+          totalAmount += totalAmountFromBid;
+          print('DEBUG: Adding bid total_amount: $totalAmountFromBid for bidder_id: $bidderId');
+        }
+      }
+      
+      print('DEBUG: Total amount calculated: $totalAmount');
+      return totalAmount;
+    } else if (_latestAuctionData != null) {
+      // คำนวณจากจำนวนที่ขายแล้ว × ราคาปัจจุบัน
+      final currentQuantitySold = _safeToInt(_latestAuctionData!['current_quantity_sold']) ?? 0;
+      final currentPrice = _parseToDouble(_latestAuctionData!['current_price'] ?? widget.auctionData['currentPrice'] ?? 0);
+      
+      return currentQuantitySold * currentPrice;
+    } else {
+      // คำนวณจากราคาปัจจุบัน × จำนวนที่เหลือ
+      final currentPrice = _parseToDouble(_latestAuctionData?['current_price'] ?? widget.auctionData['currentPrice'] ?? 0);
+      final quantity = _safeToInt(_latestAuctionData?['remaining_quantity'] ?? widget.auctionData['quantity'] ?? 0) ?? 0;
+      return currentPrice * quantity;
+    }
+  }
+
+  // เริ่ม countdown สำหรับการจอง
+  void _startBookingCountdown(int quantity) {
+    setState(() {
+      _isCountdownActive = true;
+      _countdownSeconds = 60;
+      _pendingBookingQuantity = quantity;
+    });
+    
+    _countdownTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _countdownSeconds--;
+      });
+      
+      if (_countdownSeconds <= 0) {
+        timer.cancel();
+        _executeBooking();
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('เริ่มจอง! คุณมีเวลา 60 วินาทีในการยกเลิก (จำนวน: $quantity รายการ)'),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'ยกเลิก',
+          textColor: Colors.white,
+          onPressed: _cancelBooking,
+        ),
+      ),
+    );
+  }
+  
+  // ยกเลิกการจอง
+  void _cancelBooking() {
+    _countdownTimer?.cancel();
+    setState(() {
+      _isCountdownActive = false;
+      _countdownSeconds = 60;
+      _pendingBookingQuantity = null;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('ยกเลิกการจองแล้ว'),
+        backgroundColor: Colors.grey,
+      ),
+    );
+  }
+  
+  // ส่งข้อมูลการจองไปยัง API
+  void _executeBooking() {
+    if (_pendingBookingQuantity != null) {
+      _joinAuction(_pendingBookingQuantity!);
+      setState(() {
+        _isCountdownActive = false;
+        _pendingBookingQuantity = null;
+      });
+    }
   }
 } 

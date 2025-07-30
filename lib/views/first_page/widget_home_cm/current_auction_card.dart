@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
+import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auction_detail_page.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/time_calculator.dart';
@@ -135,12 +136,36 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
     
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AuctionDetailViewPage(auctionData: widget.auctionData),
-          ),
-        );
+        try {
+          print('DEBUG: CurrentAuctionCard - Tapped on auction: ${widget.auctionData['title']}');
+          print('DEBUG: CurrentAuctionCard - Type code: ${widget.auctionData['quotation_type_code']}');
+          
+          if (widget.auctionData['quotation_type_code'] == 'AS03') {
+            print('DEBUG: CurrentAuctionCard - Navigating to QuantityReductionAuctionDetailPage');
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => QuantityReductionAuctionDetailPage(auctionData: widget.auctionData),
+              ),
+            );
+          } else {
+            print('DEBUG: CurrentAuctionCard - Navigating to AuctionDetailViewPage');
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AuctionDetailViewPage(auctionData: widget.auctionData),
+              ),
+            );
+          }
+        } catch (e) {
+          print('DEBUG: CurrentAuctionCard - Navigation error: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('เกิดข้อผิดพลาดในการเปิดหน้า: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
       child: Container(
         width: 300,
@@ -202,7 +227,7 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
                   ),
                   SizedBox(height: 4),
                   // ป้ายประเภทสินค้า
-                                    if (widget.auctionData['quotation_type_description'] != null &&
+                  if (widget.auctionData['quotation_type_description'] != null &&
                       widget.auctionData['quotation_type_description'].toString().isNotEmpty)
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -221,6 +246,35 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
                           SizedBox(width: 4),
                           Text(
                             widget.auctionData['quotation_type_description'].toString(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  // ป้ายเพิ่มเติมสำหรับ AS03 (ประมูลแบบลดตามจำนวน)
+                  if (widget.auctionData['quotation_type_code'] == 'AS03')
+                    Container(
+                      margin: EdgeInsets.only(top: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.trending_down,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'ลดตามจำนวน: ${widget.auctionData['quantity'] ?? 0} ชิ้น',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,

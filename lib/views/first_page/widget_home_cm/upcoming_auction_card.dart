@@ -228,7 +228,7 @@ class UpcomingAuctionCard extends StatelessWidget {
                           ),
                           SizedBox(width: 4),
                           Text(
-                            'ลดตามจำนวน',
+                            'ลดตามจำนวน: ${auctionData['quantity'] ?? 0} ชิ้น',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
