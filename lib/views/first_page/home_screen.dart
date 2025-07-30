@@ -886,7 +886,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  'กำลังประมูล • ชนะ • ไม่ชนะ',
+                                  'กำลังประมูล • ชนะ',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey[600],

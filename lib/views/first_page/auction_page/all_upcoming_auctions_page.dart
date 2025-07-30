@@ -20,32 +20,32 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
-        actions: [
-          // ปุ่มดูประมูลลดตามจำนวน (AS03)
-          TextButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuantityReductionAuctionsPage(),
-                ),
-              );
-            },
-            icon: Icon(
-              Icons.trending_down,
-              color: Colors.purple,
-              size: 20,
-            ),
-            label: Text(
-              'ประมูลลดจำนวน',
-              style: TextStyle(
-                color: Colors.purple,
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
+        // actions: [
+        //   // ปุ่มดูประมูลลดตามจำนวน (AS03)
+        //   TextButton.icon(
+        //     onPressed: () {
+        //       Navigator.push(
+        //         context,
+        //         MaterialPageRoute(
+        //           builder: (context) => QuantityReductionAuctionsPage(),
+        //         ),
+        //       );
+        //     },
+        //     icon: Icon(
+        //       Icons.trending_down,
+        //       color: Colors.purple,
+        //       size: 20,
+        //     ),
+        //     label: Text(
+        //       'ประมูลลดจำนวน',
+        //       style: TextStyle(
+        //         color: Colors.purple,
+        //         fontWeight: FontWeight.w500,
+        //         fontSize: 14,
+        //       ),
+        //     ),
+        //   ),
+        // ],
       ),
       body: upcomingAuctions.isEmpty
           ? const Center(

@@ -6,7 +6,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 
 class UserBidHistoryService {
   static String get baseUrl {
-    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+    final url = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
     if (Platform.isAndroid) {
       return url.replaceFirst('https://', 'http://');
     }
@@ -35,9 +35,14 @@ class UserBidHistoryService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         
         // Handle case where API returns List instead of Map
         if (data is List) {
+          print('DEBUG: UserBidHistoryService - Data is List, length: ${data.length}');
+          if (data.isNotEmpty) {
+            print('DEBUG: UserBidHistoryService - First item: ${data.first}');
+          }
           return {
             'status': 'success',
             'data': {
@@ -111,6 +116,8 @@ class UserBidHistoryService {
   static List<Map<String, dynamic>> convertBidHistoryToAppFormat(
       List<dynamic> bidHistory) {
     return bidHistory.map((bid) {
+      // Debug: แสดงข้อมูลที่ได้จาก API
+
       // แปลง quotation_image จาก JSON string เป็น List
       List<String> images = [];
       String imageUrl = 'assets/images/noimage.jpg';
@@ -183,6 +190,15 @@ class UserBidHistoryService {
         'sellerRating': '4.5', // จะต้องดึงจาก API อื่น
         'auction_end_date':
             bid['auction_end_date'] ?? bid['auction_end_time'] ?? '',
+        'quotation_type_code': bid['quotation_type_code']?.toString() ?? '',
+        'type_code': bid['type_code']?.toString() ?? '',
+        // ข้อมูลเพิ่มเติมสำหรับ AS03
+        'quantity_requested': int.tryParse(bid['quantity_requested']?.toString() ?? '0') ?? 0,
+        'total_amount': double.tryParse(bid['total_amount']?.toString() ?? '0') ?? 0,
+        'auction_type': bid['auction_type']?.toString() ?? '',
+        'quantity_discount_enabled': bid['quantity_discount_enabled']?.toString() ?? '',
+        'current_quantity_sold': int.tryParse(bid['current_quantity_sold']?.toString() ?? '0') ?? 0,
+        'max_quantity_available': int.tryParse(bid['max_quantity_available']?.toString() ?? '0') ?? 0,
       };
     }).toList();
   }

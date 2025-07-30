@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/services/product_service.dart';
+import 'package:e_auction/services/user_bid_history_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auction_detail_page.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class QuantityReductionAuctionsPage extends StatefulWidget {
   const QuantityReductionAuctionsPage({super.key});
@@ -116,11 +118,39 @@ class _QuantityReductionAuctionsPageState extends State<QuantityReductionAuction
     }
   }
 
+    Future<int> _getUserQuantityRequested(String quotationId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserId = prefs.getString('id') ?? '';
+      
+      if (currentUserId.isEmpty) return 0;
+      
+      final response = await UserBidHistoryService.getUserBidHistory(currentUserId);
+      if (response['status'] == 'success' && response['data'] != null) {
+        final bidHistory = response['data']['bid_history'] as List;
+        final userBids = UserBidHistoryService.convertBidHistoryToAppFormat(bidHistory);
+        
+        // หา bid ที่ตรงกับ quotation_id นี้
+        for (var bid in userBids) {
+          if (bid['quotation_more_information_id'] == quotationId) {
+            return bid['quantity_requested'] ?? 0;
+          }
+        }
+      }
+      return 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   Widget _buildAuctionCard(Map<String, dynamic> auction) {
     final status = auction['status'] ?? 'unknown';
-    final quantity = auction['quantity'] ?? 0;
-    
-    return Card(
+    return FutureBuilder<int>(
+      future: _getUserQuantityRequested(auction['quotation_more_information_id'] ?? ''),
+      builder: (context, snapshot) {
+        final quantityRequested = snapshot.data ?? 0;
+        
+        return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -184,7 +214,7 @@ class _QuantityReductionAuctionsPageState extends State<QuantityReductionAuction
                         ),
                         SizedBox(width: 6),
                         Text(
-                          'จำนวน: $quantity รายการ',
+                          'จองแล้ว $quantityRequested รายการ',
                           style: TextStyle(
                             color: Colors.blue,
                             fontWeight: FontWeight.w600,
@@ -222,28 +252,28 @@ class _QuantityReductionAuctionsPageState extends State<QuantityReductionAuction
                           ],
                         ),
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'ราคาเริ่มต้น',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            Text(
-                              '฿${NumberFormat('#,###').format(auction['startingPrice'] ?? 0)}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // Expanded(
+                      //   child: Column(
+                      //     crossAxisAlignment: CrossAxisAlignment.end,
+                      //     children: [
+                      //       Text(
+                      //         'ราคาเริ่มต้น',
+                      //         style: TextStyle(
+                      //           fontSize: 12,
+                      //           color: Colors.grey[600],
+                      //         ),
+                      //       ),
+                      //       Text(
+                      //         '฿${NumberFormat('#,###').format(auction['startingPrice'] ?? 0)}',
+                      //         style: TextStyle(
+                      //           fontSize: 16,
+                      //           fontWeight: FontWeight.w500,
+                      //           color: Colors.grey[700],
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
                     ],
                   ),
                   
@@ -344,6 +374,8 @@ class _QuantityReductionAuctionsPageState extends State<QuantityReductionAuction
           ],
         ),
       ),
+    );
+      },
     );
   }
 

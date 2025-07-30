@@ -5,15 +5,18 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/auth_service/auth_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
-import 'package:e_auction/views/first_page/widgets/my_auctions_widget.dart' as dialogs;
-import 'package:e_auction/views/first_page/widgets/my_auctions_widgets.dart' as widgets;
+import 'package:e_auction/views/first_page/widgets/my_auctions_widget.dart'
+    as dialogs;
+import 'package:e_auction/views/first_page/widgets/my_auctions_widgets.dart'
+    as widgets;
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/services/user_bid_history_service.dart';
 import 'package:e_auction/services/winner_service.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'dart:async';
 import 'dart:convert';
-
+import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auction_detail_page.dart';
+import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auctions_page.dart';
 
 class MyAuctionsPage extends StatefulWidget {
   const MyAuctionsPage({super.key});
@@ -377,8 +380,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
   }
 
   // แสดง popup dialog สำหรับข้อมูลที่ซ้ำ
-  void _showDuplicateFieldDialog(BuildContext rootContext, String fieldName, String fieldKey, Map<String, dynamic> auction) {
- 
+  void _showDuplicateFieldDialog(BuildContext rootContext, String fieldName,
+      String fieldKey, Map<String, dynamic> auction) {
     final TextEditingController newValueController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(
@@ -386,7 +389,6 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
         barrierDismissible: false,
         useRootNavigator: true,
         builder: (BuildContext context) {
-       
           return AlertDialog(
             title: Row(
               children: [
@@ -436,7 +438,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                     final success = await _saveWinnerInfoToServer(auction);
                     if (success) {
                       Navigator.of(rootContext).pop(); // ปิด dialog หลัก
-                      dialogs.AuctionDialogs.showPaymentDialog(rootContext, auction);
+                      dialogs.AuctionDialogs.showPaymentDialog(
+                          rootContext, auction);
                     }
                     // ถ้าไม่ success จะวน popup เดิมอีกครั้ง
                   } else {
@@ -488,9 +491,10 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
           subDistrictId.isNotEmpty;
 
       // ตรวจสอบข้อมูลที่อยู่ใหม่ (ไม่บังคับ แต่แนะนำ)
-      final hasOptionalAddressInfo = prefs.getString('winner_village')?.isNotEmpty == true ||
-          prefs.getString('winner_road')?.isNotEmpty == true ||
-          prefs.getString('winner_postal_code')?.isNotEmpty == true;
+      final hasOptionalAddressInfo =
+          prefs.getString('winner_village')?.isNotEmpty == true ||
+              prefs.getString('winner_road')?.isNotEmpty == true ||
+              prefs.getString('winner_postal_code')?.isNotEmpty == true;
 
       return hasRequiredInfo;
     } catch (e) {
@@ -525,8 +529,11 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
         // ข้อมูลที่อยู่ใหม่
         village: _controllers['village']!.text,
         road: _controllers['road']!.text,
-        postalCode: _controllers['zipCode']!.text, // ใช้ zipCode controller สำหรับ postalCode
-        country: _controllers['country']!.text.isNotEmpty ? _controllers['country']!.text : 'Thailand',
+        postalCode: _controllers['zipCode']!
+            .text, // ใช้ zipCode controller สำหรับ postalCode
+        country: _controllers['country']!.text.isNotEmpty
+            ? _controllers['country']!.text
+            : 'Thailand',
       );
 
       // บันทึกข้อมูลผู้ชนะ
@@ -554,38 +561,49 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
         // บันทึกข้อมูลที่อยู่ใหม่
         await prefs.setString('winner_village', _controllers['village']!.text);
         await prefs.setString('winner_road', _controllers['road']!.text);
-        await prefs.setString('winner_postal_code', _controllers['zipCode']!.text);
-        await prefs.setString('winner_country', _controllers['country']!.text.isNotEmpty ? _controllers['country']!.text : 'Thailand');
+        await prefs.setString(
+            'winner_postal_code', _controllers['zipCode']!.text);
+        await prefs.setString(
+            'winner_country',
+            _controllers['country']!.text.isNotEmpty
+                ? _controllers['country']!.text
+                : 'Thailand');
         return true; // บันทึกสำเร็จ
       } else {
         // ตรวจสอบข้อความ error จาก API และแสดง popup dialog แจ้งเตือน
         final message = result['message']?.toString() ?? '';
-        
-        if (message.toLowerCase().contains('email already exists') || 
-            (message.toLowerCase().contains('อีเมล') && message.toLowerCase().contains('ซ้ำ'))) {
-       
+
+        if (message.toLowerCase().contains('email already exists') ||
+            (message.toLowerCase().contains('อีเมล') &&
+                message.toLowerCase().contains('ซ้ำ'))) {
           if (auction != null) {
             _showDuplicateFieldDialog(context, 'อีเมล', 'email', auction);
           } else {
             _showValidationError('อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่น');
           }
           return false;
-        } else if (message.toLowerCase().contains('phone already exists') || 
-                   (message.toLowerCase().contains('เบอร์โทร') && message.toLowerCase().contains('ซ้ำ'))) {
-      
+        } else if (message.toLowerCase().contains('phone already exists') ||
+            (message.toLowerCase().contains('เบอร์โทร') &&
+                message.toLowerCase().contains('ซ้ำ'))) {
           if (auction != null) {
-            _showDuplicateFieldDialog(context, 'เบอร์โทรศัพท์', 'phone', auction);
+            _showDuplicateFieldDialog(
+                context, 'เบอร์โทรศัพท์', 'phone', auction);
           } else {
-            _showValidationError('เบอร์โทรศัพท์นี้ถูกใช้ไปแล้ว กรุณาใช้เบอร์อื่น');
+            _showValidationError(
+                'เบอร์โทรศัพท์นี้ถูกใช้ไปแล้ว กรุณาใช้เบอร์อื่น');
           }
           return false;
-        } else if (message.toLowerCase().contains('tax number already exists') || 
-                   (message.toLowerCase().contains('เลขบัตรประชาชน') && message.toLowerCase().contains('ซ้ำ'))) {
-       
+        } else if (message
+                .toLowerCase()
+                .contains('tax number already exists') ||
+            (message.toLowerCase().contains('เลขบัตรประชาชน') &&
+                message.toLowerCase().contains('ซ้ำ'))) {
           if (auction != null) {
-            _showDuplicateFieldDialog(context, 'เลขบัตรประชาชน', 'taxNumber', auction);
+            _showDuplicateFieldDialog(
+                context, 'เลขบัตรประชาชน', 'taxNumber', auction);
           } else {
-            _showValidationError('เลขบัตรประชาชนนี้ถูกใช้ไปแล้ว กรุณาใช้เลขบัตรอื่น');
+            _showValidationError(
+                'เลขบัตรประชาชนนี้ถูกใช้ไปแล้ว กรุณาใช้เลขบัตรอื่น');
           }
           return false;
         } else {
@@ -664,7 +682,6 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
           'รายการประมูลของฉัน',
           style: TextStyle(
             color: Colors.black,
-           
             fontSize: 20,
           ),
         ),
@@ -767,28 +784,116 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                                     return widgets.ActiveBidCard(
                                       auction: auction,
                                       onTap: () async {
-                                        final productService = ProductService(
-                                            baseUrl: Config.apiUrlAuction);
+                                        // ตรวจสอบ type ของ auction
+                                        final typeCode =
+                                            auction['quotation_type_code'] ??
+                                                auction['type_code'];
+                                        final quantityRequested =
+                                            auction['quantity_requested'] ?? 0;
+                                        final totalAmount =
+                                            auction['total_amount'] ?? 0;
                                         final quotationId = auction[
-                                                'quotation_more_information_id'] ??
-                                            auction['id'];
-                                        // ดึงข้อมูลล่าสุดจาก API (เหมือนหน้า home)
-                                        final auctionData = await productService
-                                            .getAuctionProductById(
-                                                quotationId.toString());
-                                        // แปลงข้อมูลให้อยู่ในรูปแบบเดียวกับหน้า home
-                                        final formattedAuctionData =
-                                            productService.convertToAppFormat(
-                                                auctionData ?? {});
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                AuctionDetailViewPage(
-                                                    auctionData:
-                                                        formattedAuctionData),
-                                          ),
-                                        );
+                                                'quotation_more_information_id']
+                                            ?.toString();
+                                        final auctionType =
+                                            auction['quotation_type_code'] ??
+                                                '';
+                                        final quantityDiscountEnabled = auction[
+                                                'quantity_discount_enabled'] ??
+                                            '';
+
+                                        // เช็คว่าเป็น AS03 หรือไม่ (ใช้ข้อมูลจาก API)
+                                        final isAS03 = typeCode == 'AS03' ||
+                                            auctionType ==
+                                                'quantity_discount' ||
+                                            (quantityDiscountEnabled == 't' &&
+                                                quantityRequested > 0);
+
+                                        if (isAS03) {
+                                          // สำหรับ AS03 ไปหน้า quantity reduction
+                                          final productService = ProductService(
+                                              baseUrl: Config.apiUrlAuction);
+                                          final quotationId = auction[
+                                                  'quotation_more_information_id'] ??
+                                              auction['id'];
+
+                                          // ดึงข้อมูลล่าสุดจาก API
+                                          final allQuotations =
+                                              await productService
+                                                  .getAllQuotations();
+                                          final matchingQuotation =
+                                              allQuotations?.firstWhere(
+                                            (q) =>
+                                                q['quotation_more_information_id']
+                                                    ?.toString() ==
+                                                quotationId.toString(),
+                                            orElse: () => <String, dynamic>{},
+                                          );
+
+                                          if (matchingQuotation != null &&
+                                              matchingQuotation.isNotEmpty) {
+                                            // ใช้ข้อมูลจาก getAllQuotations() และเพิ่ม type_code
+                                            final formattedAuctionData =
+                                                productService
+                                                    .convertToAppFormat(
+                                                        matchingQuotation);
+                                            // เพิ่ม type_code เพื่อให้หน้า quantity reduction รู้ว่าเป็น AS03
+                                            formattedAuctionData[
+                                                'quotation_type_code'] = 'AS03';
+                                            formattedAuctionData['type_code'] =
+                                                'AS03';
+
+                                            // นำทางไปยัง QuantityReductionAuctionsPage
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    QuantityReductionAuctionsPage(),
+                                              ),
+                                            );
+                                          } else {
+                                            // Fallback: ใช้ข้อมูลเดิมและเพิ่ม type_code
+                                            final fallbackData =
+                                                Map<String, dynamic>.from(
+                                                    auction);
+                                            fallbackData[
+                                                'quotation_type_code'] = 'AS03';
+                                            fallbackData['type_code'] = 'AS03';
+
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    QuantityReductionAuctionsPage(),
+                                              ),
+                                            );
+                                          }
+                                        } else {
+                                          // สำหรับ auction ปกติ ใช้ logic เดิม
+                                          final productService = ProductService(
+                                              baseUrl: Config.apiUrlAuction);
+                                          final quotationId = auction[
+                                                  'quotation_more_information_id'] ??
+                                              auction['id'];
+                                          // ดึงข้อมูลล่าสุดจาก API (เหมือนหน้า home)
+                                          final auctionData =
+                                              await productService
+                                                  .getAuctionProductById(
+                                                      quotationId.toString());
+                                          // แปลงข้อมูลให้อยู่ในรูปแบบเดียวกับหน้า home
+                                          final formattedAuctionData =
+                                              productService.convertToAppFormat(
+                                                  auctionData ?? {});
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  AuctionDetailViewPage(
+                                                      auctionData:
+                                                          formattedAuctionData),
+                                            ),
+                                          );
+                                        }
                                       },
                                       getStatusColor: _getStatusColor,
                                       getStatusText: _getStatusText,
@@ -824,56 +929,150 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                                       return widgets.ActiveBidCard(
                                         auction: auction,
                                         onTap: () async {
-                                          // ใช้ ProductService ในการจัดการรูปภาพ
-                                          final productService = ProductService(
-                                              baseUrl: Config.apiUrlAuction);
-
-                                          // ดึงข้อมูลจาก getAllQuotations() เหมือนหน้า home
-                                          final allQuotations =
-                                              await productService
-                                                  .getAllQuotations();
+                                          // ตรวจสอบ type ของ auction
+                                          final typeCode =
+                                              auction['quotation_type_code'] ??
+                                                  auction['type_code'];
+                                          final quantityRequested =
+                                              auction['quantity_requested'] ??
+                                                  0;
+                                          final totalAmount =
+                                              auction['total_amount'] ?? 0;
                                           final quotationId = auction[
-                                                  'quotation_more_information_id'] ??
-                                              auction['id'];
+                                                  'quotation_more_information_id']
+                                              ?.toString();
+                                          final auctionType =
+                                              auction['auction_type'] ?? '';
+                                          final quantityDiscountEnabled = auction[
+                                                  'quantity_discount_enabled'] ??
+                                              '';
 
-                                          // หา quotation ที่ตรงกับ ID
-                                          final matchingQuotation =
-                                              allQuotations?.firstWhere(
-                                            (q) =>
-                                                q['quotation_more_information_id']
-                                                    ?.toString() ==
-                                                quotationId.toString(),
-                                            orElse: () => <String, dynamic>{},
-                                          );
+                                          // เช็คว่าเป็น AS03 หรือไม่ (ใช้ข้อมูลจาก API)
+                                          final isAS03 = typeCode == 'AS03' ||
+                                              auctionType ==
+                                                  'quantity_discount' ||
+                                              (quantityDiscountEnabled == 't' &&
+                                                  quantityRequested > 0);
 
-                                          if (matchingQuotation != null &&
-                                              matchingQuotation.isNotEmpty) {
-                                            // ใช้ข้อมูลจาก getAllQuotations() เหมือนหน้า home
-                                            final formattedAuctionData =
-                                                productService
-                                                    .convertToAppFormat(
-                                                        matchingQuotation);
+                                          if (isAS03) {
+                                            // สำหรับ AS03 ไปหน้า quantity reduction
+                                            final productService =
+                                                ProductService(
+                                                    baseUrl:
+                                                        Config.apiUrlAuction);
+                                            final quotationId = auction[
+                                                    'quotation_more_information_id'] ??
+                                                auction['id'];
 
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    AuctionDetailViewPage(
-                                                        auctionData:
-                                                            formattedAuctionData),
-                                              ),
+                                            // ดึงข้อมูลจาก getAllQuotations() เหมือนหน้า home
+                                            final allQuotations =
+                                                await productService
+                                                    .getAllQuotations();
+
+                                            // หา quotation ที่ตรงกับ ID
+                                            final matchingQuotation =
+                                                allQuotations?.firstWhere(
+                                              (q) =>
+                                                  q['quotation_more_information_id']
+                                                      ?.toString() ==
+                                                  quotationId.toString(),
+                                              orElse: () => <String, dynamic>{},
                                             );
+
+                                            if (matchingQuotation != null &&
+                                                matchingQuotation.isNotEmpty) {
+                                              // ใช้ข้อมูลจาก getAllQuotations() และเพิ่ม type_code
+                                              final formattedAuctionData =
+                                                  productService
+                                                      .convertToAppFormat(
+                                                          matchingQuotation);
+                                              // เพิ่ม type_code เพื่อให้หน้า quantity reduction รู้ว่าเป็น AS03
+                                              formattedAuctionData[
+                                                      'quotation_type_code'] =
+                                                  'AS03';
+                                              formattedAuctionData[
+                                                  'type_code'] = 'AS03';
+
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      QuantityReductionAuctionsPage(),
+                                                ),
+                                              );
+                                            } else {
+                                              // Fallback: ใช้ข้อมูลเดิมและเพิ่ม type_code
+                                              final fallbackData =
+                                                  Map<String, dynamic>.from(
+                                                      auction);
+                                              fallbackData[
+                                                      'quotation_type_code'] =
+                                                  'AS03';
+                                              fallbackData['type_code'] =
+                                                  'AS03';
+
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      QuantityReductionAuctionsPage(),
+                                                ),
+                                              );
+                                            }
                                           } else {
-                                            // Fallback: ใช้ข้อมูลเดิม
+                                            // สำหรับ auction ปกติ ใช้ logic เดิม
+                                            // ใช้ ProductService ในการจัดการรูปภาพ
+                                            final productService =
+                                                ProductService(
+                                                    baseUrl:
+                                                        Config.apiUrlAuction);
 
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    AuctionDetailViewPage(
-                                                        auctionData: auction),
-                                              ),
+                                            // ดึงข้อมูลจาก getAllQuotations() เหมือนหน้า home
+                                            final allQuotations =
+                                                await productService
+                                                    .getAllQuotations();
+                                            final quotationId = auction[
+                                                    'quotation_more_information_id'] ??
+                                                auction['id'];
+
+                                            // หา quotation ที่ตรงกับ ID
+                                            final matchingQuotation =
+                                                allQuotations?.firstWhere(
+                                              (q) =>
+                                                  q['quotation_more_information_id']
+                                                      ?.toString() ==
+                                                  quotationId.toString(),
+                                              orElse: () => <String, dynamic>{},
                                             );
+
+                                            if (matchingQuotation != null &&
+                                                matchingQuotation.isNotEmpty) {
+                                              // ใช้ข้อมูลจาก getAllQuotations() เหมือนหน้า home
+                                              final formattedAuctionData =
+                                                  productService
+                                                      .convertToAppFormat(
+                                                          matchingQuotation);
+
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      AuctionDetailViewPage(
+                                                          auctionData:
+                                                              formattedAuctionData),
+                                                ),
+                                              );
+                                            } else {
+                                              // Fallback: ใช้ข้อมูลเดิม
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      AuctionDetailViewPage(
+                                                          auctionData: auction),
+                                                ),
+                                              );
+                                            }
                                           }
                                         },
                                         getStatusColor: _getStatusColor,
@@ -1041,7 +1240,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
     // เติมข้อมูลที่อยู่ใหม่
     _controllers['village']!.text = profile['village'] ?? '';
     _controllers['road']!.text = profile['road'] ?? '';
-    _controllers['postalCode']!.text = profile['postal_code'] ?? profile['zip_code'] ?? '';
+    _controllers['postalCode']!.text =
+        profile['postal_code'] ?? profile['zip_code'] ?? '';
     _controllers['country']!.text = profile['country'] ?? 'Thailand';
 
     // บันทึกข้อมูลลง SharedPreferences ด้วย prefix winner_ เพื่อให้ validateWinnerInfo ใช้งานได้
@@ -1062,7 +1262,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
       // บันทึกข้อมูลที่อยู่ใหม่
       await prefs.setString('winner_village', profile['village'] ?? '');
       await prefs.setString('winner_road', profile['road'] ?? '');
-      await prefs.setString('winner_postal_code', profile['postal_code'] ?? profile['zip_code'] ?? '');
+      await prefs.setString('winner_postal_code',
+          profile['postal_code'] ?? profile['zip_code'] ?? '');
       await prefs.setString('winner_country', profile['country'] ?? 'Thailand');
     } catch (e) {}
   }
@@ -1123,10 +1324,13 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
       Map<String, dynamic> auction, Map<String, dynamic> profile) async {
     // เติมข้อมูลหมู่ ถนน รหัสไปรษณีย์ ประเทศ จาก SharedPreferences ถ้ายังไม่มีใน profile
     final prefs = await SharedPreferences.getInstance();
-    profile['village'] = profile['village'] ?? prefs.getString('winner_village') ?? '';
+    profile['village'] =
+        profile['village'] ?? prefs.getString('winner_village') ?? '';
     profile['road'] = profile['road'] ?? prefs.getString('winner_road') ?? '';
-    profile['postal_code'] = profile['postal_code'] ?? prefs.getString('winner_postal_code') ?? '';
-    profile['country'] = profile['country'] ?? prefs.getString('winner_country') ?? 'Thailand';
+    profile['postal_code'] =
+        profile['postal_code'] ?? prefs.getString('winner_postal_code') ?? '';
+    profile['country'] =
+        profile['country'] ?? prefs.getString('winner_country') ?? 'Thailand';
 
     final zip = findZipCode(
           profile['province_id'],
@@ -1270,7 +1474,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                         context,
                         auction,
                         _controllers,
-                        ([Map<String, dynamic>? _]) => _saveWinnerInfoToServer(auction),
+                        ([Map<String, dynamic>? _]) =>
+                            _saveWinnerInfoToServer(auction),
                         _validateForm,
                         _showValidationError,
                       );
@@ -1291,7 +1496,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      dialogs.AuctionDialogs.showPaymentDialog(context, auction);
+                      dialogs.AuctionDialogs.showPaymentDialog(
+                          context, auction);
                     },
                     icon: Icon(Icons.payment, color: Colors.white),
                     label: Text('ติดต่อชำระเงิน',
@@ -1332,7 +1538,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
     final district = profile['district_name'] ?? '';
     final province = profile['province_name'] ?? '';
     final country = profile['country'] ?? 'Thailand';
-    
+
     // สร้างที่อยู่เต็มรูปแบบ พร้อมตัวย่อ
     final List<String> addressParts = [];
     if (address.isNotEmpty) addressParts.add(address);
@@ -1401,7 +1607,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                   context,
                   auction,
                   _controllers,
-                  ([Map<String, dynamic>? _]) => _saveWinnerInfoToServer(auction),
+                  ([Map<String, dynamic>? _]) =>
+                      _saveWinnerInfoToServer(auction),
                   _validateForm,
                   _showValidationError,
                 );

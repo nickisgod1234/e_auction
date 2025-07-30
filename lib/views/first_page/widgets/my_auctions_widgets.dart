@@ -162,56 +162,146 @@ class ActiveBidCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    // ตรวจสอบ type ของ auction
+    final typeCode = auction['quotation_type_code'] ?? auction['type_code'];
+    final isAS03 = typeCode == 'AS03';
+    
+    return Container(
       margin: EdgeInsets.symmetric(
-          horizontal: small ? 4 : 16, vertical: small ? 6 : 8),
-      child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: FutureBuilder<String>(
-            future: getAuctionImageWithFallback(auction),
-            builder: (context, snapshot) {
-              final imageUrl = snapshot.data ?? 'assets/images/noimage.jpg';
-              return _buildAuctionImage(imageUrl,
-                  width: small ? 44 : 60, height: small ? 44 : 60);
-            },
+          horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
           ),
-        ),
-        contentPadding: EdgeInsets.symmetric(
-            horizontal: small ? 8 : 16, vertical: small ? 6 : 8),
-        title: Text(
-          auction['title'],
-          style:
-              TextStyle(fontWeight: FontWeight.bold, fontSize: small ? 14 : 16),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('การประมูลของฉัน: ${Format.formatCurrency(auction['myBid'])}',
-                style: TextStyle(fontSize: small ? 12 : 14)),
-            Text(
-                'ราคาปัจจุบัน: ${Format.formatCurrency(auction['currentPrice'])}',
-                style: TextStyle(fontSize: small ? 12 : 14)),
-            Text(
-                '${auction['timeRemaining']} • อันดับที่ ${auction['myBidRank']}',
-                style: TextStyle(fontSize: small ? 12 : 14)),
-          ],
-        ),
-        trailing: Container(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: getStatusColor(auction['status'] ?? 'unknown'),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            getStatusText(auction['status'] ?? 'unknown'),
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: small ? 10 : 12,
-                fontWeight: FontWeight.bold),
-          ),
-        ),
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.all(small ? 12 : 16),
+          child: Row(
+            children: [
+              // รูปภาพ
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: FutureBuilder<String>(
+                  future: getAuctionImageWithFallback(auction),
+                  builder: (context, snapshot) {
+                    final imageUrl = snapshot.data ?? 'assets/images/noimage.jpg';
+                    return _buildAuctionImage(imageUrl,
+                        width: small ? 60 : 80, height: small ? 60 : 80);
+                  },
+                ),
+              ),
+              SizedBox(width: 16),
+              // ข้อมูล
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // หัวข้อและป้าย
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            auction['title'],
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold, 
+                              fontSize: small ? 14 : 16,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                        if (isAS03)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.trending_down, color: Colors.purple, size: 14),
+                                SizedBox(width: 4),
+                                Text(
+                                  'ลดจำนวน',
+                                  style: TextStyle(
+                                    color: Colors.purple,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    // ข้อมูลรายละเอียด
+                    if (isAS03) ...[
+                      // สำหรับ AS03 แสดงข้อมูลการจอง
+                      Text(
+                        'จำนวนที่จอง: ${auction['quantity_requested'] ?? auction['myBid'] ?? 0} รายการ',
+                        style: TextStyle(fontSize: small ? 12 : 14, color: Colors.purple[700], fontWeight: FontWeight.w500),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'ราคาต่อชิ้น: ${Format.formatCurrency(auction['currentPrice'])}',
+                        style: TextStyle(fontSize: small ? 12 : 14, color: Colors.grey[600]),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'ยอดรวม: ${Format.formatCurrency((auction['quantity_requested'] ?? 0) * (auction['currentPrice'] ?? 0))}',
+                        style: TextStyle(fontSize: small ? 12 : 14, fontWeight: FontWeight.w600, color: Colors.grey[800]),
+                      ),
+                    ] else ...[
+                      // สำหรับ auction ปกติ
+                      Text(
+                        'การประมูลของฉัน: ${Format.formatCurrency(auction['myBid'])}',
+                        style: TextStyle(fontSize: small ? 12 : 14, color: Colors.grey[600]),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'ราคาปัจจุบัน: ${Format.formatCurrency(auction['currentPrice'])}',
+                        style: TextStyle(fontSize: small ? 12 : 14, color: Colors.grey[600]),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '${auction['timeRemaining']} • อันดับที่ ${auction['myBidRank']}',
+                        style: TextStyle(fontSize: small ? 12 : 14, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              // สถานะ
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isAS03 ? Colors.purple : getStatusColor(auction['status'] ?? 'unknown'),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  isAS03 ? 'จองแล้ว' : getStatusText(auction['status'] ?? 'unknown'),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: small ? 10 : 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

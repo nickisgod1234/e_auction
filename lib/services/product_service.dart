@@ -720,6 +720,8 @@ class ProductService {
       'quotation_type_description': product['quotation_type_description'] ?? '',
       'quotation_type_code': product['quotation_type_code'] ?? '',
       'quantity': quantity, // ใช้ข้อมูลจาก API โดยตรง
+      'current_quantity_sold': product['current_quantity_sold'] ?? 0,
+      'max_quantity_available': product['max_quantity_available'] ?? 0,
       'brand': product['brand'] ?? 'ไม่ระบุ',
       'model': product['model'] ?? 'ไม่ระบุ',
       'material': product['material'] ?? 'ไม่ระบุ',

@@ -96,6 +96,13 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
     return 850000; // default value
   }
 
+  // Helper method to check if this is AS03 type
+  bool _isAS03Type() {
+    final typeCode = widget.auctionData['quotation_type_code']?.toString() ?? '';
+    final typeCode2 = widget.auctionData['type_code']?.toString() ?? '';
+    return typeCode == 'AS03' || typeCode2 == 'AS03';
+  }
+
   // Helper method to parse date time
   DateTime? _parseDateTime(dynamic dateTimeValue) {
 
@@ -256,34 +263,34 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
                       ),
                     ),
                   // ป้ายเพิ่มเติมสำหรับ AS03 (ประมูลแบบลดตามจำนวน)
-                  if (widget.auctionData['quotation_type_code'] == 'AS03')
-                    Container(
-                      margin: EdgeInsets.only(top: 4),
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.trending_down,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'ลดตามจำนวน: ${widget.auctionData['quantity'] ?? 0} ชิ้น',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  // if (widget.auctionData['quotation_type_code'] == 'AS03')
+                  //   Container(
+                  //     margin: EdgeInsets.only(top: 4),
+                  //     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.orange.withOpacity(0.8),
+                  //       borderRadius: BorderRadius.circular(12),
+                  //     ),
+                  //     child: Row(
+                  //       mainAxisSize: MainAxisSize.min,
+                  //       children: [
+                  //         Icon(
+                  //           Icons.trending_down,
+                  //           color: Colors.white,
+                  //           size: 14,
+                  //         ),
+                  //         SizedBox(width: 4),
+                  //         Text(
+                  //           'ลดตามจำนวน: ${widget.auctionData['quantity'] ?? 0} ชิ้น',
+                  //           style: TextStyle(
+                  //             color: Colors.white,
+                  //             fontWeight: FontWeight.w600,
+                  //             fontSize: 11,
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
                 ],
               ),
             ),
@@ -353,7 +360,7 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'ราคาปัจจุบัน: ${Format.formatCurrency(_getCurrentPriceAsInt())}',
+                          _isAS03Type() ? 'ราคาต่อชิ้น: ${Format.formatCurrency(_getCurrentPriceAsInt())}' : 'ราคา: ${Format.formatCurrency(_getCurrentPriceAsInt())}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.white,
