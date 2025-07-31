@@ -977,8 +977,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                         Column(
                           children: [
                             Text(
-                              "เมื่อดำเนินการต่อ แสดงว่าคุณยอมรับเงื่อนไขการใช้งาน\n"
-                              "และนโยบายความเป็นส่วนตัวของเรา",
+                              "พัฒนาโดย บริษัท CLOUDMATE\n"
+                              "https://cloudmate-th.com/",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: context.customTheme.primaryColor,

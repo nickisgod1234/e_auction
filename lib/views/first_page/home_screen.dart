@@ -253,16 +253,51 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _getFilteredAuctions(
       List<Map<String, dynamic>> auctions) {
     // Filter by search query if exists
-    if (_searchQuery.isEmpty) {
-      return auctions;
+    List<Map<String, dynamic>> filteredAuctions = auctions;
+    
+    if (_searchQuery.isNotEmpty) {
+      filteredAuctions = auctions.where((auction) {
+        final title = auction['title']?.toString().toLowerCase() ?? '';
+        final searchLower = _searchQuery.toLowerCase();
+        return title.contains(searchLower);
+      }).toList();
     }
 
-    return auctions.where((auction) {
-      final title = auction['title']?.toString().toLowerCase() ?? '';
-      final searchLower = _searchQuery.toLowerCase();
-
-      return title.contains(searchLower);
+    // เพิ่มเงื่อนไขสำหรับ AS03: ถ้าสินค้าครบจำนวนหรือเวลาหมดให้หายไป
+    return filteredAuctions.where((auction) {
+      final typeCode = auction['quotation_type_code']?.toString() ?? '';
+      final typeCode2 = auction['type_code']?.toString() ?? '';
+      final isAS03 = typeCode == 'AS03' || typeCode2 == 'AS03';
+      
+      if (isAS03) {
+        // ตรวจสอบว่าสินค้าครบจำนวนหรือไม่
+        final currentQuantitySold = auction['current_quantity_sold'] ?? 0;
+        final maxQuantityAvailable = auction['max_quantity_available'] ?? 0;
+        final isQuantityFull = currentQuantitySold >= maxQuantityAvailable && maxQuantityAvailable > 0;
+        
+        // ตรวจสอบว่าเวลาหมดหรือไม่
+        final endDate = auction['auction_end_date'];
+        final isTimeExpired = _isTimeExpired(endDate);
+        
+        // ถ้าสินค้าครบจำนวนหรือเวลาหมด ให้ไม่แสดง card
+        return !isQuantityFull && !isTimeExpired;
+      }
+      
+      return true; // สำหรับ type อื่นๆ แสดงตามปกติ
     }).toList();
+  }
+
+  // Helper method to check if time is expired
+  bool _isTimeExpired(dynamic endDate) {
+    if (endDate == null) return false;
+    
+    try {
+      final end = DateTime.parse(endDate.toString());
+      final now = DateTime.now();
+      return now.isAfter(end);
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> _navigateToPage(BuildContext context, Widget page) async {

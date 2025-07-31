@@ -33,7 +33,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
   
   // เพิ่มตัวแปรสำหรับ countdown
   bool _isCountdownActive = false;
-  int _countdownSeconds = 60;
+  int _countdownSeconds = 15;
   Timer? _countdownTimer;
   int? _pendingBookingQuantity;
 
@@ -535,13 +535,13 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
         ),
         actions: [
           // ปุ่มรีเซทสำหรับทดสอบ
-          // IconButton(
-          //   icon: const Icon(Icons.refresh, color: Colors.orange),
-          //   onPressed: () {
-          //     _showResetConfirmationDialog();
-          //   },
-          //   tooltip: 'รีเซทการเข้าร่วม (สำหรับทดสอบ)',
-          // ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.orange),
+            onPressed: () {
+              _showResetConfirmationDialog();
+            },
+            tooltip: 'รีเซทการเข้าร่วม (สำหรับทดสอบ)',
+          ),
           IconButton(
             icon: const Icon(Icons.share, color: Colors.black),
             onPressed: () {
@@ -1350,7 +1350,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
                   ),
                   SizedBox(height: 8),
                   Text('• จำนวนสินค้าที่มี: $availableQuantity รายการ'),
-                  Text('• เมื่อจองแล้ว จะมีเวลา 60 วินาทีในการยกเลิก'),
+                  Text('• เมื่อจองแล้ว จะมีเวลา 15 วินาทีในการยกเลิก'),
                   Text('• ราคาจะลดลงอัตโนมัติตามเวลาที่กำหนด'),
                   Text('• ผู้ที่จองก่อนจะได้สิทธิ์ซื้อก่อน'),
                   SizedBox(height: 8),
@@ -1442,7 +1442,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
   void _startBookingCountdown(int quantity) {
     setState(() {
       _isCountdownActive = true;
-      _countdownSeconds = 60;
+      _countdownSeconds = 15;
       _pendingBookingQuantity = quantity;
     });
     
@@ -1459,7 +1459,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('เริ่มจอง! คุณมีเวลา 60 วินาทีในการยกเลิก (จำนวน: $quantity รายการ)'),
+        content: Text('เริ่มจอง! คุณมีเวลา 15 วินาทีในการยกเลิก (จำนวน: $quantity รายการ)'),
         backgroundColor: Colors.orange,
         duration: Duration(seconds: 3),
         action: SnackBarAction(
@@ -1476,7 +1476,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
     _countdownTimer?.cancel();
     setState(() {
       _isCountdownActive = false;
-      _countdownSeconds = 60;
+      _countdownSeconds = 15;
       _pendingBookingQuantity = null;
     });
     

@@ -122,7 +122,7 @@ class AppTheme {
       case 'morket':
         return 'MORKET';
       case 'E-Auction':
-        return 'E-Auction';
+        return 'BidDee';
       case 'client3':
         return 'Client 3 App';
       default:

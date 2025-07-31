@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>E-Auction</string>
+	<string>BidDee</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,11 +15,11 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>E-Auction</string>
+	<string>BidDee</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.7</string>
+	<string>1.0.8</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
@@ -32,7 +32,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>1.0.11</string>
+	<string>1.0.12</string>
 	<key>FLTEnableImpeller</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>
@@ -47,17 +47,17 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>E-Auction needs access to your camera to let you take and set your profile picture in the app.</string>
+	<string>BidDee needs access to your camera to let you take and set your profile picture in the app.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>E-Auction needs access to your contacts to allow you to connect with and invite people you know.</string>
+	<string>BidDee needs access to your contacts to allow you to connect with and invite people you know.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>E-Auction needs access to your location to provide seamless location-based services even when the app is in use or running in the background.</string>
+	<string>BidDee needs access to your location to provide seamless location-based services even when the app is in use or running in the background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>E-Auction needs access to your location to provide location-based services and improve your experience.</string>
+	<string>BidDee needs access to your location to provide location-based services and improve your experience.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>E-Auction needs access to your microphone to enable voice features within the app.</string>
+	<string>BidDee needs access to your microphone to enable voice features within the app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>E-Auction needs access to your photo library to allow you to choose a photo for your profile picture.</string>
+	<string>BidDee needs access to your photo library to allow you to choose a photo for your profile picture.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
@@ -84,6 +84,6 @@
 	<key>com.google.android.geo.API_KEY</key>
 	<string>AIzaSyCA8xOljgqkqVA_DQmjSockld3podZHLrM</string>
 	<key>NSUserNotificationUsageDescription</key>
-	<string>E-Auction needs to send you notifications about auction updates, bidding status, and important events.</string>
+	<string>BidDee needs to send you notifications about auction updates, bidding status, and important events.</string>
 </dict>
 </plist>
