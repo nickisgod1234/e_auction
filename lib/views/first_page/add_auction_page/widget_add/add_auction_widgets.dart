@@ -621,6 +621,12 @@ class AddAuctionWidgets {
     required Function(String) onMinIncrementChanged,
     required ValueChanged<bool> onPercentageChanged,
     required ValueChanged<double> onPercentageValueChanged,
+    // เพิ่ม parameters สำหรับการคำนวณราคา
+    TextEditingController? costPriceController,
+    TextEditingController? quantityController,
+    Function(String)? onCostPriceChanged,
+    Function(String)? onQuantityChanged,
+    required BuildContext context,
   }) {
     // คำนวณขั้นต่ำการเพิ่ม
     double minIncrement;
@@ -656,6 +662,197 @@ class AddAuctionWidgets {
             ),
             child: Column(
               children: [
+                // Cost Calculation Section
+                if (costPriceController != null && quantityController != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.calculate, color: Colors.orange[700], size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'คำนวณราคาขายอัตโนมัติ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Cost Price Input
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'ราคาทุนต่อชิ้น (บาท)',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  TextFormField(
+                                    controller: costPriceController,
+                                    keyboardType: TextInputType.number,
+                                    onChanged: onCostPriceChanged,
+                                    inputFormatters: [SimpleNumberInputFormatter()],
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 6,
+                                      ),
+                                      hintText: 'เช่น 10',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'จำนวนชิ้น',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  TextFormField(
+                                    controller: quantityController,
+                                    keyboardType: TextInputType.number,
+                                    onChanged: onQuantityChanged,
+                                    inputFormatters: [SimpleNumberInputFormatter()],
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 6,
+                                      ),
+                                      hintText: 'เช่น 100',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 12),
+                        
+                        // Calculation Result
+                        Builder(
+                          builder: (context) {
+                            final costPrice = double.tryParse(costPriceController.text.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+                            final quantity = double.tryParse(quantityController.text.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+                            final totalCost = costPrice * quantity;
+                            final suggestedPrice = totalCost * 0.2; // 20% ของต้นทุน
+                            
+                            return Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.orange[300]!),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('ต้นทุนรวม:', style: TextStyle(fontSize: 12)),
+                                      Text('฿${NumberFormat('#,###').format(totalCost)}', 
+                                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('ราคาขายแนะนำ (20%):', style: TextStyle(fontSize: 12)),
+                                      Text('฿${NumberFormat('#,###').format(suggestedPrice)}', 
+                                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange[700])),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        
+                        const SizedBox(height: 8),
+                        
+                        // Apply Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final costPrice = double.tryParse(costPriceController.text.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+                              final quantity = double.tryParse(quantityController.text.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+                              final totalCost = costPrice * quantity;
+                              final suggestedPrice = totalCost * 0.2;
+                              final suggestedMinIncrement = suggestedPrice * 0.2; // 20% ของราคาขาย
+                              
+                              if (suggestedPrice > 0) {
+                                startingPriceController.text = suggestedPrice.toInt().toString();
+                                onStartingPriceChanged(suggestedPrice.toInt().toString());
+                                
+                                // ตั้งค่าขั้นต่ำการเพิ่มเป็น 20% ของราคาขาย
+                                if (suggestedMinIncrement > 0) {
+                                  // ตั้งค่าขั้นต่ำการเพิ่มในช่อง
+                                  minIncrementController.text = suggestedMinIncrement.toInt().toString();
+                                  onMinIncrementChanged(suggestedMinIncrement.toInt().toString());
+                                  
+                                  // แสดง SnackBar แจ้งเตือน
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('ตั้งค่าขั้นต่ำการเพิ่ม: ฿${NumberFormat('#,###').format(suggestedMinIncrement.toInt())} (20% ของราคาขาย)'),
+                                      backgroundColor: Colors.blue,
+                                      duration: Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            icon: Icon(Icons.auto_fix_high, size: 16),
+                            label: const Text('ใช้ราคาขายแนะนำ'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                
                 // Starting Price Input
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

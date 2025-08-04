@@ -219,6 +219,16 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 },
                 onPercentageChanged: _updatePercentageMode,
                 onPercentageValueChanged: _updatePercentageValue,
+                // เพิ่ม parameters สำหรับการคำนวณราคา
+                costPriceController: _state.costPriceController,
+                quantityController: _state.quantityController,
+                onCostPriceChanged: (value) {
+                  setState(() {});
+                },
+                onQuantityChanged: (value) {
+                  setState(() {});
+                },
+                context: context,
               ),
 
               // Bidder Count Section

@@ -10,6 +10,10 @@ class AddAuctionState {
   final TextEditingController startingPriceController = TextEditingController();
   final TextEditingController minIncrementController = TextEditingController();
   
+  // Cost Calculation Controllers
+  final TextEditingController costPriceController = TextEditingController();
+  final TextEditingController quantityController = TextEditingController();
+  
   // Seller Info Controllers
   final TextEditingController sellerNameController = TextEditingController();
   final TextEditingController sellerPhoneController = TextEditingController();
@@ -41,6 +45,8 @@ class AddAuctionState {
   void initializeDefaults() {
     startingPriceController.text = '0';
     minIncrementController.text = '0';
+    costPriceController.text = '';
+    quantityController.text = '';
   }
   
   // Dispose all controllers
@@ -50,6 +56,8 @@ class AddAuctionState {
     notesController.dispose();
     startingPriceController.dispose();
     minIncrementController.dispose();
+    costPriceController.dispose();
+    quantityController.dispose();
     sellerNameController.dispose();
     sellerPhoneController.dispose();
     sellerEmailController.dispose();
