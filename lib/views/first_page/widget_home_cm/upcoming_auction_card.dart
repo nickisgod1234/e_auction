@@ -78,13 +78,15 @@ class UpcomingAuctionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = auctionData['status'] ?? 'unknown';
-
-
-
     // คำนวณเวลาที่เหลือ
     final startDate = _parseDateTime(auctionData['auction_start_date']);
     final endDate = _parseDateTime(auctionData['auction_end_date']);
+    
+    // ใช้ TimeCalculator เพื่อตรวจสอบสถานะที่ถูกต้อง
+    final status = startDate != null && endDate != null 
+        ? TimeCalculator.getAuctionStatus(startDate: startDate, endDate: endDate)
+        : (auctionData['status'] ?? 'unknown');
+    
     final timeRemaining = TimeCalculator.calculateTimeRemaining(
       startDate: startDate,
       endDate: endDate,

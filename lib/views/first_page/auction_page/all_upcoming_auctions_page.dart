@@ -83,7 +83,6 @@ class AllUpcomingAuctionsPage extends StatelessWidget {
                     }
                   },
                   priceLabel: 'ราคาเริ่มต้น: ${Format.formatCurrency(upcomingAuctions[index]['startingPrice'])}',
-                  timeLabel: 'จะเริ่มในอีก: ${upcomingAuctions[index]['timeUntilStart'] ?? 'ไม่ระบุ'}',
                   timeColor: Colors.blue,
                 );
               },

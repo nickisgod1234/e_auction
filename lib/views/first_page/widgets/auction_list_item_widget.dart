@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/views/first_page/widgets/auction_image_widget.dart';
+import 'package:e_auction/utils/time_calculator.dart';
 
 class AuctionListItemWidget extends StatelessWidget {
   final Map<String, dynamic> auction;
@@ -106,11 +107,66 @@ class AuctionListItemWidget extends StatelessWidget {
       return timeLabel!;
     }
 
-    // ตรวจสอบประเภทของเวลา
-    if (auction['timeRemaining'] != null) {
-      return auction['timeRemaining'];
-    } else if (auction['timeUntilStart'] != null) {
+    // Debug: ตรวจสอบข้อมูล
+    print('DEBUG: AuctionListItemWidget - auction keys: ${auction.keys.toList()}');
+    print('DEBUG: AuctionListItemWidget - auction_start_date: ${auction['auction_start_date']}');
+    print('DEBUG: AuctionListItemWidget - auction_end_date: ${auction['auction_end_date']}');
+    print('DEBUG: AuctionListItemWidget - status: ${auction['status']}');
+
+    // Helper method to parse date time (เหมือนกับใน UpcomingAuctionCard)
+    DateTime? _parseDateTime(dynamic dateTimeValue) {
+      if (dateTimeValue == null) {
+        return null;
+      }
+      
+      if (dateTimeValue is DateTime) {
+        return dateTimeValue;
+      } else if (dateTimeValue is String) {
+        try {
+          final parsed = DateTime.parse(dateTimeValue);
+          return parsed;
+        } catch (e) {
+          print('DEBUG: Error parsing date $dateTimeValue: $e');
+          return null;
+        }
+      }
+      
+      return null;
+    }
+
+    // คำนวณเวลาที่เหลือ
+    final startDate = _parseDateTime(auction['auction_start_date']);
+    final endDate = _parseDateTime(auction['auction_end_date']);
+    
+    print('DEBUG: AuctionListItemWidget - parsed startDate: $startDate');
+    print('DEBUG: AuctionListItemWidget - parsed endDate: $endDate');
+    
+    if (startDate != null && endDate != null) {
+      // ใช้ TimeCalculator เพื่อตรวจสอบสถานะที่ถูกต้อง
+      final status = TimeCalculator.getAuctionStatus(
+        startDate: startDate,
+        endDate: endDate,
+      );
+      
+      print('DEBUG: AuctionListItemWidget - calculated status: $status');
+      
+      final timeRemaining = TimeCalculator.calculateTimeRemaining(
+        startDate: startDate,
+        endDate: endDate,
+        status: status,
+      );
+      
+      print('DEBUG: AuctionListItemWidget - timeRemaining: $timeRemaining');
+      return timeRemaining;
+    }
+
+    // Fallback ถ้าไม่มีวันที่
+    if (auction['timeUntilStart'] != null) {
+      print('DEBUG: AuctionListItemWidget - using fallback timeUntilStart: ${auction['timeUntilStart']}');
       return 'จะเริ่มในอีก: ${auction['timeUntilStart']}';
+    } else if (auction['timeRemaining'] != null) {
+      print('DEBUG: AuctionListItemWidget - using fallback timeRemaining: ${auction['timeRemaining']}');
+      return auction['timeRemaining'];
     } else if (auction['completedDate'] != null) {
       return auction['completedDate'];
     }
