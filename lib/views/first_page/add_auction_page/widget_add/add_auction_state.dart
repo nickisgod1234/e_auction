@@ -13,6 +13,7 @@ class AddAuctionState {
   // Cost Calculation Controllers
   final TextEditingController costPriceController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
+  bool showCostCalculation = false;
   
   // Seller Info Controllers
   final TextEditingController sellerNameController = TextEditingController();
@@ -91,6 +92,10 @@ class AddAuctionState {
     percentageValue = value;
   }
   
+  // Update show cost calculation
+  void updateShowCostCalculation(bool show) {
+    showCostCalculation = show;
+  }
 
   
   // Update quotation types

@@ -229,6 +229,11 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                   setState(() {});
                 },
                 context: context,
+                showCostCalculation: _state.showCostCalculation,
+                onShowCostCalculationChanged: (show) {
+                  _state.updateShowCostCalculation(show);
+                  setState(() {});
+                },
               ),
 
               // Bidder Count Section
