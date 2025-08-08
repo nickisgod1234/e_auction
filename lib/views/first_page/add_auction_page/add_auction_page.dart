@@ -113,7 +113,10 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
 
     try {
       final auctionData = _state.getFormattedAuctionData();
-      final result = await AddAuctionMethods.saveAuction(auctionData: auctionData);
+      final result = await AddAuctionMethods.saveAuction(
+        auctionData: auctionData,
+        imageFile: _state.selectedImage,
+      );
       
       if (result['status'] == 'success') {
         AddAuctionMethods.showSuccessDialog(context);
@@ -246,10 +249,6 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
               AddAuctionWidgets.buildSellerInfoSection(
                 sellerNameController: _state.sellerNameController,
                 sellerPhoneController: _state.sellerPhoneController,
-                sellerEmailController: _state.sellerEmailController,
-                sellerAddressController: _state.sellerAddressController,
-                sellerIdCardController: _state.sellerIdCardController,
-                sellerCompanyController: _state.sellerCompanyController,
               ),
 
               // Submit Button

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:e_auction/services/add_auction_service/add_auction_service.dart';
+import 'package:intl/intl.dart';
 
 class AddAuctionState {
   // Form Controllers
@@ -16,12 +17,8 @@ class AddAuctionState {
   bool showCostCalculation = false;
   
   // Seller Info Controllers
-  final TextEditingController sellerNameController = TextEditingController();
-  final TextEditingController sellerPhoneController = TextEditingController();
-  final TextEditingController sellerEmailController = TextEditingController();
-  final TextEditingController sellerAddressController = TextEditingController();
-  final TextEditingController sellerIdCardController = TextEditingController();
-  final TextEditingController sellerCompanyController = TextEditingController();
+  TextEditingController sellerNameController = TextEditingController();
+  TextEditingController sellerPhoneController = TextEditingController();
   
   // Form Key
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -61,10 +58,6 @@ class AddAuctionState {
     quantityController.dispose();
     sellerNameController.dispose();
     sellerPhoneController.dispose();
-    sellerEmailController.dispose();
-    sellerAddressController.dispose();
-    sellerIdCardController.dispose();
-    sellerCompanyController.dispose();
   }
   
   // Update selected image
@@ -157,27 +150,33 @@ class AddAuctionState {
   
   // Get auction data for API
   Map<String, dynamic> getAuctionData() {
-    return {
+    final data = {
       'product_name': productNameController.text,
       'description': descriptionController.text,
       'notes': notesController.text,
       'starting_price': getCurrentPrice(),
       'min_increment': getMinIncrement(),
-      'is_percentage': isPercentage,
-      'percentage_value': percentageValue,
-      // ไม่ส่ง bidder_count ไป API
-      'start_date': startDate?.toIso8601String(),
-      'end_date': endDate?.toIso8601String(),
-      'quotation_type_id': selectedQuotationTypeId,
-      'quotation_type_name': selectedQuotationTypeName,
+      'start_date': startDate != null ? DateFormat('yyyy-MM-dd').format(startDate!) : '',
+      'end_date': endDate != null ? DateFormat('yyyy-MM-dd').format(endDate!) : '',
+      'purchase_order_type_id': selectedQuotationTypeId,
       'seller_name': sellerNameController.text,
       'seller_phone': sellerPhoneController.text,
-      'seller_email': sellerEmailController.text,
-      'seller_address': sellerAddressController.text,
-      'seller_id_card': sellerIdCardController.text,
-      'seller_company': sellerCompanyController.text,
-      'image_path': selectedImage?.path,
     };
+    
+    // Debug: Print the raw auction data
+    print('DEBUG: Raw auction data from form:');
+    print('Product Name: ${data['product_name']}');
+    print('Description: ${data['description']}');
+    print('Notes: ${data['notes']}');
+    print('Starting Price: ${data['starting_price']}');
+    print('Min Increment: ${data['min_increment']}');
+    print('Start Date: ${data['start_date']}');
+    print('End Date: ${data['end_date']}');
+    print('Purchase Order Type ID: ${data['purchase_order_type_id']}');
+    print('Seller Name: ${data['seller_name']}');
+    print('Seller Phone: ${data['seller_phone']}');
+    
+    return data;
   }
 
   // Get formatted auction data for API using service
@@ -194,10 +193,6 @@ class AddAuctionState {
     minIncrementController.text = '100';
     sellerNameController.clear();
     sellerPhoneController.clear();
-    sellerEmailController.clear();
-    sellerAddressController.clear();
-    sellerIdCardController.clear();
-    sellerCompanyController.clear();
     
     startDate = null;
     endDate = null;
@@ -216,9 +211,6 @@ class AddAuctionState {
            startingPriceController.text.isNotEmpty &&
            sellerNameController.text.isNotEmpty &&
            sellerPhoneController.text.isNotEmpty &&
-           sellerEmailController.text.isNotEmpty &&
-           sellerAddressController.text.isNotEmpty &&
-           sellerIdCardController.text.isNotEmpty &&
            startDate != null &&
            endDate != null &&
            selectedQuotationTypeId != null;

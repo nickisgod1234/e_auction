@@ -64,34 +64,66 @@ class AddAuctionService {
     }
   }
 
-  // Save Auction
+  // Save Auction with new API
   static Future<Map<String, dynamic>> saveAuction({
     required Map<String, dynamic> auctionData,
+    File? imageFile,
   }) async {
     try {
-      final url = '$baseUrl/add_auction_controller.php';
+      final url = '$baseUrl/quotation_controller.php?action=create_flutter_auction';
 
-      final response = await http
-          .post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(auctionData),
-      )
-          .timeout(
-        const Duration(seconds: 30),
+      // Create multipart request
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+
+      // Add data as JSON string
+      final dataJson = jsonEncode(auctionData);
+      request.fields['data'] = dataJson;
+      
+      // Debug: Print the data being sent
+      print('DEBUG: Sending auction data to API:');
+      print('URL: $url');
+      print('Data: $dataJson');
+
+      // Add image if provided
+      if (imageFile != null && await imageFile.exists()) {
+        final imageStream = http.ByteStream(imageFile.openRead());
+        final imageLength = await imageFile.length();
+        
+        final multipartFile = http.MultipartFile(
+          'images',
+          imageStream,
+          imageLength,
+          filename: imageFile.path.split('/').last,
+        );
+        
+        request.files.add(multipartFile);
+      }
+
+      // Send request
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 60), // เพิ่ม timeout สำหรับการอัปโหลดรูป
         onTimeout: () {
-          throw TimeoutException('Request timeout after 30 seconds');
+          throw TimeoutException('Request timeout after 60 seconds');
         },
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> result = jsonDecode(response.body);
+      // Get response
+      final response = await http.Response.fromStream(streamedResponse);
 
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> result = jsonDecode(response.body);
+        
+        // Debug: Print the response
+        print('DEBUG: API Response:');
+        print('Status Code: ${response.statusCode}');
+        print('Response Body: ${response.body}');
+        print('Parsed Result: $result');
+        
         return result;
       } else {
+        print('DEBUG: API Error Response:');
+        print('Status Code: ${response.statusCode}');
+        print('Response Body: ${response.body}');
         throw Exception(
             'Failed to save auction: ${response.statusCode} - ${response.body}');
       }
@@ -104,17 +136,6 @@ class AddAuctionService {
       } else {
         throw Exception('Error saving auction: $e');
       }
-    }
-  }
-
-  // Upload Image (if needed)
-  static Future<String?> uploadImage(String imagePath) async {
-    try {
-      // TODO: Implement image upload if needed
-      // This would typically involve multipart/form-data
-      return imagePath;
-    } catch (e) {
-      throw Exception('Error uploading image: $e');
     }
   }
 
@@ -131,9 +152,19 @@ class AddAuctionService {
       errors['description'] = 'กรุณากรอกรายละเอียดสินค้า';
     }
 
-    if (data['starting_price'] == null ||
-        (data['starting_price'] as num) <= 0) {
+    // Fix starting_price validation
+    final startingPrice = data['starting_price'];
+    if (startingPrice == null) {
       errors['starting_price'] = 'กรุณากรอกราคาเริ่มต้น';
+    } else {
+      try {
+        final price = double.tryParse(startingPrice.toString());
+        if (price == null || price <= 0) {
+          errors['starting_price'] = 'กรุณากรอกราคาเริ่มต้น';
+        }
+      } catch (e) {
+        errors['starting_price'] = 'กรุณากรอกราคาเริ่มต้น';
+      }
     }
 
     if (data['start_date']?.toString().isEmpty ?? true) {
@@ -152,16 +183,8 @@ class AddAuctionService {
       errors['seller_phone'] = 'กรุณากรอกเบอร์โทรศัพท์';
     }
 
-    if (data['seller_address']?.toString().isEmpty ?? true) {
-      errors['seller_address'] = 'กรุณากรอกที่อยู่';
-    }
-
-    if (data['seller_id_card']?.toString().isEmpty ?? true) {
-      errors['seller_id_card'] = 'กรุณากรอกเลขบัตรประชาชน';
-    }
-
-    if (data['quotation_type_id']?.toString().isEmpty ?? true) {
-      errors['quotation_type_id'] = 'กรุณาเลือกประเภทสินค้า';
+    if (data['purchase_order_type_id']?.toString().isEmpty ?? true) {
+      errors['purchase_order_type_id'] = 'กรุณาเลือกประเภทสินค้า';
     }
 
     return {
@@ -170,30 +193,55 @@ class AddAuctionService {
     };
   }
 
-  // Format Auction Data for API
+  // Format Auction Data for new API
   static Map<String, dynamic> formatAuctionDataForAPI(
       Map<String, dynamic> data) {
-    return {
+    // Convert prices to integers to remove .0
+    final startingPrice = data['starting_price'];
+    final minIncrement = data['min_increment'];
+    
+    String startingPriceStr = '0';
+    String minIncrementStr = '100';
+    
+    if (startingPrice != null) {
+      try {
+        final price = double.tryParse(startingPrice.toString());
+        startingPriceStr = price?.toInt().toString() ?? '0';
+      } catch (e) {
+        startingPriceStr = '0';
+      }
+    }
+    
+    if (minIncrement != null) {
+      try {
+        final increment = double.tryParse(minIncrement.toString());
+        minIncrementStr = increment?.toInt().toString() ?? '100';
+      } catch (e) {
+        minIncrementStr = '100';
+      }
+    }
+    
+    final formattedData = {
       'product_name': data['product_name']?.toString() ?? '',
       'description': data['description']?.toString() ?? '',
       'notes': data['notes']?.toString() ?? '',
-      'starting_price': data['starting_price']?.toString() ?? '0',
-      'min_increment': data['min_increment']?.toString() ?? '100',
-      'is_percentage': data['is_percentage'] ?? false,
-      'percentage_value': data['percentage_value']?.toString() ?? '3.0',
-      'bidder_count': data['bidder_count']?.toString() ?? '0',
+      'starting_price': startingPriceStr,
+      'min_increment': minIncrementStr,
       'start_date': data['start_date']?.toString() ?? '',
       'end_date': data['end_date']?.toString() ?? '',
-      'quotation_type_id': data['quotation_type_id']?.toString() ?? '',
-      'quotation_type_name': data['quotation_type_name']?.toString() ?? '',
+      'purchase_order_type_id': data['purchase_order_type_id']?.toString() ?? '',
       'seller_name': data['seller_name']?.toString() ?? '',
       'seller_phone': data['seller_phone']?.toString() ?? '',
-      'seller_email': data['seller_email']?.toString() ?? '',
-      'seller_address': data['seller_address']?.toString() ?? '',
-      'seller_id_card': data['seller_id_card']?.toString() ?? '',
-      'seller_company': data['seller_company']?.toString() ?? '',
-      'image_path': data['image_path']?.toString() ?? '',
-      'created_at': DateTime.now().toIso8601String(),
+      // เพิ่มข้อมูลที่จำเป็นตามตัวอย่าง API response
+      'sourcing': 'true',
+      'created_by': 2, // ควรดึงจาก user session - ใช้ int แทน string
+      'vendor_id': 8, // ควรดึงจาก user session - ใช้ int แทน string
     };
+    
+    // Debug: Print the formatted data
+    print('DEBUG: Formatted auction data for API:');
+    print('Formatted Data: $formattedData');
+    
+    return formattedData;
   }
 }

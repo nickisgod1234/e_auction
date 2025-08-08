@@ -26,11 +26,6 @@ class AddAuctionMethods {
     return null;
   }
 
-  // Upload Image
-  static Future<String?> uploadImage(String imagePath) async {
-    return await AddAuctionService.uploadImage(imagePath);
-  }
-
   // Load Quotation Types
   static Future<List<Map<String, dynamic>>> loadQuotationTypes() async {
     return await AddAuctionService.loadQuotationTypes();
@@ -175,6 +170,7 @@ class AddAuctionMethods {
   // Save Auction
   static Future<Map<String, dynamic>> saveAuction({
     required Map<String, dynamic> auctionData,
+    File? imageFile,
   }) async {
     // Format data for API
     final formattedData = AddAuctionService.formatAuctionDataForAPI(auctionData);
@@ -185,7 +181,10 @@ class AddAuctionMethods {
       throw Exception('Validation failed: ${validation['errors']}');
     }
     
-    return await AddAuctionService.saveAuction(auctionData: formattedData);
+    return await AddAuctionService.saveAuction(
+      auctionData: formattedData,
+      imageFile: imageFile,
+    );
   }
 
   // Show Success Dialog

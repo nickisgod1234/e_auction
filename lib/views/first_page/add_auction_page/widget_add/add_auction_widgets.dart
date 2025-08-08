@@ -1210,10 +1210,6 @@ class AddAuctionWidgets {
   static Widget buildSellerInfoSection({
     required TextEditingController sellerNameController,
     required TextEditingController sellerPhoneController,
-    required TextEditingController sellerEmailController,
-    required TextEditingController sellerAddressController,
-    required TextEditingController sellerIdCardController,
-    required TextEditingController sellerCompanyController,
   }) {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -1260,52 +1256,6 @@ class AddAuctionWidgets {
                 return 'กรุณากรอกเบอร์โทรศัพท์';
               }
               return null;
-            },
-          ),
-          buildTextField(
-            label: 'อีเมล',
-            controller: sellerEmailController,
-            keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'กรุณากรอกอีเมล';
-              }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                return 'กรุณากรอกอีเมลให้ถูกต้อง';
-              }
-              return null;
-            },
-          ),
-          buildTextField(
-            label: 'ที่อยู่ *',
-            controller: sellerAddressController,
-            maxLines: 3,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'กรุณากรอกที่อยู่';
-              }
-              return null;
-            },
-          ),
-          buildTextField(
-            label: 'เลขบัตรประชาชน *',
-            controller: sellerIdCardController,
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'กรุณากรอกเลขบัตรประชาชน';
-              }
-              if (value.length != 13) {
-                return 'เลขบัตรประชาชนต้องมี 13 หลัก';
-              }
-              return null;
-            },
-          ),
-          buildTextField(
-            label: 'บริษัท/องค์กร (ถ้ามี)',
-            controller: sellerCompanyController,
-            validator: (value) {
-              return null; // Optional field
             },
           ),
         ],
