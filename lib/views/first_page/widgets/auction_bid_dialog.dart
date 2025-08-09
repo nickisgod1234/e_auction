@@ -51,6 +51,16 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
       minBid = currentPrice + minimumIncrease;
     }
     
+    // คำนวณขีดจำกัด 20% ของราคาขั้นต่ำ
+    final maxBidLimit = (minBid * 1.2).round();
+    final minBidLimit = (currentPrice * 0.8).round();
+    print('DEBUG: Current Price: $currentPrice');
+    print('DEBUG: Min Bid: $minBid');
+    print('DEBUG: Minimum Increase: $minimumIncrease');
+    print('DEBUG: Max Bid Limit (Min Bid * 1.2): $maxBidLimit');
+    print('DEBUG: Min Bid Limit (20%): $minBidLimit');
+    print('DEBUG: Calculation: $minBid * 1.2 = ${minBid * 1.2}');
+    
     bidController.text = Format.formatNumber(minBid);
   }
 
@@ -73,23 +83,23 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
             children: [
               // Title
               Padding(
-                padding: EdgeInsets.all(24),
+                padding: EdgeInsets.all(10),
                 child: Column(
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isReverseAuction 
-                          ? Colors.red.withOpacity(0.1) 
-                          : Colors.green.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isReverseAuction ? Icons.trending_down : Icons.gavel, 
-                        color: isReverseAuction ? Colors.red : Colors.green, 
-                        size: 48
-                      ),
-                    ),
+                    // Container(
+                    //   padding: EdgeInsets.all(16),
+                    //   decoration: BoxDecoration(
+                    //     color: isReverseAuction 
+                    //       ? Colors.red.withOpacity(0.1) 
+                    //       : Colors.green.withOpacity(0.1),
+                    //     shape: BoxShape.circle,
+                    //   ),
+                    //   child: Icon(
+                    //     isReverseAuction ? Icons.trending_down : Icons.gavel, 
+                    //     color: isReverseAuction ? Colors.red : Colors.green, 
+                    //     size: 48
+                    //   ),
+                    // ),
                     SizedBox(height: 16),
                     Text(
                       isReverseAuction ? 'เสนอราคา (Reverse Auction)' : 'ลงประมูลสินค้า',
@@ -276,30 +286,41 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                           },
                         ),
                         SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              isReverseAuction 
-                                ? 'สูงสุด: ${Format.formatCurrency(minBid)}'
-                                : 'ขั้นต่ำ: ${Format.formatCurrency(minBid)}',
-                              style: TextStyle(
-                                color: isReverseAuction ? Colors.red[700] : Colors.orange[700],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              isReverseAuction 
-                                ? 'ขั้นต่ำ: ${Format.formatCurrency((currentPrice * 0.9).round())}'
-                                : 'สูงสุด: ${Format.formatCurrency((currentPrice * 1.1).round())}',
-                              style: TextStyle(
-                                color: isReverseAuction ? Colors.red[700] : Colors.orange[700],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                                                  Builder(
+                            builder: (context) {
+                              final maxBidDisplay = (minBid * 1.2).round();
+                              final minBidDisplay = (currentPrice * 0.8).round();
+                              print('DEBUG: Display - Current Price: $currentPrice');
+                              print('DEBUG: Display - Min Bid: $minBid');
+                              print('DEBUG: Display - Max Bid: $maxBidDisplay');
+                              print('DEBUG: Display - Calculation: $minBid * 1.2 = $maxBidDisplay');
+                            
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  isReverseAuction 
+                                    ? 'สูงสุด: ${Format.formatCurrency(minBid)}'
+                                    : 'ขั้นต่ำ: ${Format.formatCurrency(minBid)}',
+                                  style: TextStyle(
+                                    color: isReverseAuction ? Colors.red[700] : Colors.orange[700],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  isReverseAuction 
+                                    ? 'ขั้นต่ำ: ${Format.formatCurrency(minBidDisplay)}'
+                                    : 'สูงสุด: ${Format.formatCurrency(maxBidDisplay)}',
+                                  style: TextStyle(
+                                    color: isReverseAuction ? Colors.red[700] : Colors.orange[700],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -380,9 +401,9 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                             }
                           }
                           
-                          // ตรวจสอบขีดจำกัด ±10% ของราคาปัจจุบัน
-                          final maxBid = (currentPrice * 1.1).round();
-                          final minBidLimit = (currentPrice * 0.9).round();
+                          // ตรวจสอบขีดจำกัด 20% ของราคาขั้นต่ำ
+                          final maxBid = (minBid * 1.2).round();
+                          final minBidLimit = (currentPrice * 0.8).round();
                           
                           if (isReverseAuction) {
                             // Reverse Auction: ตรวจสอบขีดจำกัด
@@ -401,16 +422,6 @@ class _AuctionBidDialogState extends State<AuctionBidDialog> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('ราคาไม่สามารถเกิน ${Format.formatCurrency(maxBid)} ได้'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              return;
-                            }
-                            
-                            if (bidAmount < minBidLimit) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('ราคาไม่สามารถต่ำกว่า ${Format.formatCurrency(minBidLimit)} ได้'),
                                   backgroundColor: Colors.red,
                                 ),
                               );

@@ -33,10 +33,10 @@ class AddAuctionService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
 
-        // Filter only auction types (starting with 'A')
+        // Filter only auction types (starting with 'A') but exclude AS03
         final auctionTypes = data.where((item) {
           final code = item['quotation_type_code']?.toString() ?? '';
-          return code.startsWith('A');
+          return code.startsWith('A') && code != 'AS03';
         }).map((item) {
           return {
             'id': item['quotation_type_id']?.toString() ?? '',
