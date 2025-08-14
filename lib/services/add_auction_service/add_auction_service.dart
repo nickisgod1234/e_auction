@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 
 class AddAuctionService {
@@ -194,8 +195,8 @@ class AddAuctionService {
   }
 
   // Format Auction Data for new API
-  static Map<String, dynamic> formatAuctionDataForAPI(
-      Map<String, dynamic> data) {
+  static Future<Map<String, dynamic>> formatAuctionDataForAPI(
+      Map<String, dynamic> data) async {
     // Convert prices to integers to remove .0
     final startingPrice = data['starting_price'];
     final minIncrement = data['min_increment'];
@@ -221,9 +222,22 @@ class AddAuctionService {
       }
     }
     
+    // Get customer_id from SharedPreferences
+    int customerId = 0;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userIdStr = prefs.getString('id');
+      if (userIdStr != null && userIdStr.isNotEmpty) {
+        customerId = int.tryParse(userIdStr) ?? 0;
+      }
+    } catch (e) {
+      print('Error getting customer_id from SharedPreferences: $e');
+    }
+    
     final formattedData = {
       'product_name': data['product_name']?.toString() ?? '',
       'description': data['description']?.toString() ?? '',
+      'customer_id': customerId, // เพิ่ม customer_id จาก user session
       'notes': data['notes']?.toString() ?? '',
       'starting_price': startingPriceStr,
       'min_increment': minIncrementStr,

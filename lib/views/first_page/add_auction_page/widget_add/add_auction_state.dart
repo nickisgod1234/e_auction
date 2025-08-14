@@ -180,8 +180,8 @@ class AddAuctionState {
   }
 
   // Get formatted auction data for API using service
-  Map<String, dynamic> getFormattedAuctionData() {
-    return AddAuctionService.formatAuctionDataForAPI(getAuctionData());
+  Future<Map<String, dynamic>> getFormattedAuctionData() async {
+    return await AddAuctionService.formatAuctionDataForAPI(getAuctionData());
   }
   
   // Reset form

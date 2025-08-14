@@ -112,7 +112,7 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
     setState(() {});
 
     try {
-      final auctionData = _state.getFormattedAuctionData();
+      final auctionData = await _state.getFormattedAuctionData();
       final result = await AddAuctionMethods.saveAuction(
         auctionData: auctionData,
         imageFile: _state.selectedImage,

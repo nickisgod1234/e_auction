@@ -173,7 +173,7 @@ class AddAuctionMethods {
     File? imageFile,
   }) async {
     // Format data for API
-    final formattedData = AddAuctionService.formatAuctionDataForAPI(auctionData);
+    final formattedData = await AddAuctionService.formatAuctionDataForAPI(auctionData);
     
     // Validate data
     final validation = AddAuctionService.validateAuctionData(formattedData);
@@ -261,7 +261,7 @@ class AddAuctionMethods {
   }
 
   // Format Auction Data for API
-  static Map<String, dynamic> formatAuctionDataForAPI(Map<String, dynamic> data) {
-    return AddAuctionService.formatAuctionDataForAPI(data);
+  static Future<Map<String, dynamic>> formatAuctionDataForAPI(Map<String, dynamic> data) async {
+    return await AddAuctionService.formatAuctionDataForAPI(data);
   }
 } 
