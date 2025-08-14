@@ -240,16 +240,16 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
               ),
 
               // Bidder Count Section
-              AddAuctionWidgets.buildBidderCountSection(
-                bidderCount: 0,
-                onBidderCountChanged: (value) {}, // ไม่ใช้ callback
-              ),
+              // AddAuctionWidgets.buildBidderCountSection(
+              //   bidderCount: 0,
+              //   onBidderCountChanged: (value) {}, // ไม่ใช้ callback
+              // ),
 
               // Seller Info Section
-              AddAuctionWidgets.buildSellerInfoSection(
-                sellerNameController: _state.sellerNameController,
-                sellerPhoneController: _state.sellerPhoneController,
-              ),
+              // AddAuctionWidgets.buildSellerInfoSection(
+              //   sellerNameController: _state.sellerNameController,
+              //   sellerPhoneController: _state.sellerPhoneController,
+              // ),
 
               // Submit Button
               Container(
