@@ -37,7 +37,12 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
       _state.updateQuotationTypes(types);
     } catch (e) {
       // Handle error
-
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาดในการโหลดประเภทสินค้า: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       _state.updateLoadingQuotationTypes(false);
       setState(() {});

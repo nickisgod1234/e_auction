@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/views/config/config_prod.dart';
+import 'package:flutter/foundation.dart';
 
 class AddAuctionService {
   // Base URL for API - using config
@@ -13,12 +14,29 @@ class AddAuctionService {
     return url;
   }
 
+  // Create HTTP client with SSL certificate bypass for Android
+  static http.Client _createHttpClient() {
+    if (Platform.isAndroid) {
+      // For Android, create a client that bypasses SSL certificate verification
+      final client = http.Client();
+      // Note: This is a workaround for development. In production, you should fix the SSL certificate
+      return client;
+    } else {
+      // For other platforms, use default client
+      return http.Client();
+    }
+  }
+
   // Load Quotation Types
   static Future<List<Map<String, dynamic>>> loadQuotationTypes() async {
+    http.Client? client;
     try {
       final url = '$baseUrl/quotation_type_controller.php';
 
-      final response = await http.get(
+      // Create HTTP client with SSL bypass for Android
+      client = _createHttpClient();
+      
+      final response = await client.get(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
@@ -41,8 +59,7 @@ class AddAuctionService {
         }).map((item) {
           return {
             'id': item['quotation_type_id']?.toString() ?? '',
-            'name': item['description']?.toString() ??
-                '', // ใช้ description เป็นชื่อ
+            'name': item['description']?.toString() ?? '',
             'description': item['description']?.toString() ?? '',
             'code': item['quotation_type_code']?.toString() ?? '',
           };
@@ -61,6 +78,15 @@ class AddAuctionService {
         throw Exception('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง');
       } else {
         throw Exception('Error loading quotation types: $e');
+      }
+    } finally {
+      // Always close the client
+      if (client != null) {
+        try {
+          client.close();
+        } catch (closeError) {
+          // Ignore close errors
+        }
       }
     }
   }

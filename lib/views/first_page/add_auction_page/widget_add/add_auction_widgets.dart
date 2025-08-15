@@ -683,15 +683,18 @@ class AddAuctionWidgets {
                           children: [
                             Icon(Icons.calculate, color: Colors.orange[700], size: 20),
                             const SizedBox(width: 8),
-                            const Text(
-                              'คำนวณราคาขายอัตโนมัติ',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange,
+                            Expanded(
+                              child: const Text(
+                                'คำนวณราคาขายอัตโนมัติ',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
@@ -709,7 +712,7 @@ class AddAuctionWidgets {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'ตัวเลือกเสริม',
+                                    'ตัวเลือก',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
