@@ -16,9 +16,9 @@ class AddAuctionState {
   final TextEditingController quantityController = TextEditingController();
   bool showCostCalculation = false;
   
-  // Seller Info Controllers
-  TextEditingController sellerNameController = TextEditingController();
-  TextEditingController sellerPhoneController = TextEditingController();
+  // Seller Info Controllers - ลบออกเพราะไม่ใช้แล้ว
+  // TextEditingController sellerNameController = TextEditingController();
+  // TextEditingController sellerPhoneController = TextEditingController();
   
   // Form Key
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -56,8 +56,7 @@ class AddAuctionState {
     minIncrementController.dispose();
     costPriceController.dispose();
     quantityController.dispose();
-    sellerNameController.dispose();
-    sellerPhoneController.dispose();
+    // ลบการ dispose seller controllers ออกเพราะไม่ใช้แล้ว
   }
   
   // Update selected image
@@ -159,8 +158,7 @@ class AddAuctionState {
       'start_date': startDate != null ? DateFormat('yyyy-MM-dd').format(startDate!) : '',
       'end_date': endDate != null ? DateFormat('yyyy-MM-dd').format(endDate!) : '',
       'purchase_order_type_id': selectedQuotationTypeId,
-      'seller_name': sellerNameController.text,
-      'seller_phone': sellerPhoneController.text,
+      // ลบ seller_name และ seller_phone ออกเพราะไม่ใช้แล้ว
     };
     
     // Debug: Print the raw auction data
@@ -173,8 +171,7 @@ class AddAuctionState {
     print('Start Date: ${data['start_date']}');
     print('End Date: ${data['end_date']}');
     print('Purchase Order Type ID: ${data['purchase_order_type_id']}');
-    print('Seller Name: ${data['seller_name']}');
-    print('Seller Phone: ${data['seller_phone']}');
+    // ลบ debug prints สำหรับ seller info
     
     return data;
   }
@@ -191,8 +188,7 @@ class AddAuctionState {
     notesController.clear();
     startingPriceController.text = '0';
     minIncrementController.text = '100';
-    sellerNameController.clear();
-    sellerPhoneController.clear();
+    // ลบการ clear seller controllers ออกเพราะไม่ใช้แล้ว
     
     startDate = null;
     endDate = null;
@@ -209,8 +205,7 @@ class AddAuctionState {
     return productNameController.text.isNotEmpty &&
            descriptionController.text.isNotEmpty &&
            startingPriceController.text.isNotEmpty &&
-           sellerNameController.text.isNotEmpty &&
-           sellerPhoneController.text.isNotEmpty &&
+           // ลบการตรวจสอบ seller fields ออกเพราะไม่ใช้แล้ว
            startDate != null &&
            endDate != null &&
            selectedQuotationTypeId != null;

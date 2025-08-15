@@ -8,7 +8,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 class AddAuctionService {
   // Base URL for API - using config
   static String get baseUrl {
-    final url = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers';
+    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers';
 
     return url;
   }
@@ -176,13 +176,7 @@ class AddAuctionService {
       errors['end_date'] = 'กรุณาเลือกวันที่สิ้นสุด';
     }
 
-    if (data['seller_name']?.toString().isEmpty ?? true) {
-      errors['seller_name'] = 'กรุณากรอกชื่อผู้ขาย';
-    }
-
-    if (data['seller_phone']?.toString().isEmpty ?? true) {
-      errors['seller_phone'] = 'กรุณากรอกเบอร์โทรศัพท์';
-    }
+    // ลบการตรวจสอบ seller_name และ seller_phone ออกเพราะไม่ใช้แล้ว
 
     if (data['purchase_order_type_id']?.toString().isEmpty ?? true) {
       errors['purchase_order_type_id'] = 'กรุณาเลือกประเภทสินค้า';
@@ -244,8 +238,7 @@ class AddAuctionService {
       'start_date': data['start_date']?.toString() ?? '',
       'end_date': data['end_date']?.toString() ?? '',
       'purchase_order_type_id': data['purchase_order_type_id']?.toString() ?? '',
-      'seller_name': data['seller_name']?.toString() ?? '',
-      'seller_phone': data['seller_phone']?.toString() ?? '',
+      // ลบ seller_name และ seller_phone ออกเพราะไม่ใช้แล้ว
       // เพิ่มข้อมูลที่จำเป็นตามตัวอย่าง API response
       'sourcing': 'true',
       'created_by': 2, // ควรดึงจาก user session - ใช้ int แทน string
