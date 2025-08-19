@@ -37,10 +37,6 @@ class AddAuctionState {
   // Loading State
   bool isSubmitting = false;
   
-  // Quantity fields for AS03
-  final TextEditingController maxQuantityController = TextEditingController();
-  final TextEditingController currentQuantityController = TextEditingController();
-  
   // Initialize default values
   void initializeDefaults() {
     startingPriceController.text = '0';
@@ -58,8 +54,6 @@ class AddAuctionState {
     minIncrementController.dispose();
     costPriceController.dispose();
     quantityController.dispose();
-    maxQuantityController.dispose();
-    currentQuantityController.dispose();
     // ลบการ dispose seller controllers ออกเพราะไม่ใช้แล้ว
   }
   
@@ -166,15 +160,7 @@ class AddAuctionState {
       // ลบ seller_name และ seller_phone ออกเพราะไม่ใช้แล้ว
     };
     
-    // Add quantity data for AS03
-    if (selectedQuotationTypeCode == 'AS03') {
-      data['max_quantity'] = maxQuantityController.text.isNotEmpty 
-          ? int.tryParse(maxQuantityController.text) ?? 0 
-          : 0;
-      data['current_quantity'] = currentQuantityController.text.isNotEmpty 
-          ? int.tryParse(currentQuantityController.text) ?? 0 
-          : 0;
-    }
+
     
     // Debug: Print the raw auction data
     print('DEBUG: Raw auction data from form:');
@@ -186,10 +172,6 @@ class AddAuctionState {
     print('Start Date: ${data['start_date']}');
     print('End Date: ${data['end_date']}');
     print('Purchase Order Type ID: ${data['purchase_order_type_id']}');
-    if (selectedQuotationTypeCode == 'AS03') {
-      print('Max Quantity: ${data['max_quantity']}');
-      print('Current Quantity: ${data['current_quantity']}');
-    }
     // ลบ debug prints สำหรับ seller info
     
     return data;
@@ -207,8 +189,6 @@ class AddAuctionState {
     notesController.clear();
     startingPriceController.text = '0';
     minIncrementController.text = '100';
-    maxQuantityController.clear();
-    currentQuantityController.clear();
     // ลบการ clear seller controllers ออกเพราะไม่ใช้แล้ว
     
     startDate = null;
@@ -224,21 +204,12 @@ class AddAuctionState {
   
   // Check if form is complete
   bool isFormComplete() {
-    bool basicComplete = productNameController.text.isNotEmpty &&
+    return productNameController.text.isNotEmpty &&
            descriptionController.text.isNotEmpty &&
            startingPriceController.text.isNotEmpty &&
            // ลบการตรวจสอบ seller fields ออกเพราะไม่ใช้แล้ว
            startDate != null &&
            endDate != null &&
            selectedQuotationTypeId != null;
-    
-    // Additional validation for AS03
-    if (selectedQuotationTypeCode == 'AS03') {
-      return basicComplete &&
-             maxQuantityController.text.isNotEmpty &&
-             currentQuantityController.text.isNotEmpty;
-    }
-    
-    return basicComplete;
   }
 } 

@@ -3,6 +3,7 @@ import 'package:e_auction/theme/app_theme.dart';
 import 'widget_add/add_auction_widgets.dart';
 import 'widget_add/add_auction_methods.dart';
 import 'widget_add/add_auction_state.dart';
+import 'promotion_policy_page.dart';
 
 class AddAuctionPage extends StatefulWidget {
   const AddAuctionPage({super.key});
@@ -87,8 +88,6 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
     setState(() {});
   }
 
-
-
   void _updateQuotationType(String? id, String? name) {
     // Find the selected type to get the code
     String? typeCode;
@@ -99,9 +98,180 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
       );
       typeCode = selectedType['code']?.toString();
     }
-    
+
     _state.updateSelectedQuotationType(id, name, typeCode);
     setState(() {});
+  }
+
+  void _showAdminContactDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.admin_panel_settings,
+                  color: Colors.blue[700],
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'ข้อมูลติดต่อ Admin',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'หากมีปัญหาในการใช้งานหรือต้องการความช่วยเหลือ กรุณาติดต่อ Admin ได้ที่:',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.email,
+                      color: Colors.blue[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'อีเมลล์:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'sale@cloudmate-th.com',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      color: Colors.green[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'เวลาตอบกลับ:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '24 ชั่วโมง',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'ปิด',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            // ElevatedButton.icon(
+            //   onPressed: () {
+            //     // TODO: Implement email opening functionality
+            //     Navigator.of(context).pop();
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       const SnackBar(
+            //         content: Text('เปิดอีเมลล์: nickisgods@gmail.com'),
+            //         backgroundColor: Colors.blue,
+            //       ),
+            //     );
+            //   },
+            //   icon: const Icon(Icons.email, size: 16),
+            //   label: const Text('ส่งอีเมลล์'),
+            //   style: ElevatedButton.styleFrom(
+            //     backgroundColor: Colors.blue[600],
+            //     foregroundColor: Colors.white,
+            //     shape: RoundedRectangleBorder(
+            //       borderRadius: BorderRadius.circular(8),
+            //     ),
+            //   ),
+            // ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _submitForm() async {
@@ -132,12 +302,13 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
         auctionData: auctionData,
         imageFile: _state.selectedImage,
       );
-      
+
       if (result['status'] == 'success') {
         AddAuctionMethods.showSuccessDialog(context);
         _state.resetForm();
       } else {
-        AddAuctionMethods.showErrorDialog(context, result['message'] ?? 'เกิดข้อผิดพลาด');
+        AddAuctionMethods.showErrorDialog(
+            context, result['message'] ?? 'เกิดข้อผิดพลาด');
       }
     } catch (e) {
       AddAuctionMethods.showErrorDialog(context, 'เกิดข้อผิดพลาด: $e');
@@ -155,22 +326,121 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () {
+              _showAdminContactDialog(context);
+            },
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.headset_mic,
+                color: Colors.blue[700],
+                size: 20,
+              ),
+            ),
+            tooltip: 'ข้อมูลติดต่อ Admin',
+          ),
+        ],
       ),
       body: Form(
         key: _state.formKey,
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // Promotion Banner
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.orange[400]!, Colors.orange[600]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.local_offer,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'โปรโมชั่นพิเศษ!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'ค่าธรรมเนียมเพียง 2% จากยอดชนะ',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PromotionPolicyPage(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.orange[600],
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'ดูรายละเอียด',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-
-                // Image Section
+              // Image Section
               AddAuctionWidgets.buildImageSection(
                 selectedImage: _state.selectedImage,
                 onPickImage: _pickImage,
                 onTakePhoto: _takePhoto,
               ),
 
-               // Quotation Type Dropdown
+              // Quotation Type Dropdown
               AddAuctionWidgets.buildQuotationTypeDropdown(
                 quotationTypes: _state.quotationTypes,
                 isLoadingQuotationTypes: _state.isLoadingQuotationTypes,
@@ -182,10 +452,11 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
               AddAuctionWidgets.buildTextField(
                 label: 'ชื่อสินค้า *',
                 controller: _state.productNameController,
-                validator: (value) => AddAuctionMethods.validateRequired(value, 'ชื่อสินค้า'),
+                validator: (value) =>
+                    AddAuctionMethods.validateRequired(value, 'ชื่อสินค้า'),
               ),
 
-                // Date Section
+              // Date Section
               AddAuctionWidgets.buildDateSection(
                 startDate: _state.startDate,
                 endDate: _state.endDate,
@@ -196,7 +467,8 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 label: 'รายละเอียดสินค้า *',
                 controller: _state.descriptionController,
                 maxLines: 3,
-                validator: (value) => AddAuctionMethods.validateRequired(value, 'รายละเอียดสินค้า'),
+                validator: (value) => AddAuctionMethods.validateRequired(
+                    value, 'รายละเอียดสินค้า'),
               ),
               AddAuctionWidgets.buildTextField(
                 label: 'หมายเหตุ (ถ้ามี)',
@@ -205,12 +477,7 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 validator: (value) => null, // Optional
               ),
 
-              // Quantity Fields for AS03
-              if (_state.selectedQuotationTypeCode == 'AS03')
-                AddAuctionWidgets.buildQuantityFields(
-                  maxQuantityController: _state.maxQuantityController,
-                  currentQuantityController: _state.currentQuantityController,
-                ),
+
 
               // Combined Price Section
               AddAuctionWidgets.buildCombinedPriceSection(
@@ -224,12 +491,12 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                   // อัปเดตราคาปัจจุบันเมื่อราคาเริ่มต้นเปลี่ยน
                   final currentPrice = _state.getCurrentPrice();
                   final minIncrement = _state.getMinIncrement();
-                  
+
                   // ถ้าขั้นต่ำการเพิ่มเกินราคาปัจจุบัน ให้ reset เป็น 0
                   if (minIncrement > currentPrice && currentPrice > 0) {
                     _state.minIncrementController.clear();
                   }
-                  
+
                   setState(() {});
                 },
                 onMinIncrementChanged: (value) {
@@ -290,7 +557,8 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             ),
                             SizedBox(width: 8),
@@ -314,4 +582,4 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
       ),
     );
   }
-} 
+}
