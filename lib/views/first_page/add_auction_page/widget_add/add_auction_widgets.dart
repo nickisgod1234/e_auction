@@ -1158,6 +1158,72 @@ class AddAuctionWidgets {
     );
   }
 
+  // Quantity Fields for AS03 Widget
+  static Widget buildQuantityFields({
+    required TextEditingController maxQuantityController,
+    required TextEditingController currentQuantityController,
+  }) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ข้อมูลจำนวนสินค้า',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: buildTextField(
+                  label: 'จำนวนสินค้าสูงสุด *',
+                  controller: maxQuantityController,
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'กรุณากรอกจำนวนสินค้าสูงสุด';
+                    }
+                    final quantity = int.tryParse(value);
+                    if (quantity == null || quantity <= 0) {
+                      return 'กรุณากรอกจำนวนสินค้าที่ถูกต้อง';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: buildTextField(
+                  label: 'จำนวนสินค้าปัจจุบัน *',
+                  controller: currentQuantityController,
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'กรุณากรอกจำนวนสินค้าปัจจุบัน';
+                    }
+                    final quantity = int.tryParse(value);
+                    if (quantity == null || quantity <= 0) {
+                      return 'กรุณากรอกจำนวนสินค้าที่ถูกต้อง';
+                    }
+                    final maxQuantity = int.tryParse(maxQuantityController.text) ?? 0;
+                    if (quantity > maxQuantity) {
+                      return 'จำนวนสินค้าปัจจุบันต้องไม่เกินจำนวนสูงสุด';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // Bidder Count Section Widget
   static Widget buildBidderCountSection({
     required int bidderCount,
@@ -1210,61 +1276,61 @@ class AddAuctionWidgets {
   }
 
   // Seller Info Section Widget
-  static Widget buildSellerInfoSection({
-    required TextEditingController sellerNameController,
-    required TextEditingController sellerPhoneController,
-  }) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.person, color: Colors.blue[600]),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'ข้อมูลส่วนตัวของผู้ขอ',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          buildTextField(
-            label: 'ชื่อ-นามสกุล *',
-            controller: sellerNameController,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'กรุณากรอกชื่อ-นามสกุล';
-              }
-              return null;
-            },
-          ),
-          buildTextField(
-            label: 'เบอร์โทรศัพท์ *',
-            controller: sellerPhoneController,
-            keyboardType: TextInputType.phone,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'กรุณากรอกเบอร์โทรศัพท์';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  // static Widget buildSellerInfoSection({
+  //   required TextEditingController sellerNameController,
+  //   required TextEditingController sellerPhoneController,
+  // }) {
+  //   return Container(
+  //     margin: const EdgeInsets.all(16),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           children: [
+  //             Container(
+  //               padding: const EdgeInsets.all(8),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.blue.withOpacity(0.1),
+  //                 borderRadius: BorderRadius.circular(8),
+  //               ),
+  //               child: Icon(Icons.person, color: Colors.blue[600]),
+  //             ),
+  //             const SizedBox(width: 12),
+  //             const Text(
+  //               'ข้อมูลส่วนตัวของผู้ขอ',
+  //               style: TextStyle(
+  //                 fontSize: 18,
+  //                 fontWeight: FontWeight.bold,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         const SizedBox(height: 16),
+  //         buildTextField(
+  //           label: 'ชื่อ-นามสกุล *',
+  //           controller: sellerNameController,
+  //           validator: (value) {
+  //             if (value == null || value.isEmpty) {
+  //               return 'กรุณากรอกชื่อ-นามสกุล';
+  //             }
+  //             return null;
+  //           },
+  //         ),
+  //         buildTextField(
+  //           label: 'เบอร์โทรศัพท์ *',
+  //           controller: sellerPhoneController,
+  //           keyboardType: TextInputType.phone,
+  //           validator: (value) {
+  //             if (value == null || value.isEmpty) {
+  //               return 'กรุณากรอกเบอร์โทรศัพท์';
+  //             }
+  //             return null;
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // Quotation Type Dropdown Widget
   static Widget buildQuotationTypeDropdown({

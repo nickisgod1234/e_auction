@@ -90,7 +90,17 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
 
 
   void _updateQuotationType(String? id, String? name) {
-    _state.updateSelectedQuotationType(id, name);
+    // Find the selected type to get the code
+    String? typeCode;
+    if (id != null) {
+      final selectedType = _state.quotationTypes.firstWhere(
+        (type) => type['id'].toString() == id,
+        orElse: () => {'code': ''},
+      );
+      typeCode = selectedType['code']?.toString();
+    }
+    
+    _state.updateSelectedQuotationType(id, name, typeCode);
     setState(() {});
   }
 
@@ -195,11 +205,12 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 validator: (value) => null, // Optional
               ),
 
-             
-
-            
-
-            
+              // Quantity Fields for AS03
+              if (_state.selectedQuotationTypeCode == 'AS03')
+                AddAuctionWidgets.buildQuantityFields(
+                  maxQuantityController: _state.maxQuantityController,
+                  currentQuantityController: _state.currentQuantityController,
+                ),
 
               // Combined Price Section
               AddAuctionWidgets.buildCombinedPriceSection(

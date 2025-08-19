@@ -52,16 +52,32 @@ class AddAuctionService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
 
-        // Filter only auction types (starting with 'A') but exclude AS03
+        // Filter only auction types (starting with 'A') - include AS03 for quantity reduction auction
         final auctionTypes = data.where((item) {
           final code = item['quotation_type_code']?.toString() ?? '';
-          return code.startsWith('A') && code != 'AS03';
+          return code.startsWith('A');
         }).map((item) {
+          final code = item['quotation_type_code']?.toString() ?? '';
+          String customName = item['description']?.toString() ?? '';
+          
+          // Override names for specific types
+          switch (code) {
+            case 'AS01':
+              customName = 'ประมูลแบบทั่วไป(ได้ราคาสูงสุดเป็นผู้ชนะ)';
+              break;
+            case 'AS02':
+              customName = 'ประมูลแบบราคาลดลง(ได้ราคาต่ำสุดเป็นผู้ชนะ)';
+              break;
+            case 'AS03':
+              customName = 'การซื้อสินค้าตามจำนวนที่ต้องการ';
+              break;
+          }
+          
           return {
             'id': item['quotation_type_id']?.toString() ?? '',
-            'name': item['description']?.toString() ?? '',
-            'description': item['description']?.toString() ?? '',
-            'code': item['quotation_type_code']?.toString() ?? '',
+            'name': customName,
+            'description': customName,
+            'code': code,
           };
         }).toList();
 
