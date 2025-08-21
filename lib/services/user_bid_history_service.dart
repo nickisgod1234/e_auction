@@ -6,7 +6,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 
 class UserBidHistoryService {
   static String get baseUrl {
-    final url = '${Config.apiUrllocal}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
     if (Platform.isAndroid) {
       return url.replaceFirst('https://', 'http://');
     }
@@ -28,20 +28,28 @@ class UserBidHistoryService {
   // ดึงประวัติการประมูลของผู้ใช้
   static Future<Map<String, dynamic>> getUserBidHistory(String bidderId) async {
     try {
+      print('🔍 DEBUG: UserBidHistoryService.getUserBidHistory called with bidderId: $bidderId');
+      print('🔍 DEBUG: API URL: $baseUrl?action=user_bid_history&bidder_id=$bidderId');
+      
       final client = _getHttpClient();
       final response = await client.get(
         Uri.parse('$baseUrl?action=user_bid_history&bidder_id=$bidderId'),
       );
 
+      print('🔍 DEBUG: Response status code: ${response.statusCode}');
+      print('🔍 DEBUG: Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('🔍 DEBUG: Parsed data type: ${data.runtimeType}');
+        print('🔍 DEBUG: Parsed data: $data');
 
         
         // Handle case where API returns List instead of Map
         if (data is List) {
-          print('DEBUG: UserBidHistoryService - Data is List, length: ${data.length}');
+          print('🔍 DEBUG: UserBidHistoryService - Data is List, length: ${data.length}');
           if (data.isNotEmpty) {
-            print('DEBUG: UserBidHistoryService - First item: ${data.first}');
+            print('🔍 DEBUG: UserBidHistoryService - First item: ${data.first}');
           }
           return {
             'status': 'success',
@@ -50,8 +58,10 @@ class UserBidHistoryService {
             },
           };
         } else if (data is Map<String, dynamic>) {
+          print('🔍 DEBUG: UserBidHistoryService - Data is Map: $data');
           return data;
         } else {
+          print('🔍 DEBUG: UserBidHistoryService - Data is neither List nor Map, returning empty');
           return {
             'status': 'success',
             'data': {
@@ -60,10 +70,12 @@ class UserBidHistoryService {
           };
         }
       } else {
+        print('❌ DEBUG: UserBidHistoryService - HTTP error: ${response.statusCode}');
         throw Exception(
             'Failed to get user bid history: ${response.statusCode}');
       }
     } catch (e) {
+      print('❌ DEBUG: UserBidHistoryService - Exception: $e');
       throw Exception('Error getting user bid history: $e');
     }
   }
@@ -115,7 +127,11 @@ class UserBidHistoryService {
   // แปลงข้อมูล bid history เป็นรูปแบบที่ใช้ในแอป
   static List<Map<String, dynamic>> convertBidHistoryToAppFormat(
       List<dynamic> bidHistory) {
+    print('🔍 DEBUG: convertBidHistoryToAppFormat called with ${bidHistory.length} items');
+    print('🔍 DEBUG: First bid item: ${bidHistory.isNotEmpty ? bidHistory.first : "No items"}');
+    
     return bidHistory.map((bid) {
+      print('🔍 DEBUG: Processing bid: $bid');
       // Debug: แสดงข้อมูลที่ได้จาก API
 
       // แปลง quotation_image จาก JSON string เป็น List
@@ -220,15 +236,22 @@ class UserBidHistoryService {
   // จัดกลุ่ม bid history ตาม quotation
   static Map<String, List<Map<String, dynamic>>> groupBidsByQuotation(
       List<Map<String, dynamic>> bidHistory) {
+    print('🔍 DEBUG: groupBidsByQuotation called with ${bidHistory.length} items');
+    
     final grouped = <String, List<Map<String, dynamic>>>{};
     
     for (final bid in bidHistory) {
       final quotationId = bid['quotationId'] ?? '';
+      print('🔍 DEBUG: Processing bid with quotationId: "$quotationId"');
+      
       if (!grouped.containsKey(quotationId)) {
         grouped[quotationId] = [];
       }
       grouped[quotationId]!.add(bid);
     }
+    
+    print('🔍 DEBUG: Grouped result: ${grouped.keys.length} quotations');
+    print('🔍 DEBUG: Grouped keys: ${grouped.keys.toList()}');
     
     return grouped;
   }
@@ -236,10 +259,16 @@ class UserBidHistoryService {
   // หา bid สูงสุดของแต่ละ quotation
   static Map<String, Map<String, dynamic>> getHighestBidsByQuotation(
       List<Map<String, dynamic>> bidHistory) {
+    print('🔍 DEBUG: getHighestBidsByQuotation called with ${bidHistory.length} items');
+    
     final grouped = groupBidsByQuotation(bidHistory);
+    print('🔍 DEBUG: Grouped by quotation: ${grouped.keys.length} quotations');
+    print('🔍 DEBUG: Grouped data: $grouped');
+    
     final highestBids = <String, Map<String, dynamic>>{};
     
     grouped.forEach((quotationId, bids) {
+      print('🔍 DEBUG: Processing quotation $quotationId with ${bids.length} bids');
       if (bids.isNotEmpty) {
         // เรียงตาม bid_amount จากมากไปน้อย
         bids.sort(

@@ -67,6 +67,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
   @override
   void initState() {
     super.initState();
+    print('🔍 DEBUG: MyAuctionsPage initState called');
+    
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {
@@ -74,6 +76,21 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
       });
     });
     _authService = AuthService(baseUrl: Config.apiUrlotpsever);
+    
+    // Debug: ตรวจสอบ user ID ใน SharedPreferences
+    SharedPreferences.getInstance().then((prefs) {
+      final userId = prefs.getString('id') ?? '';
+      final name = prefs.getString('name') ?? '';
+      final email = prefs.getString('email') ?? '';
+      final phone = prefs.getString('phone') ?? '';
+      
+      print('🔍 DEBUG: SharedPreferences data:');
+      print('🔍 DEBUG: - User ID: "$userId"');
+      print('🔍 DEBUG: - Name: "$name"');
+      print('🔍 DEBUG: - Email: "$email"');
+      print('🔍 DEBUG: - Phone: "$phone"');
+    });
+    
     _loadAddressData();
     _loadUserBidHistory();
     _loadUserWonAuctions();
@@ -98,14 +115,17 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
   // โหลดข้อมูลผู้ชนะของผู้ใช้จาก API
   Future<void> _loadUserWonAuctions() async {
     try {
+      print('🔍 DEBUG: Starting _loadUserWonAuctions...');
       setState(() {
         _isLoadingWonAuctions = true;
       });
 
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('id') ?? '';
+      print('🔍 DEBUG: User ID for won auctions: "$userId"');
 
       if (userId.isEmpty) {
+        print('❌ DEBUG: User ID is empty for won auctions, returning early');
         setState(() {
           _wonAuctions = [];
           _isLoadingWonAuctions = false;
@@ -113,35 +133,45 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
         return;
       }
 
+      print('🔍 DEBUG: Calling WinnerService.getWinnersByUserId with userId: $userId');
       // ดึงข้อมูลผู้ชนะตาม user_id
-
       final result = await WinnerService.getWinnersByUserId(userId);
+      print('🔍 DEBUG: WinnerService result: $result');
 
       if (result['status'] == 'success' && result['data'] != null) {
         final winners = result['data'] as List;
+        print('🔍 DEBUG: Winners data length: ${winners.length}');
+        print('🔍 DEBUG: Winners data: $winners');
 
         if (winners.isNotEmpty) {
           // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
           final convertedWinners =
               WinnerService.convertWinnersToAppFormat(winners);
+          print('🔍 DEBUG: Converted winners length: ${convertedWinners.length}');
+          print('🔍 DEBUG: Converted winners: $convertedWinners');
 
           setState(() {
             _wonAuctions = convertedWinners;
             _isLoadingWonAuctions = false;
           });
         } else {
+          print('❌ DEBUG: Winners data is empty');
           setState(() {
             _wonAuctions = [];
             _isLoadingWonAuctions = false;
           });
         }
       } else {
+        print('❌ DEBUG: WinnerService result status is not success or data is null');
+        print('🔍 DEBUG: Result status: ${result['status']}');
+        print('🔍 DEBUG: Result data: ${result['data']}');
         setState(() {
           _wonAuctions = [];
           _isLoadingWonAuctions = false;
         });
       }
     } catch (e) {
+      print('❌ DEBUG: Error in _loadUserWonAuctions: $e');
       setState(() {
         _wonAuctions = [];
         _isLoadingWonAuctions = false;
@@ -152,14 +182,17 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
   // โหลดประวัติการประมูลของผู้ใช้จาก API
   Future<void> _loadUserBidHistory() async {
     try {
+      print('🔍 DEBUG: Starting _loadUserBidHistory...');
       setState(() {
         _isLoadingActiveBids = true;
       });
 
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('id') ?? '';
+      print('🔍 DEBUG: User ID from SharedPreferences: "$userId"');
 
       if (userId.isEmpty) {
+        print('❌ DEBUG: User ID is empty, returning early');
         setState(() {
           _activeBids = [];
           _isLoadingActiveBids = false;
@@ -167,23 +200,33 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
         return;
       }
 
+      print('🔍 DEBUG: Calling UserBidHistoryService.getUserBidHistory with userId: $userId');
       // ดึงประวัติการประมูลจาก API
       final result = await UserBidHistoryService.getUserBidHistory(userId);
+      print('🔍 DEBUG: API result: $result');
 
       if (result['status'] == 'success' && result['data'] != null) {
         final bidHistory = result['data']['bid_history'] as List;
+        print('🔍 DEBUG: Bid history length: ${bidHistory.length}');
+        print('🔍 DEBUG: Bid history data: $bidHistory');
 
         if (bidHistory.isNotEmpty) {
           // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
           final convertedBids =
               UserBidHistoryService.convertBidHistoryToAppFormat(bidHistory);
+          print('🔍 DEBUG: Converted bids length: ${convertedBids.length}');
+          print('🔍 DEBUG: Converted bids: $convertedBids');
 
           // จัดกลุ่มตาม quotation และหา bid สูงสุด
           final highestBids =
               UserBidHistoryService.getHighestBidsByQuotation(convertedBids);
+          print('🔍 DEBUG: Highest bids count: ${highestBids.length}');
+          print('🔍 DEBUG: Highest bids: $highestBids');
 
           // แปลงเป็น List
           final uniqueBids = highestBids.values.toList();
+          print('🔍 DEBUG: Unique bids length: ${uniqueBids.length}');
+          print('🔍 DEBUG: Unique bids: $uniqueBids');
 
           setState(() {
             _activeBids = uniqueBids;
@@ -193,18 +236,23 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
           // เช็คและประกาศผู้ชนะสำหรับ auction ที่หมดเวลาแล้ว
           await _checkAndAnnounceWinners(uniqueBids, userId);
         } else {
+          print('❌ DEBUG: Bid history is empty');
           setState(() {
             _activeBids = [];
             _isLoadingActiveBids = false;
           });
         }
       } else {
+        print('❌ DEBUG: API result status is not success or data is null');
+        print('🔍 DEBUG: Result status: ${result['status']}');
+        print('🔍 DEBUG: Result data: ${result['data']}');
         setState(() {
           _activeBids = [];
           _isLoadingActiveBids = false;
         });
       }
     } catch (e) {
+      print('❌ DEBUG: Error in _loadUserBidHistory: $e');
       setState(() {
         _activeBids = [];
         _isLoadingActiveBids = false;

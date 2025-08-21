@@ -477,7 +477,12 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 validator: (value) => null, // Optional
               ),
 
-
+              // Quantity Fields for AS03
+              if (_state.selectedQuotationTypeCode == 'AS03')
+                AddAuctionWidgets.buildQuantityFields(
+                  maxQuantityController: _state.maxQuantityController,
+                  currentQuantityController: _state.currentQuantityController,
+                ),
 
               // Combined Price Section
               AddAuctionWidgets.buildCombinedPriceSection(
