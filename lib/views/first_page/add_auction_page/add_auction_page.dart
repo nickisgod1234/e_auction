@@ -4,6 +4,7 @@ import 'widget_add/add_auction_widgets.dart';
 import 'widget_add/add_auction_methods.dart';
 import 'widget_add/add_auction_state.dart';
 import 'promotion_policy_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AddAuctionPage extends StatefulWidget {
   const AddAuctionPage({super.key});
@@ -86,6 +87,35 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
   void _updatePercentageValue(double value) {
     _state.updatePercentageValue(value);
     setState(() {});
+  }
+
+  Future<void> _openLineOA() async {
+    const lineUrl = 'https://line.me/R/ti/p/@770psqfc';
+    final Uri uri = Uri.parse(lineUrl);
+    
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: try to open Line app directly
+        const lineAppUrl = 'line://ti/p/@770psqfc';
+        final Uri lineAppUri = Uri.parse(lineAppUrl);
+        if (await canLaunchUrl(lineAppUri)) {
+          await launchUrl(lineAppUri);
+        } else {
+          throw Exception('ไม่สามารถเปิด Line ได้');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ไม่สามารถเปิด Line ได้: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _updateQuotationType(String? id, String? name) {
@@ -190,18 +220,69 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 ),
               ),
               const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _openLineOA,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.chat,
+                        color: Colors.green[700],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Line OA:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '@770psqfc',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.open_in_new,
+                        color: Colors.green[700],
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green[50],
+                  color: Colors.orange[50],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green[200]!),
+                  border: Border.all(color: Colors.orange[200]!),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.access_time,
-                      color: Colors.green[700],
+                      color: Colors.orange[700],
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -223,7 +304,7 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
+                              color: Colors.orange[700],
                             ),
                           ),
                         ],
