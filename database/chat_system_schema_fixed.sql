@@ -4,7 +4,7 @@
 -- สำหรับ PostgreSQL Database
 
 -- ตารางเก็บข้อมูลการสนทนา (Chat Sessions)
-CREATE TABLE chat_sessions (
+CREATE TABLE cm_hrm.chat_sessions (
     id SERIAL PRIMARY KEY,
     customer_id INT NOT NULL, -- ID ของลูกค้าจาก tb_customers (Foreign Key)
     admin_id INT DEFAULT NULL, -- ID ของ admin จาก tb_customers (Foreign Key)
@@ -18,13 +18,13 @@ CREATE TABLE chat_sessions (
 );
 
 -- สร้าง Index สำหรับ chat_sessions
-CREATE INDEX idx_chat_sessions_customer_id ON chat_sessions(customer_id);
-CREATE INDEX idx_chat_sessions_admin_id ON chat_sessions(admin_id);
-CREATE INDEX idx_chat_sessions_status ON chat_sessions(status);
-CREATE INDEX idx_chat_sessions_last_message_at ON chat_sessions(last_message_at);
+CREATE INDEX idx_chat_sessions_customer_id ON cm_hrm.chat_sessions(customer_id);
+CREATE INDEX idx_chat_sessions_admin_id ON cm_hrm.chat_sessions(admin_id);
+CREATE INDEX idx_chat_sessions_status ON cm_hrm.chat_sessions(status);
+CREATE INDEX idx_chat_sessions_last_message_at ON cm_hrm.chat_sessions(last_message_at);
 
 -- ตารางเก็บข้อความในแต่ละการสนทนา
-CREATE TABLE chat_messages (
+CREATE TABLE cm_hrm.chat_messages (
     id SERIAL PRIMARY KEY,
     session_id INT NOT NULL, -- รหัสการสนทนา
     sender_type VARCHAR(20) NOT NULL CHECK (sender_type IN ('customer', 'admin')), -- ประเภทผู้ส่ง (customer หรือ admin)
@@ -34,19 +34,19 @@ CREATE TABLE chat_messages (
     is_read BOOLEAN DEFAULT FALSE, -- สถานะการอ่าน
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES cm_hrm.chat_sessions(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_id) REFERENCES cm_hrm.tb_customers(id) ON DELETE CASCADE
 );
 
 -- สร้าง Index สำหรับ chat_messages
-CREATE INDEX idx_chat_messages_session_id ON chat_messages(session_id);
-CREATE INDEX idx_chat_messages_sender_type ON chat_messages(sender_type);
-CREATE INDEX idx_chat_messages_sender_id ON chat_messages(sender_id);
-CREATE INDEX idx_chat_messages_created_at ON chat_messages(created_at);
-CREATE INDEX idx_chat_messages_is_read ON chat_messages(is_read);
+CREATE INDEX idx_chat_messages_session_id ON cm_hrm.chat_messages(session_id);
+CREATE INDEX idx_chat_messages_sender_type ON cm_hrm.chat_messages(sender_type);
+CREATE INDEX idx_chat_messages_sender_id ON cm_hrm.chat_messages(sender_id);
+CREATE INDEX idx_chat_messages_created_at ON cm_hrm.chat_messages(created_at);
+CREATE INDEX idx_chat_messages_is_read ON cm_hrm.chat_messages(is_read);
 
 -- ตารางเก็บข้อมูล Admin (เชื่อมต่อกับ tb_customers)
-CREATE TABLE chat_admins (
+CREATE TABLE cm_hrm.chat_admins (
     id SERIAL PRIMARY KEY,
     customer_id INT NOT NULL, -- ID ของ admin จาก tb_customers
     is_active BOOLEAN DEFAULT TRUE, -- สถานะการใช้งาน
@@ -58,11 +58,11 @@ CREATE TABLE chat_admins (
 );
 
 -- สร้าง Index สำหรับ chat_admins
-CREATE INDEX idx_chat_admins_customer_id ON chat_admins(customer_id);
-CREATE INDEX idx_chat_admins_is_active ON chat_admins(is_active);
+CREATE INDEX idx_chat_admins_customer_id ON cm_hrm.chat_admins(customer_id);
+CREATE INDEX idx_chat_admins_is_active ON cm_hrm.chat_admins(is_active);
 
 -- ตารางเก็บการแจ้งเตือน (Notifications)
-CREATE TABLE chat_notifications (
+CREATE TABLE cm_hrm.chat_notifications (
     id SERIAL PRIMARY KEY,
     session_id INT NOT NULL,
     recipient_type VARCHAR(20) NOT NULL CHECK (recipient_type IN ('customer', 'admin')),
@@ -73,19 +73,19 @@ CREATE TABLE chat_notifications (
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES cm_hrm.chat_sessions(id) ON DELETE CASCADE,
     FOREIGN KEY (recipient_id) REFERENCES cm_hrm.tb_customers(id) ON DELETE CASCADE
 );
 
 -- สร้าง Index สำหรับ chat_notifications
-CREATE INDEX idx_chat_notifications_session_id ON chat_notifications(session_id);
-CREATE INDEX idx_chat_notifications_recipient_type ON chat_notifications(recipient_type);
-CREATE INDEX idx_chat_notifications_recipient_id ON chat_notifications(recipient_id);
-CREATE INDEX idx_chat_notifications_is_read ON chat_notifications(is_read);
-CREATE INDEX idx_chat_notifications_created_at ON chat_notifications(created_at);
+CREATE INDEX idx_chat_notifications_session_id ON cm_hrm.chat_notifications(session_id);
+CREATE INDEX idx_chat_notifications_recipient_type ON cm_hrm.chat_notifications(recipient_type);
+CREATE INDEX idx_chat_notifications_recipient_id ON cm_hrm.chat_notifications(recipient_id);
+CREATE INDEX idx_chat_notifications_is_read ON cm_hrm.chat_notifications(is_read);
+CREATE INDEX idx_chat_notifications_created_at ON cm_hrm.chat_notifications(created_at);
 
 -- ตารางเก็บไฟล์ที่แนบในแชท
-CREATE TABLE chat_attachments (
+CREATE TABLE cm_hrm.chat_attachments (
     id SERIAL PRIMARY KEY,
     message_id INT NOT NULL,
     file_name VARCHAR(255) NOT NULL,
@@ -94,15 +94,15 @@ CREATE TABLE chat_attachments (
     file_type VARCHAR(100) NOT NULL, -- MIME type
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE
+    FOREIGN KEY (message_id) REFERENCES cm_hrm.chat_messages(id) ON DELETE CASCADE
 );
 
 -- สร้าง Index สำหรับ chat_attachments
-CREATE INDEX idx_chat_attachments_message_id ON chat_attachments(message_id);
-CREATE INDEX idx_chat_attachments_file_type ON chat_attachments(file_type);
+CREATE INDEX idx_chat_attachments_message_id ON cm_hrm.chat_attachments(message_id);
+CREATE INDEX idx_chat_attachments_file_type ON cm_hrm.chat_attachments(file_type);
 
 -- ตารางเก็บสถิติการสนทนา
-CREATE TABLE chat_statistics (
+CREATE TABLE cm_hrm.chat_statistics (
     id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     total_sessions INT DEFAULT 0,
@@ -116,7 +116,7 @@ CREATE TABLE chat_statistics (
 );
 
 -- สร้าง Index สำหรับ chat_statistics
-CREATE INDEX idx_chat_statistics_date ON chat_statistics(date);
+CREATE INDEX idx_chat_statistics_date ON cm_hrm.chat_statistics(date);
 
 -- สร้าง Trigger Functions สำหรับอัปเดต updated_at อัตโนมัติ
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -129,19 +129,19 @@ $$ language 'plpgsql';
 
 -- สร้าง Trigger สำหรับ chat_sessions
 CREATE TRIGGER update_chat_sessions_updated_at 
-    BEFORE UPDATE ON chat_sessions 
+    BEFORE UPDATE ON cm_hrm.chat_sessions 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- สร้าง Trigger สำหรับ chat_admins
 CREATE TRIGGER update_chat_admins_updated_at 
-    BEFORE UPDATE ON chat_admins 
+    BEFORE UPDATE ON cm_hrm.chat_admins 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- สร้าง Trigger สำหรับอัปเดต last_message_at เมื่อมีข้อความใหม่
 CREATE OR REPLACE FUNCTION update_session_last_message_at()
 RETURNS TRIGGER AS $$
 BEGIN
-    UPDATE chat_sessions 
+    UPDATE cm_hrm.chat_sessions 
     SET last_message_at = CURRENT_TIMESTAMP 
     WHERE id = NEW.session_id;
     RETURN NEW;
@@ -149,15 +149,13 @@ END;
 $$ language 'plpgsql';
 
 CREATE TRIGGER update_chat_sessions_last_message_at 
-    AFTER INSERT ON chat_messages 
+    AFTER INSERT ON cm_hrm.chat_messages 
     FOR EACH ROW EXECUTE FUNCTION update_session_last_message_at();
 
 -- Insert default admin data (เชื่อมต่อกับ tb_customers)
 -- หมายเหตุ: ต้องเพิ่ม field user_type ใน tb_customers ก่อน แล้วค่อยรัน INSERT นี้
--- INSERT INTO chat_admins (customer_id, is_active) VALUES
--- (1, TRUE),  -- admin ที่ id = 1 ใน tb_customers
--- (2, TRUE),  -- admin ที่ id = 2 ใน tb_customers
--- (3, TRUE);  -- admin ที่ id = 3 ใน tb_customers
+-- INSERT INTO cm_hrm.chat_admins (customer_id, is_active) VALUES
+-- (26, TRUE);  -- admin ที่ id = 26 ใน tb_customers
 
 -- หมายเหตุ: ต้องสร้าง admin ใน tb_customers ก่อน โดยใช้ field ใหม่ที่สร้างขึ้น
 
@@ -172,22 +170,22 @@ CREATE TRIGGER update_chat_sessions_last_message_at
 
 -- วิธีที่ 1: เพิ่ม field 'user_role' (แนะนำ)
 -- ALTER TABLE cm_hrm.tb_customers ADD COLUMN user_role VARCHAR(20) DEFAULT 'customer';
--- UPDATE cm_hrm.tb_customers SET user_role = 'admin' WHERE id IN (1, 2, 3);
+-- UPDATE cm_hrm.tb_customers SET user_role = 'admin' WHERE id = 26;
 -- CREATE INDEX idx_customers_user_role ON cm_hrm.tb_customers(user_role);
 
 -- วิธีที่ 2: เพิ่ม field 'account_type' (ชัดเจนที่สุด)
 -- ALTER TABLE cm_hrm.tb_customers ADD COLUMN account_type VARCHAR(20) DEFAULT 'customer';
--- UPDATE cm_hrm.tb_customers SET account_type = 'admin' WHERE id IN (1, 2, 3);
+-- UPDATE cm_hrm.tb_customers SET account_type = 'admin' WHERE id = 26;
 -- CREATE INDEX idx_customers_account_type ON cm_hrm.tb_customers(account_type);
 
 -- วิธีที่ 3: เพิ่ม field 'is_admin' (ง่ายที่สุด)
 -- ALTER TABLE cm_hrm.tb_customers ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
--- UPDATE cm_hrm.tb_customers SET is_admin = TRUE WHERE id IN (1, 2, 3);
+-- UPDATE cm_hrm.tb_customers SET is_admin = TRUE WHERE id = 26;
 -- CREATE INDEX idx_customers_is_admin ON cm_hrm.tb_customers(is_admin);
 
 -- วิธีที่ 4: เพิ่ม field 'user_type' (ตรงกับการใช้งาน)
 -- ALTER TABLE cm_hrm.tb_customers ADD COLUMN user_type VARCHAR(20) DEFAULT 'customer';
--- UPDATE cm_hrm.tb_customers SET user_type = 'admin' WHERE id IN (1, 2, 3);
+-- UPDATE cm_hrm.tb_customers SET user_type = 'admin' WHERE id = 26;
 -- CREATE INDEX idx_customers_user_type ON cm_hrm.tb_customers(user_type);
 
 -- ===== ตัวอย่างการใช้งาน =====
@@ -199,7 +197,7 @@ CREATE TRIGGER update_chat_sessions_last_message_at
 
 -- Query หา admin ที่สามารถตอบแชทได้:
 -- SELECT c.* FROM cm_hrm.tb_customers c 
--- INNER JOIN chat_admins ca ON c.id = ca.customer_id 
+-- INNER JOIN cm_hrm.chat_admins ca ON c.id = ca.customer_id 
 -- WHERE c.user_type = 'admin' AND ca.is_active = true AND c.isdelete = false;
 
 -- ===== สคริปต์ติดตั้งระบบแชท (รันตามลำดับ) =====
@@ -212,14 +210,12 @@ CREATE TRIGGER update_chat_sessions_last_message_at
 -- UPDATE cm_hrm.tb_customers SET user_type = 'customer' WHERE user_type IS NULL;
 
 -- ขั้นตอนที่ 3: กำหนด admin (เปลี่ยน id ตามต้องการ)
--- UPDATE cm_hrm.tb_customers SET user_type = 'admin' WHERE id IN (1, 2, 3);
+-- UPDATE cm_hrm.tb_customers SET user_type = 'admin' WHERE id = 26;
 
 -- ขั้นตอนที่ 4: เพิ่ม admin ใน chat_admins (เปลี่ยน id ตามต้องการ)
--- INSERT INTO chat_admins (customer_id, is_active) VALUES
--- (1, TRUE),  -- admin ที่ id = 1 ใน tb_customers
--- (2, TRUE),  -- admin ที่ id = 2 ใน tb_customers
--- (3, TRUE);  -- admin ที่ id = 3 ใน tb_customers
+-- INSERT INTO cm_hrm.chat_admins (customer_id, is_active) VALUES
+-- (26, TRUE);  -- admin ที่ id = 26 ใน tb_customers
 
 -- ขั้นตอนที่ 5: ตรวจสอบผลลัพธ์
 -- SELECT id, name, email, user_type FROM cm_hrm.tb_customers WHERE user_type = 'admin';
--- SELECT * FROM chat_admins;
+-- SELECT * FROM cm_hrm.chat_admins;

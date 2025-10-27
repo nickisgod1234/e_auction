@@ -1,6 +1,6 @@
 class ChatSession {
   final int id;
-  final String phoneId;
+  final int customerId;
   final int? adminId;
   final String status;
   final DateTime createdAt;
@@ -9,7 +9,7 @@ class ChatSession {
 
   ChatSession({
     required this.id,
-    required this.phoneId,
+    required this.customerId,
     this.adminId,
     required this.status,
     required this.createdAt,
@@ -20,7 +20,7 @@ class ChatSession {
   factory ChatSession.fromJson(Map<String, dynamic> json) {
     return ChatSession(
       id: json['id'],
-      phoneId: json['phone_id'],
+      customerId: json['customer_id'],
       adminId: json['admin_id'],
       status: json['status'],
       createdAt: DateTime.parse(json['created_at']),
@@ -32,7 +32,7 @@ class ChatSession {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'phone_id': phoneId,
+      'customer_id': customerId,
       'admin_id': adminId,
       'status': status,
       'created_at': createdAt.toIso8601String(),
@@ -45,11 +45,15 @@ class ChatSession {
 class ChatMessage {
   final int id;
   final int sessionId;
-  final String senderType; // 'user' or 'admin'
-  final String senderId;
+  final String senderType; // 'customer' or 'admin'
+  final int senderId;
+  final String? senderName;
+  final String? senderEmail;
+  final String? senderPhone;
   final String message;
   final String messageType; // 'text', 'image', 'file'
   final bool isRead;
+  final bool? isMine; // null if not provided by API
   final DateTime createdAt;
   final List<ChatAttachment>? attachments;
 
@@ -58,9 +62,13 @@ class ChatMessage {
     required this.sessionId,
     required this.senderType,
     required this.senderId,
+    this.senderName,
+    this.senderEmail,
+    this.senderPhone,
     required this.message,
     required this.messageType,
     required this.isRead,
+    this.isMine,
     required this.createdAt,
     this.attachments,
   });
@@ -71,9 +79,13 @@ class ChatMessage {
       sessionId: json['session_id'],
       senderType: json['sender_type'],
       senderId: json['sender_id'],
+      senderName: json['sender_name'],
+      senderEmail: json['sender_email'],
+      senderPhone: json['sender_phone'],
       message: json['message'],
       messageType: json['message_type'],
-      isRead: json['is_read'],
+      isRead: json['is_read'] ?? false,
+      isMine: json['is_mine'],
       createdAt: DateTime.parse(json['created_at']),
       attachments: json['attachments'] != null
           ? (json['attachments'] as List)
@@ -89,16 +101,20 @@ class ChatMessage {
       'session_id': sessionId,
       'sender_type': senderType,
       'sender_id': senderId,
+      'sender_name': senderName,
+      'sender_email': senderEmail,
+      'sender_phone': senderPhone,
       'message': message,
       'message_type': messageType,
       'is_read': isRead,
+      'is_mine': isMine,
       'created_at': createdAt.toIso8601String(),
       'attachments': attachments?.map((attachment) => attachment.toJson()).toList(),
     };
   }
 
-  // Helper method to check if message is from user
-  bool get isFromUser => senderType == 'user';
+  // Helper method to check if message is from customer
+  bool get isFromUser => senderType == 'customer';
   
   // Helper method to check if message is from admin
   bool get isFromAdmin => senderType == 'admin';
@@ -268,11 +284,15 @@ class ChatListResponse {
   final List<ChatMessage> messages;
   final bool hasMore;
   final int totalCount;
+  final int currentPage;
+  final int perPage;
 
   ChatListResponse({
     required this.messages,
     required this.hasMore,
     required this.totalCount,
+    required this.currentPage,
+    required this.perPage,
   });
 
   factory ChatListResponse.fromJson(Map<String, dynamic> json) {
@@ -280,8 +300,10 @@ class ChatListResponse {
       messages: (json['messages'] as List)
           .map((message) => ChatMessage.fromJson(message))
           .toList(),
-      hasMore: json['has_more'],
-      totalCount: json['total_count'],
+      hasMore: json['has_more'] ?? false,
+      totalCount: json['total_count'] ?? 0,
+      currentPage: json['current_page'] ?? 1,
+      perPage: json['per_page'] ?? 50,
     );
   }
 }

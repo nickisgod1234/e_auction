@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/auth_service/auth_service.dart';
 import 'package:e_auction/views/first_page/home_screen.dart';
 import 'package:e_auction/theme/app_theme.dart';
+import 'package:e_auction/utils/user_data_manager.dart';
 
 class RequestOtpLoginPage extends StatefulWidget {
   @override
@@ -19,7 +20,7 @@ class RequestOtpLoginPage extends StatefulWidget {
 class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _pinController = TextEditingController();
-  final AuthService _authService = AuthService(baseUrl: Config.apiUrlotpsever);
+  final AuthService _authService = AuthService(baseUrl: Config.apiUrlotplocalauction);
 
   bool _isPinVisible = false; // แสดงช่อง PIN เมื่อได้รับ refno
   bool _isPhoneLoginMode = false; // ควบคุมการแสดง TextButton และปุ่มย้อนกลับ
@@ -28,6 +29,9 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
   int _countdown = 0; // ตัวนับเวลาขอ OTP ใหม่
   String _refno = ""; // เก็บ refno
   Timer? _timer;
+  
+  // เก็บข้อมูลผู้ใช้จากขั้นตอน phone check
+  Map<String, dynamic>? _userDataFromPhoneCheck;
 
   // Helper function to safely get string values from userData
   String _safeGetString(Map<String, dynamic> userData, String key) {
@@ -81,7 +85,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
     }
   }
 
-// บันทึกข้อมูลเบอร์โทรและ Token
+// บันทึกข้อมูลเบอร์โทรและ Token (Deprecated - ใช้ UserDataManager แทน)
   Future<void> saveUserData(String phoneNumber, String token,
       String phoneUserID, String email, String password) async {
     final prefs = await SharedPreferences.getInstance();
@@ -92,31 +96,14 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
     await prefs.setString('token_otp', token); // เก็บ Token
   }
 
-// ดึงข้อมูลผู้ใช้จาก Local Storage
-  Future<Map<String, String?>> getUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final phoneNumber = prefs.getString('phone_number');
-    final token = prefs.getString('token_otp');
-    final phoneUserID = prefs.getString('id');
-    final email = prefs.getString('email');
-    final password = prefs.getString('password');
-    print('Phone User ID: $phoneUserID');
-    print('Phone Number: $phoneNumber');
-    print('email: $email');
-    print('passwor: $password');
-    return {
-      'phone_number': phoneNumber,
-      'token_otp': token,
-      'id': phoneUserID,
-      'email': email,
-      'password': password
-    };
+// ดึงข้อมูลผู้ใช้จาก Local Storage (Deprecated - ใช้ UserDataManager แทน)
+  Future<Map<String, dynamic>> getUserData() async {
+    return await UserDataManager.getUserData();
   }
 
-// ลบข้อมูลผู้ใช้ (สำหรับกรณี Log Out)
+// ลบข้อมูลผู้ใช้ (สำหรับกรณี Log Out) (Deprecated - ใช้ UserDataManager แทน)
   Future<void> clearUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('phone_number');
+    await UserDataManager.clearUserData();
   }
 
   void _submitPhoneNumber() async {
@@ -124,9 +111,29 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
 
     // Demo Mode for Apple Review
     if (phoneNumber == '0001112345') {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('id', 'APPLE_TEST_ID');
-      await prefs.setString('phone', '0001112345');
+      // ใช้ UserDataManager สำหรับ Demo Mode
+      final demoData = {
+        'phone_number': '0001112345',
+        'token_otp': 'demo_token',
+        'id': 'APPLE_TEST_ID',
+        'email': 'demo@example.com',
+        'password': 'demo123',
+        'role': 'customer',
+        'is_admin': false,
+        'name': 'Demo User',
+        'profile_picture': null,
+        'type': 'individual',
+        'address': 'Demo Address',
+        'status': 'active',
+      };
+      
+      await UserDataManager.saveUserData(demoData);
+      
+      print('=== Demo Mode Setup ===');
+      print('User ID: APPLE_TEST_ID');
+      print('Phone Number: 0001112345');
+      print('Role: customer');
+      print('Is Admin: false');
 
       setState(() {
         _refno = 'DEMO';
@@ -170,49 +177,45 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
       }
 
       // ถ้า isdelete == 'f' หรือค่าว่าง/null ให้เข้าใช้งานได้ตามปกติ
+      // เก็บข้อมูลผู้ใช้ไว้สำหรับใช้ในขั้นตอน OTP verification
+      _userDataFromPhoneCheck = userData;
+      
+      // ใช้ UserDataManager เพื่อบันทึกข้อมูลผู้ใช้
+      await UserDataManager.saveUserData(userData);
+      
+      // ตรวจสอบข้อมูลที่บันทึกจริงจาก SharedPreferences
+      final savedData = await UserDataManager.getUserData();
+      
+      print('=== Raw API Data ===');
+      print('API Role: ${userData['role']}');
+      print('API Is Admin: ${userData['is_admin']}');
+      print('API User Type: ${userData['user_type']}');
+      
+      print('=== Saved Data Verification ===');
+      print('Saved Role: ${savedData['role']}');
+      print('Saved Is Admin: ${savedData['is_admin']}');
+      
+      // แสดงข้อมูลที่บันทึก
       final phone_number = _safeGetString(userData, 'phone_number');
       final phone_id = _safeGetString(userData, 'id');
       final userName = _safeGetString(userData, 'name');
-      final Emai = _safeGetString(userData, 'email');
-      final password = _safeGetString(userData, 'password');
+      final role = savedData['role'] ?? ''; // ใช้ข้อมูลจาก SharedPreferences
+      final isAdmin = savedData['is_admin'] ?? false; // ใช้ข้อมูลจาก SharedPreferences
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('phone_number', phone_number);
-      await prefs.setString('id', phone_id);
-      await prefs.setString('email', Emai);
-      await prefs.setString('password', password);
-      // ... (บันทึก fields อื่นๆ เหมือนเดิม)
-      await prefs.setString(
-          'created_at', _safeGetString(userData, 'created_at'));
-      await prefs.setString(
-          'updated_at', _safeGetString(userData, 'updated_at'));
-      await prefs.setString(
-          'company_id', _safeGetString(userData, 'company_id'));
-      await prefs.setString('type', _safeGetString(userData, 'type'));
-      await prefs.setString('logo', _safeGetString(userData, 'logo'));
-      await prefs.setString('phone', _safeGetString(userData, 'phone'));
-      await prefs.setString('code', _safeGetString(userData, 'code'));
-      await prefs.setString('name', _safeGetString(userData, 'name'));
-      await prefs.setString(
-          'tax_number', _safeGetString(userData, 'tax_number'));
-      await prefs.setString('fullname', _safeGetString(userData, 'fullname'));
-      await prefs.setString('addr', _safeGetString(userData, 'addr'));
-      await prefs.setString(
-          'province_id', _safeGetString(userData, 'province_id'));
-      await prefs.setString(
-          'district_id', _safeGetString(userData, 'district_id'));
-      await prefs.setString(
-          'sub_district_id', _safeGetString(userData, 'sub_district_id'));
-      await prefs.setString('sub', _safeGetString(userData, 'sub'));
-      await prefs.setString('pass', _safeGetString(userData, 'pass'));
-      await prefs.setString('reset_key', _safeGetString(userData, 'reset_key'));
-      await prefs.setString(
-          'reset_key_exp', _safeGetString(userData, 'reset_key_exp'));
-      await prefs.setString('isdelete', userData['isdelete'] ?? '');
-
-      print('User ID: $phone_number');
+      print('=== User Login Data ===');
+      print('User ID: $phone_id');
+      print('Phone Number: $phone_number');
       print('User Name: $userName');
+      print('Role: $role');
+      print('Is Admin: $isAdmin');
       print('Status: $status');
+      
+      // ตรวจสอบ role และแสดงข้อความ
+      if (isAdmin) {
+        print('🔴 ADMIN LOGIN DETECTED - จะไปหน้า Admin Dashboard');
+      } else {
+        print('🔵 CUSTOMER LOGIN DETECTED - จะไปหน้า Customer Chat');
+      }
       // ส่ง OTP ทันทีเพื่อเข้าสู่ระบบ
       final otpResponse = await _authService.sendOtp(phoneNumber);
       _stopLoadingDialog(context); // ปิดสถานะโหลด
@@ -427,18 +430,17 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                   Navigator.pop(context); // ปิด OTP dialog
 
                   // บันทึกข้อมูลการลงทะเบียน
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('phone_number', phoneNumber);
-                  await prefs.setString('token_otp', response['token'] ?? '');
-                  await prefs.setString('id', response['id']?.toString() ?? '');
-
-                  // บันทึกข้อมูลอื่นๆ ที่ได้จาก response
-                  if (response['email'] != null)
-                    await prefs.setString('email', response['email']);
-                  if (response['password'] != null)
-                    await prefs.setString('password', response['password']);
-                  if (response['name'] != null)
-                    await prefs.setString('name', response['name']);
+                  await UserDataManager.saveUserData(response);
+                  
+                  // แสดงข้อมูลที่บันทึก
+                  final role = response['role'] ?? '';
+                  final isAdmin = response['is_admin'] ?? false;
+                  
+                  print('=== Registration Success ===');
+                  print('User ID: ${response['id']}');
+                  print('Phone Number: $phoneNumber');
+                  print('Role: $role');
+                  print('Is Admin: $isAdmin');
 
                   // แสดงข้อความสำเร็จ
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -498,13 +500,29 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
 
     // Demo Mode
     if (phoneNumber == '0001112345' && pin == '12345') {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('phone_number', '0001112345');
-      await prefs.setString('token_otp', 'demo_token');
-      await prefs.setString('id', '999');
-      await prefs.setString('email', 'nick888@hmail.com');
-      await prefs.setString('password', '12345');
-      // เพิ่มข้อมูลจำลองอื่น ๆ ตามต้องการ
+      // ใช้ UserDataManager สำหรับ Demo Mode
+      final demoData = {
+        'phone_number': '0001112345',
+        'token_otp': 'demo_token',
+        'id': '999',
+        'email': 'nick888@hmail.com',
+        'password': '12345',
+        'role': 'customer',
+        'is_admin': false,
+        'name': 'Demo User',
+        'profile_picture': null,
+        'type': 'individual',
+        'address': 'Demo Address',
+        'status': 'active',
+      };
+      
+      await UserDataManager.saveUserData(demoData);
+      
+      print('=== Demo Mode Login ===');
+      print('User ID: 999');
+      print('Phone Number: 0001112345');
+      print('Role: customer');
+      print('Is Admin: false');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('เข้าสู่ Demo Mode')),
@@ -534,19 +552,50 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
       final id = int.tryParse(response['id'].toString()) ?? 0;
 
       if (id > 0) {
-        final prefs = await SharedPreferences.getInstance();
-        // บันทึกข้อมูลการล็อกอิน
-        await prefs.setString('phone_number', phoneNumber);
-        await prefs.setString('token_otp', response['token'] ?? '');
-        await prefs.setString('id', id.toString());
-
-        // บันทึกข้อมูลอื่นๆ ที่ได้จาก response
-        if (response['email'] != null)
-          await prefs.setString('email', response['email']);
-        if (response['password'] != null)
-          await prefs.setString('password', response['password']);
-        if (response['name'] != null)
-          await prefs.setString('name', response['name']);
+        // ใช้ข้อมูลจากขั้นตอน phone check แทน response ของ OTP
+        final userDataToSave = _userDataFromPhoneCheck ?? response;
+        
+        print('=== OTP Verification ===');
+        print('Using data from phone check: ${_userDataFromPhoneCheck != null}');
+        print('OTP Response ID: ${response['id']}');
+        print('Phone Check ID: ${_userDataFromPhoneCheck?['id']}');
+        
+        // ใช้ UserDataManager เพื่อบันทึกข้อมูลการล็อกอิน
+        await UserDataManager.saveUserData(userDataToSave);
+        
+        // ตรวจสอบข้อมูลที่บันทึกจริงจาก SharedPreferences
+        final savedData = await UserDataManager.getUserData();
+        
+        print('=== Raw OTP Response Data ===');
+        print('Response Role: ${response['role']}');
+        print('Response Is Admin: ${response['is_admin']}');
+        print('Response User Type: ${response['user_type']}');
+        
+        print('=== Phone Check Data Used ===');
+        print('Phone Check Role: ${_userDataFromPhoneCheck?['role']}');
+        print('Phone Check Is Admin: ${_userDataFromPhoneCheck?['is_admin']}');
+        print('Phone Check User Type: ${_userDataFromPhoneCheck?['user_type']}');
+        
+        print('=== Saved Data Verification ===');
+        print('Saved Role: ${savedData['role']}');
+        print('Saved Is Admin: ${savedData['is_admin']}');
+        
+        // แสดงข้อมูลที่บันทึก
+        final role = savedData['role'] ?? ''; // ใช้ข้อมูลจาก SharedPreferences
+        final isAdmin = savedData['is_admin'] ?? false; // ใช้ข้อมูลจาก SharedPreferences
+        
+        print('=== OTP Verification Success ===');
+        print('User ID: $id');
+        print('Phone Number: $phoneNumber');
+        print('Role: $role');
+        print('Is Admin: $isAdmin');
+        
+        // ตรวจสอบ role และแสดงข้อความ
+        if (isAdmin) {
+          print('🔴 ADMIN LOGIN DETECTED - จะไปหน้า Admin Dashboard');
+        } else {
+          print('🔵 CUSTOMER LOGIN DETECTED - จะไปหน้า Customer Chat');
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('ยืนยันสำเร็จ!')),

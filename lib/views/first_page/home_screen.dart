@@ -318,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _searchController.clear();
         _isSearching = false;
       });
-    } else if (index == 2) {
+    } else if (index == 3) {
       // Settings tab
       await _navigateToPage(context, SettingPage());
       setState(() => _selectedIndex = 0); // Reset index after returning

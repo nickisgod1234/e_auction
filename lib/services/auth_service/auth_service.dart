@@ -30,6 +30,13 @@ class AuthService {
           final status = data['data']['status'];
           if (status == "exists") {
             final userData = data['data'];
+            
+            // Debug: แสดงข้อมูลที่ได้รับจาก API
+            print('=== AuthService.checkPhoneNumber Debug ===');
+            print('API Role: ${userData['role']}');
+            print('API Is Admin: ${userData['is_admin']}');
+            print('API User Type: ${userData['user_type']}');
+            
             final result = <String, String>{};
             result['id'] = _safeToString(userData['id']);
             result['phone_number'] = _safeToString(userData['phone_number']);
@@ -69,6 +76,18 @@ class AuthService {
                 : _safeToString(userData['password']);
             result['reset_key'] = _safeToString(userData['reset_key']);
             result['reset_key_exp'] = _safeToString(userData['reset_key_exp']);
+            
+            // เพิ่มข้อมูล role และ is_admin
+            result['role'] = _safeToString(userData['role']);
+            result['is_admin'] = _safeToString(userData['is_admin']);
+            result['user_type'] = _safeToString(userData['user_type']);
+            
+            // Debug: แสดงข้อมูลที่ส่งกลับไป
+            print('=== AuthService Result Debug ===');
+            print('Result Role: ${result['role']}');
+            print('Result Is Admin: ${result['is_admin']}');
+            print('Result User Type: ${result['user_type']}');
+            
             print('Result created successfully');
             return result;
           } else {

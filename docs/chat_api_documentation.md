@@ -4,10 +4,10 @@
 ระบบแชทระหว่าง User และ Admin โดยแยกตาม phone_id และรองรับการแชทแบบ real-time
 
 ## Database Schema
-- **chat_sessions**: เก็บข้อมูลการสนทนาแต่ละครั้ง
-- **chat_messages**: เก็บข้อความทั้งหมด
-- **chat_admins**: เก็บข้อมูล admin
-- **chat_notifications**: เก็บการแจ้งเตือน
+- **chat_sessions**: เก็บข้อมูลการสนทนาแต่ละครั้ง (เชื่อมต่อกับ tb_customers)
+- **chat_messages**: เก็บข้อความทั้งหมด (sender_id เชื่อมต่อกับ tb_customers)
+- **chat_admins**: เก็บข้อมูล admin (customer_id เชื่อมต่อกับ tb_customers)
+- **chat_notifications**: เก็บการแจ้งเตือน (recipient_id เชื่อมต่อกับ tb_customers)
 - **chat_attachments**: เก็บไฟล์แนบ
 - **chat_statistics**: เก็บสถิติการสนทนา
 
@@ -19,7 +19,7 @@ POST /api/chat/sessions
 Content-Type: application/json
 
 {
-  "phone_id": "0812345678"
+  "customer_id": 123  // ID ของลูกค้าจาก tb_customers (จาก SharedPreferences 'id')
 }
 
 Response:
@@ -28,7 +28,7 @@ Response:
   "message": "Session created/retrieved successfully",
   "data": {
     "id": 1,
-    "phone_id": "0812345678",
+    "customer_id": 123,
     "admin_id": null,
     "status": "pending",
     "created_at": "2024-01-01T10:00:00Z",
@@ -45,8 +45,8 @@ Content-Type: application/json
 
 {
   "session_id": 1,
-  "sender_type": "user",
-  "sender_id": "0812345678",
+  "sender_type": "customer",
+  "sender_id": 123,  // ID ของผู้ส่งจาก tb_customers
   "message": "สวัสดีครับ",
   "message_type": "text"
 }
@@ -58,8 +58,8 @@ Response:
   "data": {
     "id": 1,
     "session_id": 1,
-    "sender_type": "user",
-    "sender_id": "0812345678",
+    "sender_type": "customer",
+    "sender_id": 123,
     "message": "สวัสดีครับ",
     "message_type": "text",
     "is_read": false,
@@ -81,8 +81,8 @@ Response:
       {
         "id": 1,
         "session_id": 1,
-        "sender_type": "user",
-        "sender_id": "0812345678",
+        "sender_type": "customer",
+        "sender_id": 123,
         "message": "สวัสดีครับ",
         "message_type": "text",
         "is_read": true,
@@ -108,7 +108,7 @@ Response:
       "id": 2,
       "session_id": 1,
       "sender_type": "admin",
-      "sender_id": "1",
+      "sender_id": 26,
       "message": "สวัสดีครับ ยินดีให้บริการครับ",
       "message_type": "text",
       "is_read": false,
@@ -124,8 +124,8 @@ PUT /api/chat/sessions/{session_id}/mark-read
 Content-Type: application/json
 
 {
-  "recipient_type": "user",
-  "recipient_id": "0812345678"
+  "recipient_type": "customer",
+  "recipient_id": 123
 }
 
 Response:
@@ -146,18 +146,23 @@ Response:
   "message": "Admin retrieved successfully",
   "data": {
     "id": 1,
-    "admin_name": "เจ้าหน้าที่บริการลูกค้า",
-    "admin_email": "support@e-auction.com",
+    "customer_id": 26,
     "is_active": true,
     "created_at": "2024-01-01T09:00:00Z",
-    "updated_at": "2024-01-01T09:00:00Z"
+    "updated_at": "2024-01-01T09:00:00Z",
+    "customer_info": {
+      "id": 26,
+      "name": "เจ้าหน้าที่บริการลูกค้า",
+      "email": "support@e-auction.com",
+      "phone": "0812345678"
+    }
   }
 }
 ```
 
 ### 7. ดึงการแจ้งเตือน
 ```
-GET /api/chat/notifications?phone_id=0812345678&page=1&limit=20
+GET /api/chat/notifications?customer_id=123&page=1&limit=20
 
 Response:
 {
@@ -167,8 +172,8 @@ Response:
     {
       "id": 1,
       "session_id": 1,
-      "recipient_type": "user",
-      "recipient_id": "0812345678",
+      "recipient_type": "customer",
+      "recipient_id": 123,
       "notification_type": "new_message",
       "title": "ข้อความใหม่",
       "message": "คุณมีข้อความใหม่จากเจ้าหน้าที่",
@@ -222,14 +227,14 @@ Response:
 ## Business Logic
 
 ### User Flow
-1. User เข้าสู่หน้าแชท → สร้างหรือดึง session ที่มีอยู่
-2. User ส่งข้อความ → บันทึกในฐานข้อมูล
-3. Admin ตอบกลับ → User ได้รับข้อความใหม่ผ่าน polling
+1. User เข้าสู่หน้าแชท → ดึง `id` จาก SharedPreferences (ที่บันทึกจากการล็อกอิน)
+2. User ส่งข้อความ → บันทึกในฐานข้อมูลด้วย `customer_id` = `id` จาก SharedPreferences
+3. Admin (id=26) ตอบกลับ → User ได้รับข้อความใหม่ผ่าน polling
 4. User อ่านข้อความ → อัปเดตสถานะการอ่าน
 
 ### Admin Flow
-1. Admin เข้าสู่ระบบ → เห็นรายการ session ที่รอการตอบกลับ
-2. Admin เลือก session → รับผิดชอบการสนทนา
+1. Admin (id=26) เข้าสู่ระบบ → เห็นรายการ session ที่รอการตอบกลับ
+2. Admin เลือก session → รับผิดชอบการสนทนา (admin_id = 26)
 3. Admin ตอบกลับ → User ได้รับข้อความใหม่
 4. Admin ปิด session → จบการสนทนา
 
@@ -244,11 +249,12 @@ Response:
 - **file**: ไฟล์อื่นๆ
 
 ## Security Considerations
-1. ตรวจสอบ phone_id ว่าถูกต้อง
+1. ตรวจสอบ customer_id (id จาก SharedPreferences) ว่าถูกต้อง
 2. ตรวจสอบสิทธิ์การเข้าถึง session
 3. จำกัดขนาดไฟล์แนบ
 4. ตรวจสอบ MIME type ของไฟล์
 5. Rate limiting สำหรับการส่งข้อความ
+6. Admin id=26 เท่านั้นที่สามารถตอบแชทได้
 
 ## Performance Optimization
 1. ใช้ pagination สำหรับข้อความ
