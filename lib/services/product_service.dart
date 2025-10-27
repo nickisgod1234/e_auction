@@ -93,7 +93,7 @@ class ProductService {
   List<Map<String, dynamic>> _filterAuctionQuotations(
       List<Map<String, dynamic>> quotations) {
     
-    print('DEBUG: ProductService - Filtering ${quotations.length} quotations');
+    // print('DEBUG: ProductService - Filtering ${quotations.length} quotations');
     
     final filteredQuotations = quotations.where((quotation) {
       final typeCode = _safeToString(quotation['quotation_type_code']);
@@ -105,18 +105,18 @@ class ProductService {
       final isActive = status == "1"; // เปรียบเทียบกับ string "1"
       final shouldInclude = isAuction && isActive;
       
-      print('DEBUG: ProductService - Quotation: $title, Type: $typeCode, Status: $status, Include: $shouldInclude');
+      // print('DEBUG: ProductService - Quotation: $title, Type: $typeCode, Status: $status, Include: $shouldInclude');
       
-      if (!shouldInclude) {
-        print('DEBUG: ProductService - Excluded: $title (Type: $typeCode, Status: $status)');
-      } else {
-        print('DEBUG: ProductService - Included: $title (Type: $typeCode, Status: $status)');
-      }
+      // if (!shouldInclude) {
+      //   print('DEBUG: ProductService - Excluded: $title (Type: $typeCode, Status: $status)');
+      // } else {
+      //   print('DEBUG: ProductService - Included: $title (Type: $typeCode, Status: $status)');
+      // }
       
       return shouldInclude;
     }).toList();
     
-    print('DEBUG: ProductService - Filtered to ${filteredQuotations.length} auction quotations');
+    // print('DEBUG: ProductService - Filtered to ${filteredQuotations.length} auction quotations');
 
     return filteredQuotations;
   }
