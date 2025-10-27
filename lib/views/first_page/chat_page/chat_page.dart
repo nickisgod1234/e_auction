@@ -81,9 +81,9 @@ class _ChatPageState extends State<ChatPage> {
         });
      
         
-        // ดึงข้อมูลเพิ่มเติม
-        final phoneNumber = await UserDataManager.getPhoneNumber();
-        final name = await UserDataManager.getName();
+          // ดึงข้อมูลเพิ่มเติม
+          // final phoneNumber = await UserDataManager.getPhoneNumber();
+          // final name = await UserDataManager.getName();
      
       } else {
       
@@ -525,12 +525,13 @@ class _ChatPageState extends State<ChatPage> {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
-    if (difference.inDays > 0) {
+    // ถ้าเป็นวันเดียวกัน แสดงเวลา
+    if (difference.inDays == 0) {
+      return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    }
+    // ถ้าเป็นวันอื่น แสดงวันที่และเวลา
+    else {
       return '${timestamp.day}/${timestamp.month} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inHours > 0) {
-      return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-    } else {
-      return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
     }
   }
 

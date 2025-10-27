@@ -86,7 +86,7 @@ class ChatMessage {
       messageType: json['message_type'],
       isRead: json['is_read'] ?? false,
       isMine: json['is_mine'],
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: DateTime.parse(json['created_at']).toLocal(), // แปลงเป็นเวลาท้องถิ่น
       attachments: json['attachments'] != null
           ? (json['attachments'] as List)
               .map((attachment) => ChatAttachment.fromJson(attachment))

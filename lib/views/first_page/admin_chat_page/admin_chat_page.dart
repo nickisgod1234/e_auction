@@ -399,7 +399,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _formatTime(message.createdAt.toString()),
+                  _formatTime(message.createdAt),
                   style: TextStyle(
                     fontSize: 10,
                     color: isMine ? Colors.white70 : Colors.grey[600],
@@ -426,18 +426,17 @@ class _AdminChatPageState extends State<AdminChatPage> {
     );
   }
 
-  String _formatTime(String isoTime) {
-    try {
-      final dateTime = DateTime.parse(isoTime);
-      final now = DateTime.now();
+  String _formatTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
 
-      if (dateTime.day == now.day) {
-        return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-      } else {
-        return '${dateTime.day}/${dateTime.month} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-      }
-    } catch (e) {
-      return '';
+    // ถ้าเป็นวันเดียวกัน แสดงเวลา
+    if (difference.inDays == 0) {
+      return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    }
+    // ถ้าเป็นวันอื่น แสดงวันที่และเวลา
+    else {
+      return '${timestamp.day}/${timestamp.month} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
     }
   }
 

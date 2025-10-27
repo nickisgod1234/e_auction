@@ -400,7 +400,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   String _formatTime(String? isoTime) {
     if (isoTime == null) return '';
     try {
-      final dateTime = DateTime.parse(isoTime);
+      final dateTime = DateTime.parse(isoTime).toLocal(); // แปลงเป็นเวลาท้องถิ่น
       final now = DateTime.now();
       
       if (dateTime.day == now.day) {
