@@ -355,7 +355,94 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
     );
   }
 
+  void _showImageSelectionDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'เลือกรูปภาพสินค้า',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _pickImage();
+                      },
+                      icon: Icon(Icons.photo_library),
+                      label: Text('เลือกรูปจากแกลเลอรี่'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _takePhoto();
+                      },
+                      icon: Icon(Icons.camera_alt),
+                      label: Text('ถ่ายรูปใหม่'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('ยกเลิก'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _submitForm() async {
+    // ตรวจสอบว่ามีรูปภาพหรือไม่
+    if (_state.selectedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('กรุณาเลือกรูปภาพสินค้าก่อนเพิ่มประมูล'),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'เลือกรูป',
+            textColor: Colors.white,
+            onPressed: () {
+              _showImageSelectionDialog();
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!_state.validateForm()) {
       return;
     }
@@ -625,9 +712,9 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 margin: const EdgeInsets.all(16),
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _state.isSubmitting ? null : _submitForm,
+                  onPressed: (_state.isSubmitting || _state.selectedImage == null) ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: _state.selectedImage == null ? Colors.grey : Colors.blue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -651,8 +738,8 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                             Text('กำลังเพิ่มประมูล...'),
                           ],
                         )
-                      : const Text(
-                          'เพิ่มประมูล',
+                      : Text(
+                          _state.selectedImage == null ? 'กรุณาเลือกรูปภาพก่อน' : 'เพิ่มประมูล',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
