@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/services/chat_service.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
 import 'package:e_auction/views/first_page/admin_chat_page/admin_chat_page.dart';
+import 'package:e_auction/services/product_approval_service.dart';
+import 'package:e_auction/views/first_page/admin_dashboard/product_approval_page.dart';
 import 'dart:async';
 
 class AdminDashboard extends StatefulWidget {
@@ -351,7 +353,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.approval, size: 64, color: Colors.grey),
+          Icon(Icons.approval, size: 64, color: Colors.orange),
           SizedBox(height: 16),
           Text(
             'อนุมัติสินค้า',
@@ -359,24 +361,25 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           ),
           SizedBox(height: 8),
           Text(
-            'ฟีเจอร์นี้กำลังพัฒนา',
+            'จัดการการอนุมัติสินค้าจาก Mobile',
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
           SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('ฟีเจอร์อนุมัติสินค้ากำลังพัฒนา'),
-                  backgroundColor: Colors.orange,
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProductApprovalPage(),
                 ),
               );
             },
-            icon: Icon(Icons.info),
-            label: Text('ข้อมูลเพิ่มเติม'),
+            icon: Icon(Icons.approval),
+            label: Text('ไปหน้าอนุมัติสินค้า'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
         ],
