@@ -30,6 +30,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
   bool _isSending = false;
   bool _isPolling = false;
   bool _isTyping = false; // เพิ่มตัวแปรสำหรับ tracking การพิมพ์
+  bool _isInChatScreen = true; // เพิ่ม flag สำหรับตรวจสอบว่าอยู่ในหน้าแชทหรือไม่
   Timer? _pollingTimer;
   Timer? _typingTimer; // Timer สำหรับส่งสัญญาณหยุดพิมพ์
 
@@ -41,10 +42,12 @@ class _AdminChatPageState extends State<AdminChatPage> {
 
   Future<void> _initializeChat() async {
     setState(() => _isLoading = true);
-
+    
     await _loadMessages();
+    // Mark messages as read เมื่อเข้าหน้าแชท
+    await _markMessagesAsRead();
     _startPolling();
-
+    
     setState(() => _isLoading = false);
   }
 
@@ -141,6 +144,15 @@ class _AdminChatPageState extends State<AdminChatPage> {
             _messages.addAll(newMessages);
           });
           _scrollToBottom();
+          
+          // Mark messages as read ทันทีเมื่อได้ข้อความใหม่
+          await _markMessagesAsRead();
+          
+          // Refresh ข้อความเพื่อแสดงสถานะ is_read ที่อัปเดตแล้ว
+          await _loadMessages();
+        } else {
+          // ไม่มีข้อความใหม่ แต่ยังต้องดึงสถานะ read ที่อัปเดต
+          await _loadMessages();
         }
       }
     } finally {
@@ -382,13 +394,31 @@ class _AdminChatPageState extends State<AdminChatPage> {
 
             SizedBox(height: 4),
 
-            // เวลา
-            Text(
-              _formatTime(message.createdAt.toString()),
-              style: TextStyle(
-                fontSize: 10,
-                color: isMine ? Colors.white70 : Colors.grey[600],
-              ),
+            // เวลาและ Read status
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatTime(message.createdAt.toString()),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isMine ? Colors.white70 : Colors.grey[600],
+                  ),
+                ),
+                // Read status สำหรับข้อความของตัวเอง
+                if (isMine) ...[
+                  SizedBox(width: 4),
+                  Icon(
+                    message.isRead 
+                      ? Icons.done_all  // อ่านแล้ว (ติ๊กสองอัน)
+                      : Icons.done,     // ส่งแล้ว (ติ๊กอันเดียว)
+                    size: 12,
+                    color: message.isRead 
+                      ? Colors.white  // สีขาว = อ่านแล้ว
+                      : Colors.white70, // สีขาวจาง = ส่งแล้วแต่ยังไม่อ่าน
+                  ),
+                ],
+              ],
             ),
           ],
         ),
@@ -408,6 +438,29 @@ class _AdminChatPageState extends State<AdminChatPage> {
       }
     } catch (e) {
       return '';
+    }
+  }
+
+  // Mark messages as read
+  Future<void> _markMessagesAsRead() async {
+    if (!_isInChatScreen) {
+      return;
+    }
+    
+    try {
+      final response = await ChatService.markMessagesAsRead(
+        sessionId: widget.sessionId,
+        recipientType: 'admin',
+        recipientId: widget.adminId,
+      );
+      
+      if (response.success) {
+        // Success
+      } else {
+        // Failed
+      }
+    } catch (e) {
+      // Error
     }
   }
 
@@ -450,6 +503,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
 
   @override
   void dispose() {
+    _isInChatScreen = false; // ออกจากหน้าแชท
     _pollingTimer?.cancel();
     _typingTimer?.cancel();
     _messageController.dispose();

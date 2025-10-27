@@ -25,13 +25,14 @@ class _ChatPageState extends State<ChatPage> {
   bool _isSending = false;
   bool _isPolling = false; // เพิ่ม flag สำหรับป้องกัน polling ซ้ำ
   bool _isTyping = false; // เพิ่มตัวแปรสำหรับ tracking การพิมพ์
+  bool _isInChatScreen = true; // เพิ่ม flag สำหรับตรวจสอบว่าอยู่ในหน้าแชทหรือไม่
   Timer? _pollingTimer;
   Timer? _typingTimer; // Timer สำหรับส่งสัญญาณหยุดพิมพ์
   
   @override
   void initState() {
     super.initState();
-    print('ChatPage initState called');
+ 
     _initializeChat();
     // ไม่เริ่ม polling ที่นี่ เพราะจะเริ่มหลังจากโหลดข้อความเสร็จ
   }
@@ -40,23 +41,25 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _initializeChat() async {
     setState(() => _isLoading = true);
     
-    print('=== Chat Initialization Started ===');
+ 
     
     // ดึง customer_id จาก SharedPreferences ที่บันทึกจากการล็อกอิน
     await _loadUserData();
     
     if (_customerId != null) {
-      print('Customer ID found: $_customerId, proceeding with chat setup');
+   
       await _createOrGetSession();
       await _loadMessages();
+      // Mark messages as read เมื่อเข้าหน้าแชท
+      await _markMessagesAsRead();
       // เริ่ม polling หลังจากโหลดข้อความเสร็จ
       _startPolling();
     } else {
-      print('No customer ID found, showing error');
+     
       _showErrorSnackBar('ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่');
     }
     
-    print('=== Chat Initialization Completed ===');
+ 
     setState(() => _isLoading = false);
   }
 
@@ -66,7 +69,7 @@ class _ChatPageState extends State<ChatPage> {
       // ตรวจสอบว่าผู้ใช้ล็อกอินแล้วหรือไม่
       final isLoggedIn = await UserDataManager.isLoggedIn();
       if (!isLoggedIn) {
-        print('User not logged in');
+    
         return;
       }
 
@@ -76,18 +79,17 @@ class _ChatPageState extends State<ChatPage> {
         setState(() {
           _customerId = customerId;
         });
-        print('Loaded customer_id: $customerId');
+     
         
         // ดึงข้อมูลเพิ่มเติม
         final phoneNumber = await UserDataManager.getPhoneNumber();
         final name = await UserDataManager.getName();
-        print('Phone number: $phoneNumber');
-        print('Name: $name');
+     
       } else {
-        print('No valid customer_id found');
+      
       }
     } catch (e) {
-      print('Error loading user data: $e');
+    
     }
   }
 
@@ -111,6 +113,7 @@ class _ChatPageState extends State<ChatPage> {
   // ดึงข้อความทั้งหมด
   Future<void> _loadMessages() async {
     if (_currentSession != null && _customerId != null) {
+     
       final response = await ChatService.getMessages(
         sessionId: _currentSession!.id,
         customerId: _customerId!,
@@ -121,8 +124,9 @@ class _ChatPageState extends State<ChatPage> {
           _messages = response.data!;
         });
         _scrollToBottom();
-        print('Loaded ${_messages.length} messages');
+      
       } else {
+      
         _showErrorSnackBar(response.message);
       }
     }
@@ -131,7 +135,7 @@ class _ChatPageState extends State<ChatPage> {
   // ส่งข้อความ
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty || _isSending || _currentSession == null || _customerId == null) {
-      print('Send message blocked: isEmpty=${_messageController.text.trim().isEmpty}, isSending=$_isSending, session=${_currentSession != null}, customerId=${_customerId != null}');
+   
       return;
     }
 
@@ -140,7 +144,7 @@ class _ChatPageState extends State<ChatPage> {
     final messageText = _messageController.text.trim();
     _messageController.clear();
     
-    print('Sending message: $messageText');
+   
 
     final response = await ChatService.sendMessage(
       sessionId: _currentSession!.id,
@@ -159,9 +163,9 @@ class _ChatPageState extends State<ChatPage> {
           _messages.add(newMessage);
         });
         _scrollToBottom();
-        print('Message added to UI: ${newMessage.message}');
+      
       } else {
-        print('Message already exists, not adding to UI');
+     
       }
     } else {
       _showErrorSnackBar(response.message);
@@ -180,18 +184,18 @@ class _ChatPageState extends State<ChatPage> {
     _pollingTimer = Timer.periodic(Duration(seconds: 5), (timer) {
       _checkNewMessages();
     });
-    print('Polling started');
+  
   }
 
   // ตรวจสอบข้อความใหม่
   Future<void> _checkNewMessages() async {
     if (_currentSession == null || _customerId == null || _isPolling) {
-      print('Customer polling blocked: session=${_currentSession != null}, customerId=${_customerId != null}, isPolling=$_isPolling');
+    
       return;
     }
 
     _isPolling = true;
-    print('Customer checking for new messages...');
+   
     
     try {
       final response = await ChatService.checkNewMessages(
@@ -200,21 +204,33 @@ class _ChatPageState extends State<ChatPage> {
         since: _messages.isNotEmpty ? _messages.last.createdAt.toIso8601String() : null,
       );
 
-      print('Customer checkNewMessages response: success=${response.success}, data=${response.data?.length ?? 0} messages');
+   
 
       if (response.success && response.data != null && response.data!.isNotEmpty) {
         // ตรวจสอบว่าข้อความใหม่ไม่ซ้ำกับที่มีอยู่
         final existingMessageIds = _messages.map((m) => m.id).toSet();
         final newMessages = response.data!.where((msg) => !existingMessageIds.contains(msg.id)).toList();
         
-        print('Customer found ${newMessages.length} new messages (existing: ${_messages.length})');
+         
         
         if (newMessages.isNotEmpty) {
           setState(() {
             _messages.addAll(newMessages);
           });
           _scrollToBottom();
-          print('Customer added ${newMessages.length} new messages');
+       
+          
+          // Mark messages as read ทันทีเมื่อได้ข้อความใหม่
+        
+          await _markMessagesAsRead();
+          
+          // Refresh ข้อความเพื่อแสดงสถานะ is_read ที่อัปเดตแล้ว
+      
+          await _loadMessages();
+        } else {
+          // ไม่มีข้อความใหม่ แต่ยังต้องดึงสถานะ read ที่อัปเดต
+        
+          await _loadMessages();
         }
       }
     } finally {
@@ -457,14 +473,32 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   SizedBox(height: 4),
-                  Text(
-                    _formatTime(message.createdAt),
-                    style: TextStyle(
-                      color: isMine
-                          ? Colors.white.withOpacity(0.7)
-                          : Colors.grey[600],
-                      fontSize: 11,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatTime(message.createdAt),
+                        style: TextStyle(
+                          color: isMine
+                              ? Colors.white.withOpacity(0.7)
+                              : Colors.grey[600],
+                          fontSize: 11,
+                        ),
+                      ),
+                      // Read status สำหรับข้อความของตัวเอง
+                      if (isMine) ...[
+                        SizedBox(width: 4),
+                        Icon(
+                          message.isRead 
+                            ? Icons.done_all  // อ่านแล้ว (ติ๊กสองอัน)
+                            : Icons.done,     // ส่งแล้ว (ติ๊กอันเดียว)
+                          size: 12,
+                          color: message.isRead 
+                            ? Colors.white.withOpacity(0.8)  // สีขาวจาง = อ่านแล้ว
+                            : Colors.white.withOpacity(0.5), // สีขาวจางมาก = ส่งแล้วแต่ยังไม่อ่าน
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -511,9 +545,34 @@ class _ChatPageState extends State<ChatPage> {
         senderType: 'customer',
         isTyping: isTyping,
       );
-      print('Customer typing indicator sent: $isTyping');
+
     } catch (e) {
-      print('Error sending typing indicator: $e');
+        
+    }
+  }
+
+  // Mark messages as read
+  Future<void> _markMessagesAsRead() async {
+    if (!_isInChatScreen || _currentSession == null || _customerId == null) {
+      
+      return;
+    }
+    
+  
+    try {
+      final response = await ChatService.markMessagesAsRead(
+        sessionId: _currentSession!.id,
+        recipientType: 'customer',
+        recipientId: _customerId!,
+      );
+      
+      if (response.success) {
+     
+      } else {
+    
+      }
+    } catch (e) {
+    
     }
   }
 
@@ -544,6 +603,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    _isInChatScreen = false; // ออกจากหน้าแชท
     _messageController.dispose();
     _scrollController.dispose();
     _pollingTimer?.cancel();

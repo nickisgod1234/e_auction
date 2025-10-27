@@ -189,6 +189,50 @@ class ChatService {
     }
   }
 
+  // Mark messages as read
+  static Future<ChatApiResponse<Map<String, dynamic>>> markMessagesAsRead({
+    required int sessionId,
+    required String recipientType, // 'customer' หรือ 'admin'
+    required int recipientId,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/mark_read.php?session_id=$sessionId'),
+        headers: _headers,
+        body: jsonEncode({
+          'recipient_type': recipientType,
+          'recipient_id': recipientId,
+        }),
+      );
+
+      print('ChatService.markMessagesAsRead URL: $baseUrl/mark_read.php?session_id=$sessionId');
+      print('ChatService.markMessagesAsRead Body: recipient_type=$recipientType, recipient_id=$recipientId');
+      print('ChatService.markMessagesAsRead Response: ${response.statusCode}');
+      print('ChatService.markMessagesAsRead Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ChatApiResponse<Map<String, dynamic>>(
+          success: data['success'] ?? false,
+          message: data['message'] ?? 'Mark messages as read successfully',
+          data: data['data'],
+        );
+      } else {
+        return ChatApiResponse<Map<String, dynamic>>(
+          success: false,
+          message: 'เกิดข้อผิดพลาดในการ mark messages as read',
+          error: response.body,
+        );
+      }
+    } catch (e) {
+      return ChatApiResponse<Map<String, dynamic>>(
+        success: false,
+        message: 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
+        error: e.toString(),
+      );
+    }
+  }
+
   // ส่งสัญญาณกำลังพิมพ์ (Typing Indicator)
   static Future<ChatApiResponse<Map<String, dynamic>>> sendTypingIndicator({
     required int sessionId,
