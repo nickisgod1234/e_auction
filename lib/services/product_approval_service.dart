@@ -2,17 +2,18 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
+import 'package:e_auction/views/config/config_prod.dart';
 
 class ProductApprovalService {
-  final String baseUrl;
+  static String get baseUrl => '${Config.apiUrlAuction}/ERP-Cloudmate';
   late http.Client _client;
 
-  ProductApprovalService({required this.baseUrl}) {
+  ProductApprovalService() {
     _client = _createHttpClient();
   }
 
-  // ใช้ baseUrl เดียวกับ product_service.dart
-  ProductApprovalService.defaultInstance() : baseUrl = 'https://cm-mecustomers.com' {
+  // ใช้ baseUrl จาก Config
+  ProductApprovalService.defaultInstance() {
     _client = _createHttpClient();
   }
 
@@ -56,7 +57,7 @@ class ProductApprovalService {
       if (type != null && type.isNotEmpty) queryParams['type'] = type;
       if (date != null && date.isNotEmpty) queryParams['date'] = date;
 
-      final uri = Uri.parse('${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/flutter_quotation_approval_controller.php')
+      final uri = Uri.parse('${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php')
           .replace(queryParameters: queryParams);
 
       print('ProductApprovalService.getPendingProducts URL: $uri');
@@ -91,7 +92,7 @@ class ProductApprovalService {
   // ดึงรายละเอียดสินค้า
   Future<ProductApprovalResponse> getProductDetail(int quotationId) async {
     try {
-      final uri = Uri.parse('${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/flutter_quotation_approval_controller.php')
+      final uri = Uri.parse('${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php')
           .replace(queryParameters: {'id': quotationId.toString()});
 
       print('ProductApprovalService.getProductDetail URL: $uri');
@@ -133,7 +134,7 @@ class ProductApprovalService {
         'comment': comment ?? (status == 'approved' ? 'อนุมัติโดย admin' : 'ปฏิเสธโดย admin'),
       };
 
-      final uri = Uri.parse('${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/flutter_quotation_approval_controller.php');
+      final uri = Uri.parse('${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php');
 
       print('ProductApprovalService.approveProduct URL: $uri');
       print('ProductApprovalService.approveProduct Body: ${jsonEncode(requestData)}');
@@ -403,8 +404,8 @@ class ProductQuotation {
       // ตรวจสอบว่า imageData เป็น List หรือไม่
       if (imageData is List) {
         final urls = (imageData as List).map((img) {
-          // ใช้ localhost สำหรับทดสอบก่อน
-          String baseUrl = 'http://localhost/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
+          // ใช้ baseUrl จาก Config
+          String baseUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
           print('ProductQuotation.imageUrls - Generated URL: $baseUrl');
           return baseUrl;
         }).toList();
@@ -419,7 +420,7 @@ class ProductQuotation {
             final parsed = jsonDecode(imageData);
             if (parsed is List) {
               final urls = (parsed as List).map((img) {
-                String baseUrl = 'http://localhost/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
+                String baseUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
                 print('ProductQuotation.imageUrls - Generated URL (retry): $baseUrl');
                 return baseUrl;
               }).toList();

@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:e_auction/models/chat_models.dart';
+import 'package:e_auction/views/config/config_prod.dart';
 
 class ChatService {
-  static const String baseUrl = 'http://192.168.1.39/HR-API-MORKET/api/chat';
+  // static String get baseUrl => '${Config.apiUrlotplocalauction}api/chat';
+  static String get baseUrl => '${Config.apiUrlotpsever}api/chat';
   
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json; charset=UTF-8',
