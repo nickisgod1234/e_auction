@@ -41,26 +41,38 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _initializeChat() async {
     setState(() => _isLoading = true);
     
- 
-    
-    // ดึง customer_id จาก SharedPreferences ที่บันทึกจากการล็อกอิน
-    await _loadUserData();
-    
-    if (_customerId != null) {
-   
-      await _createOrGetSession();
-      await _loadMessages();
-      // Mark messages as read เมื่อเข้าหน้าแชท
-      await _markMessagesAsRead();
-      // เริ่ม polling หลังจากโหลดข้อความเสร็จ
-      _startPolling();
-    } else {
-     
-      _showErrorSnackBar('ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่');
+    try {
+      // ดึง customer_id จาก SharedPreferences ที่บันทึกจากการล็อกอิน
+      await _loadUserData();
+      
+      if (_customerId != null) {
+        print('DEBUG: Customer ID loaded: $_customerId');
+        
+        // ตรวจสอบว่าเป็น demo account หรือไม่
+        if (_customerId == 999) {
+          // ใช้ demo mode สำหรับ Apple Store testing
+          _createDemoSession();
+          await _loadDemoMessages();
+        } else {
+          // ใช้ production mode
+          await _createOrGetSession();
+          await _loadMessages();
+          // Mark messages as read เมื่อเข้าหน้าแชท
+          await _markMessagesAsRead();
+        }
+        
+        // เริ่ม polling หลังจากโหลดข้อความเสร็จ
+        _startPolling();
+      } else {
+        print('ERROR: Customer ID is null');
+        _showErrorSnackBar('ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่');
+      }
+    } catch (e) {
+      print('ERROR: Exception in _initializeChat: $e');
+      _showErrorSnackBar('เกิดข้อผิดพลาดในการเริ่มต้นแชท: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
-    
- 
-    setState(() => _isLoading = false);
   }
 
   // ดึงข้อมูลผู้ใช้จาก SharedPreferences
@@ -93,7 +105,65 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  // สร้างหรือดึงข้อมูลการสนทนา
+  // สร้าง demo session สำหรับ Apple Store testing
+  void _createDemoSession() {
+    setState(() {
+      _currentSession = ChatSession(
+        id: 999,
+        customerId: 999,
+        adminId: 1,
+        status: 'active',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        lastMessageAt: DateTime.now(),
+      );
+    });
+    print('DEBUG: Demo session created with ID: ${_currentSession?.id}');
+  }
+
+  // โหลดข้อความ demo สำหรับ Apple Store testing
+  Future<void> _loadDemoMessages() async {
+    setState(() {
+      _messages = [
+        ChatMessage(
+          id: 1,
+          sessionId: 999,
+          senderType: 'admin',
+          senderId: 1,
+          message: 'สวัสดีครับ ยินดีต้อนรับสู่ระบบประมูลออนไลน์',
+          messageType: 'text',
+          isRead: true,
+          isMine: false,
+          createdAt: DateTime.now().subtract(Duration(minutes: 5)),
+        ),
+        ChatMessage(
+          id: 2,
+          sessionId: 999,
+          senderType: 'customer',
+          senderId: 999,
+          message: 'สวัสดีครับ ผมสนใจจะเข้าร่วมประมูล',
+          messageType: 'text',
+          isRead: true,
+          isMine: true,
+          createdAt: DateTime.now().subtract(Duration(minutes: 3)),
+        ),
+        ChatMessage(
+          id: 3,
+          sessionId: 999,
+          senderType: 'admin',
+          senderId: 1,
+          message: 'ยินดีครับ หากมีคำถามใดๆ สามารถสอบถามได้เลยครับ',
+          messageType: 'text',
+          isRead: true,
+          isMine: false,
+          createdAt: DateTime.now().subtract(Duration(minutes: 1)),
+        ),
+      ];
+    });
+    print('DEBUG: Demo messages loaded: ${_messages.length} messages');
+  }
+
+  // สร้างหรือดึงข้อมูลการสนทนา (สำหรับ production)
   Future<void> _createOrGetSession() async {
     final response = await ChatService.createOrGetSession(customerId: _customerId!);
     if (response.success && response.data != null) {
@@ -135,7 +205,6 @@ class _ChatPageState extends State<ChatPage> {
   // ส่งข้อความ
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty || _isSending || _currentSession == null || _customerId == null) {
-   
       return;
     }
 
@@ -144,32 +213,79 @@ class _ChatPageState extends State<ChatPage> {
     final messageText = _messageController.text.trim();
     _messageController.clear();
     
-   
-
-    final response = await ChatService.sendMessage(
-      sessionId: _currentSession!.id,
-      customerId: _customerId!,
-      message: messageText,
-    );
-
-    if (response.success && response.data != null) {
-      // สร้าง ChatMessage object จาก response
-      final newMessage = ChatMessage.fromJson(response.data!);
+    // ตรวจสอบว่าเป็น demo account หรือไม่
+    if (_customerId == 999) {
+      // Demo mode สำหรับ Apple Store testing
+      final newMessage = ChatMessage(
+        id: _messages.length + 1,
+        sessionId: _currentSession!.id,
+        senderType: 'customer',
+        senderId: _customerId!,
+        message: messageText,
+        messageType: 'text',
+        isRead: false,
+        isMine: true,
+        createdAt: DateTime.now(),
+      );
       
-      // ตรวจสอบว่าข้อความนี้ยังไม่มีในรายการ
-      final messageExists = _messages.any((msg) => msg.id == newMessage.id);
-      if (!messageExists) {
-        setState(() {
-          _messages.add(newMessage);
-        });
-        _scrollToBottom();
+      setState(() {
+        _messages.add(newMessage);
+      });
+      _scrollToBottom();
       
+      // จำลองการตอบกลับจาก admin หลังจาก 2 วินาที
+      Future.delayed(Duration(seconds: 2), () {
+        if (mounted) {
+          final adminReply = ChatMessage(
+            id: _messages.length + 1,
+            sessionId: _currentSession!.id,
+            senderType: 'admin',
+            senderId: 1,
+            message: 'ขอบคุณสำหรับข้อความครับ จะติดต่อกลับไปในไม่ช้า',
+            messageType: 'text',
+            isRead: true,
+            isMine: false,
+            createdAt: DateTime.now(),
+          );
+          
+          setState(() {
+            _messages.add(adminReply);
+          });
+          _scrollToBottom();
+        }
+      });
+      
+      setState(() => _isSending = false);
+      return;
+    }
+
+    // Production mode
+    try {
+      final response = await ChatService.sendMessage(
+        sessionId: _currentSession!.id,
+        customerId: _customerId!,
+        message: messageText,
+      );
+
+      if (response.success && response.data != null) {
+        // สร้าง ChatMessage object จาก response
+        final newMessage = ChatMessage.fromJson(response.data!);
+        
+        // ตรวจสอบว่าข้อความนี้ยังไม่มีในรายการ
+        final messageExists = _messages.any((msg) => msg.id == newMessage.id);
+        if (!messageExists) {
+          setState(() {
+            _messages.add(newMessage);
+          });
+          _scrollToBottom();
+        }
       } else {
-     
+        _showErrorSnackBar(response.message);
+        // คืนข้อความกลับไปในช่องพิมพ์
+        _messageController.text = messageText;
       }
-    } else {
-      _showErrorSnackBar(response.message);
-      // คืนข้อความกลับไปในช่องพิมพ์
+    } catch (e) {
+      _showErrorSnackBar('เกิดข้อผิดพลาดในการส่งข้อความ: $e');
       _messageController.text = messageText;
     }
 
@@ -181,10 +297,16 @@ class _ChatPageState extends State<ChatPage> {
     // หยุด polling เก่าก่อน (ถ้ามี)
     _pollingTimer?.cancel();
     
+    // สำหรับ demo account ไม่ต้อง polling
+    if (_customerId == 999) {
+      print('DEBUG: Demo account - skipping polling');
+      return;
+    }
+    
     _pollingTimer = Timer.periodic(Duration(seconds: 5), (timer) {
       _checkNewMessages();
     });
-  
+    print('DEBUG: Polling started for production account');
   }
 
   // ตรวจสอบข้อความใหม่
@@ -281,7 +403,7 @@ class _ChatPageState extends State<ChatPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _currentAdmin?.adminName ?? 'เจ้าหน้าที่บริการลูกค้า',
+                  _customerId == 999 ? 'Demo - เจ้าหน้าที่บริการลูกค้า' : (_currentAdmin?.adminName ?? 'เจ้าหน้าที่บริการลูกค้า'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -289,10 +411,10 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ),
                 Text(
-                  _currentSession?.adminId != null ? 'ออนไลน์' : 'รอการตอบกลับ',
+                  _customerId == 999 ? 'Demo Mode' : (_currentSession?.adminId != null ? 'ออนไลน์' : 'รอการตอบกลับ'),
                   style: TextStyle(
                     fontSize: 12,
-                    color: _currentSession?.adminId != null ? Colors.green[300] : Colors.orange[300],
+                    color: _customerId == 999 ? Colors.blue[300] : (_currentSession?.adminId != null ? Colors.green[300] : Colors.orange[300]),
                   ),
                 ),
               ],
