@@ -166,15 +166,15 @@ class AddAuctionState {
       // ลบ seller_name และ seller_phone ออกเพราะไม่ใช้แล้ว
     };
     
-    // Add quantity data for AS03
-    if (selectedQuotationTypeCode == 'AS03') {
-      data['max_quantity'] = maxQuantityController.text.isNotEmpty 
-          ? int.tryParse(maxQuantityController.text) ?? 0 
-          : 0;
-      data['current_quantity'] = currentQuantityController.text.isNotEmpty 
-          ? int.tryParse(currentQuantityController.text) ?? 0 
-          : 0;
-    }
+    // Add quantity data for AS03 - Hidden
+    // if (selectedQuotationTypeCode == 'AS03') {
+    //   data['max_quantity'] = maxQuantityController.text.isNotEmpty 
+    //       ? int.tryParse(maxQuantityController.text) ?? 0 
+    //       : 0;
+    //   data['current_quantity'] = currentQuantityController.text.isNotEmpty 
+    //       ? int.tryParse(currentQuantityController.text) ?? 0 
+    //       : 0;
+    // }
     
     // Debug: Print the raw auction data
     print('DEBUG: Raw auction data from form:');
@@ -186,10 +186,10 @@ class AddAuctionState {
     print('Start Date: ${data['start_date']}');
     print('End Date: ${data['end_date']}');
     print('Purchase Order Type ID: ${data['purchase_order_type_id']}');
-    if (selectedQuotationTypeCode == 'AS03') {
-      print('Max Quantity: ${data['max_quantity']}');
-      print('Current Quantity: ${data['current_quantity']}');
-    }
+    // if (selectedQuotationTypeCode == 'AS03') {
+    //   print('Max Quantity: ${data['max_quantity']}');
+    //   print('Current Quantity: ${data['current_quantity']}');
+    // }
     // ลบ debug prints สำหรับ seller info
     
     return data;
@@ -232,12 +232,12 @@ class AddAuctionState {
            endDate != null &&
            selectedQuotationTypeId != null;
     
-    // Additional validation for AS03
-    if (selectedQuotationTypeCode == 'AS03') {
-      return basicComplete &&
-             maxQuantityController.text.isNotEmpty &&
-             currentQuantityController.text.isNotEmpty;
-    }
+    // Additional validation for AS03 - Hidden
+    // if (selectedQuotationTypeCode == 'AS03') {
+    //   return basicComplete &&
+    //          maxQuantityController.text.isNotEmpty &&
+    //          currentQuantityController.text.isNotEmpty;
+    // }
     
     return basicComplete;
   }

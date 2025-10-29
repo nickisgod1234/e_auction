@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/views/config/config_prod.dart';
-import 'package:flutter/foundation.dart';
 
 class AddAuctionService {
   // Base URL for API - using config
@@ -52,10 +51,10 @@ class AddAuctionService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
 
-        // Filter only auction types (starting with 'A') - include AS03 for quantity reduction auction
+        // Filter only auction types (starting with 'A') - exclude AS03
         final auctionTypes = data.where((item) {
           final code = item['quotation_type_code']?.toString() ?? '';
-          return code.startsWith('A');
+          return code.startsWith('A') && code != 'AS03';
         }).map((item) {
           final code = item['quotation_type_code']?.toString() ?? '';
           String customName = item['description']?.toString() ?? '';
@@ -68,9 +67,9 @@ class AddAuctionService {
             case 'AS02':
               customName = 'ประมูลแบบราคาลดลง(ได้ราคาต่ำสุดเป็นผู้ชนะ)';
               break;
-            case 'AS03':
-              customName = 'การซื้อสินค้าตามจำนวนที่ต้องการ';
-              break;
+            // case 'AS03': - Hidden
+            //   customName = 'การซื้อสินค้าตามจำนวนที่ต้องการ';
+            //   break;
           }
           
           return {

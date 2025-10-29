@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:e_auction/theme/app_theme.dart';
 import 'widget_add/add_auction_widgets.dart';
 import 'widget_add/add_auction_methods.dart';
 import 'widget_add/add_auction_state.dart';
@@ -645,12 +644,12 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 validator: (value) => null, // Optional
               ),
 
-              // Quantity Fields for AS03
-              if (_state.selectedQuotationTypeCode == 'AS03')
-                AddAuctionWidgets.buildQuantityFields(
-                  maxQuantityController: _state.maxQuantityController,
-                  currentQuantityController: _state.currentQuantityController,
-                ),
+              // Quantity Fields for AS03 - Hidden
+              // if (_state.selectedQuotationTypeCode == 'AS03')
+              //   AddAuctionWidgets.buildQuantityFields(
+              //     maxQuantityController: _state.maxQuantityController,
+              //     currentQuantityController: _state.currentQuantityController,
+              //   ),
 
               // Combined Price Section
               AddAuctionWidgets.buildCombinedPriceSection(

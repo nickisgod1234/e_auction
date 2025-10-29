@@ -40,15 +40,28 @@ class _AdminChatPageState extends State<AdminChatPage> {
     _initializeChat();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh messages เมื่อกลับมาหน้าแชท
+    if (mounted) {
+      _loadMessages();
+    }
+  }
+
   Future<void> _initializeChat() async {
-    setState(() => _isLoading = true);
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
     
     await _loadMessages();
     // Mark messages as read เมื่อเข้าหน้าแชท
     await _markMessagesAsRead();
     _startPolling();
     
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadMessages() async {
@@ -58,12 +71,16 @@ class _AdminChatPageState extends State<AdminChatPage> {
     );
 
     if (response.success && response.data != null) {
-      setState(() {
-        _messages = response.data!;
-      });
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _messages = response.data!;
+        });
+        _scrollToBottom();
+      }
     } else {
-      _showErrorSnackBar(response.message);
+      if (mounted) {
+        _showErrorSnackBar(response.message);
+      }
     }
   }
 
@@ -90,19 +107,23 @@ class _AdminChatPageState extends State<AdminChatPage> {
 
       // ตรวจสอบว่าข้อความนี้ยังไม่มีในรายการ
       final messageExists = _messages.any((msg) => msg.id == newMessage.id);
-      if (!messageExists) {
+      if (!messageExists && mounted) {
         setState(() {
           _messages.add(newMessage);
         });
         _scrollToBottom();
       } else {}
     } else {
-      _showErrorSnackBar(response.message);
-      // คืนข้อความกลับไปในช่องพิมพ์
-      _messageController.text = messageText;
+      if (mounted) {
+        _showErrorSnackBar(response.message);
+        // คืนข้อความกลับไปในช่องพิมพ์
+        _messageController.text = messageText;
+      }
     }
 
-    setState(() => _isSending = false);
+    if (mounted) {
+      setState(() => _isSending = false);
+    }
   }
 
   void _startPolling() {
@@ -110,7 +131,11 @@ class _AdminChatPageState extends State<AdminChatPage> {
     _pollingTimer?.cancel();
 
     _pollingTimer = Timer.periodic(Duration(seconds: 5), (timer) {
-      _checkNewMessages();
+      if (mounted) {
+        _checkNewMessages();
+      } else {
+        timer.cancel();
+      }
     });
   }
 
@@ -140,10 +165,12 @@ class _AdminChatPageState extends State<AdminChatPage> {
             .toList();
 
         if (newMessages.isNotEmpty) {
-          setState(() {
-            _messages.addAll(newMessages);
-          });
-          _scrollToBottom();
+          if (mounted) {
+            setState(() {
+              _messages.addAll(newMessages);
+            });
+            _scrollToBottom();
+          }
           
           // Mark messages as read ทันทีเมื่อได้ข้อความใหม่
           await _markMessagesAsRead();
@@ -161,8 +188,10 @@ class _AdminChatPageState extends State<AdminChatPage> {
   }
 
   void _scrollToBottom() {
+    if (!mounted) return;
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (mounted && _scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: Duration(milliseconds: 300),
@@ -509,5 +538,12 @@ class _AdminChatPageState extends State<AdminChatPage> {
     _scrollController.dispose();
 
     super.dispose();
+  }
+
+  // เพิ่ม method สำหรับ refresh เมื่อกลับมาหน้าแชท
+  void refreshMessages() {
+    if (mounted) {
+      _loadMessages();
+    }
   }
 }

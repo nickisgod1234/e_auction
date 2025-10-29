@@ -47,7 +47,9 @@ class _ChatManagementPageState extends State<ChatManagementPage>
     
     // เลื่อนไปล่างสุดเมื่อโหลดเสร็จ
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
+      if (mounted) {
+        _scrollToBottom();
+      }
     });
     
     // เริ่ม polling เพื่อ refresh ข้อมูลอัตโนมัติ
@@ -66,7 +68,9 @@ class _ChatManagementPageState extends State<ChatManagementPage>
           onTap: (index) {
             // เลื่อนไปล่างสุดเมื่อเปลี่ยนแท็บ
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _scrollToBottom();
+              if (mounted) {
+                _scrollToBottom();
+              }
             });
           },
           tabs: [
@@ -359,7 +363,11 @@ class _ChatManagementPageState extends State<ChatManagementPage>
     
     // เริ่ม timer ใหม่ - refresh ทุก 5 วินาที
     _pollingTimer = Timer.periodic(Duration(seconds: 5), (timer) async {
-      await _refreshData();
+      if (mounted) {
+        await _refreshData();
+      } else {
+        timer.cancel();
+      }
     });
   }
 
@@ -369,27 +377,35 @@ class _ChatManagementPageState extends State<ChatManagementPage>
       final response = await ChatService.getAllSessions(status: 'all');
       
       if (response.success && response.data != null) {
-        setState(() {
-          // แยก sessions ตาม status
-          _pendingSessions = response.data!.where((session) => session['status'] == 'pending').toList();
-          _mySessions = response.data!.where((session) => session['status'] == 'active').toList();
-        });
+        if (mounted) {
+          setState(() {
+            // แยก sessions ตาม status
+            _pendingSessions = response.data!.where((session) => session['status'] == 'pending').toList();
+            _mySessions = response.data!.where((session) => session['status'] == 'active').toList();
+          });
+        }
       }
       
       // เรียก onRefresh เพื่ออัปเดตข้อมูลใน AdminDashboard ด้วย
       await widget.onRefresh();
       
       // เลื่อนไปล่างสุดหลังจาก refresh
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
-      });
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _scrollToBottom();
+          }
+        });
+      }
     } catch (e) {
       print('Error refreshing data: $e');
       // ถ้าเกิดข้อผิดพลาด ให้ใช้ข้อมูลจาก widget
-      setState(() {
-        _pendingSessions = List.from(widget.pendingSessions);
-        _mySessions = List.from(widget.mySessions);
-      });
+      if (mounted) {
+        setState(() {
+          _pendingSessions = List.from(widget.pendingSessions);
+          _mySessions = List.from(widget.mySessions);
+        });
+      }
     }
   }
 
@@ -399,6 +415,8 @@ class _ChatManagementPageState extends State<ChatManagementPage>
   }
 
   void _scrollToBottom() {
+    if (!mounted) return;
+    
     // เลื่อนไปล่างสุดของแท็บที่กำลังแสดงอยู่
     if (_tabController.index == 0) {
       // แท็บ "รอตอบกลับ"

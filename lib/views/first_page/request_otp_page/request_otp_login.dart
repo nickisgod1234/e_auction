@@ -20,7 +20,7 @@ class RequestOtpLoginPage extends StatefulWidget {
 class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _pinController = TextEditingController();
-  final AuthService _authService = AuthService(baseUrl: Config.apiUrlotplocalauction);
+  final AuthService _authService = AuthService(baseUrl: Config.apiUrlotpsever);
 
   bool _isPinVisible = false; // แสดงช่อง PIN เมื่อได้รับ refno
   bool _isPhoneLoginMode = false; // ควบคุมการแสดง TextButton และปุ่มย้อนกลับ

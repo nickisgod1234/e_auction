@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:e_auction/theme/app_theme.dart';
 import 'package:intl/intl.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:e_auction/utils/format.dart';
@@ -1377,7 +1375,8 @@ class AddAuctionWidgets {
                       )
                     : const Text('เลือกประเภทสินค้า'),
                 isExpanded: true,
-                items: quotationTypes.map((type) {
+                //  items: quotationTypes.map((type) { ใช้ type ทั้งหมด
+                items: quotationTypes.where((type) => type['code'] != 'AS03').map((type) {
                   return DropdownMenuItem<String>(
                     value: type['id'].toString(),
                     child: Text('${type['code']} - ${type['name']}'),
