@@ -170,7 +170,7 @@ class AddAuctionMethods {
   // Save Auction
   static Future<Map<String, dynamic>> saveAuction({
     required Map<String, dynamic> auctionData,
-    File? imageFile,
+    List<File>? imageFiles,
   }) async {
     // Format data for API
     final formattedData = await AddAuctionService.formatAuctionDataForAPI(auctionData);
@@ -183,7 +183,7 @@ class AddAuctionMethods {
     
     return await AddAuctionService.saveAuction(
       auctionData: formattedData,
-      imageFile: imageFile,
+      imageFiles: imageFiles ?? [],
     );
   }
 

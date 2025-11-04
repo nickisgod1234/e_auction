@@ -51,19 +51,42 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
   }
 
   Future<void> _pickImage() async {
+    if (_state.selectedImages.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เพิ่มรูปภาพได้สูงสุด 5 รูป'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     final image = await AddAuctionMethods.pickImage();
     if (image != null) {
-      _state.updateSelectedImage(image);
+      _state.addSelectedImage(image);
       setState(() {});
     }
   }
 
   Future<void> _takePhoto() async {
+    if (_state.selectedImages.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เพิ่มรูปภาพได้สูงสุด 5 รูป'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     final image = await AddAuctionMethods.takePhoto();
     if (image != null) {
-      _state.updateSelectedImage(image);
+      _state.addSelectedImage(image);
       setState(() {});
     }
+  }
+  
+  void _removeImage(int index) {
+    _state.removeSelectedImage(index);
+    setState(() {});
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
@@ -425,10 +448,10 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
 
   Future<void> _submitForm() async {
     // ตรวจสอบว่ามีรูปภาพหรือไม่
-    if (_state.selectedImage == null) {
+    if (_state.selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('กรุณาเลือกรูปภาพสินค้าก่อนเพิ่มประมูล'),
+          content: Text('กรุณาเลือกรูปภาพสินค้าอย่างน้อย 1 รูปก่อนเพิ่มประมูล'),
           backgroundColor: Colors.red,
           action: SnackBarAction(
             label: 'เลือกรูป',
@@ -467,7 +490,7 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
       final auctionData = await _state.getFormattedAuctionData();
       final result = await AddAuctionMethods.saveAuction(
         auctionData: auctionData,
-        imageFile: _state.selectedImage,
+        imageFiles: _state.selectedImages,
       );
 
       if (result['status'] == 'success') {
@@ -602,9 +625,10 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
 
               // Image Section
               AddAuctionWidgets.buildImageSection(
-                selectedImage: _state.selectedImage,
+                selectedImages: _state.selectedImages,
                 onPickImage: _pickImage,
                 onTakePhoto: _takePhoto,
+                onRemoveImage: _removeImage,
               ),
 
               // Quotation Type Dropdown
@@ -711,9 +735,9 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 margin: const EdgeInsets.all(16),
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_state.isSubmitting || _state.selectedImage == null) ? null : _submitForm,
+                  onPressed: (_state.isSubmitting || _state.selectedImages.isEmpty) ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _state.selectedImage == null ? Colors.grey : Colors.blue,
+                    backgroundColor: _state.selectedImages.isEmpty ? Colors.grey : Colors.blue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -738,7 +762,7 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                           ],
                         )
                       : Text(
-                          _state.selectedImage == null ? 'กรุณาเลือกรูปภาพก่อน' : 'เพิ่มประมูล',
+                          _state.selectedImages.isEmpty ? 'กรุณาเลือกรูปภาพก่อน' : 'เพิ่มประมูล',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

@@ -668,6 +668,77 @@ class ProductService {
   Map<String, dynamic> convertToAppFormat(Map<String, dynamic> product) {
     
     final imagePath = _getAuctionImageUrl(product['quotation_image']);
+    
+    // Parse images array จาก quotation_image
+    List<String> imagesList = [];
+    final quotationImage = product['quotation_image'];
+    if (quotationImage != null) {
+      try {
+        String imageData = quotationImage.toString().trim();
+        
+        // ลบ quotes นอกสุดถ้ามี (สำหรับกรณี "[\"img.jpg\"]")
+        if (imageData.startsWith('"') && imageData.endsWith('"')) {
+          imageData = imageData.substring(1, imageData.length - 1);
+          // Unescape backslashes
+          imageData = imageData.replaceAll('\\"', '"').replaceAll('\\\\', '\\');
+        }
+        
+        // ถ้าเป็น JSON array string ให้ parse
+        if (imageData.startsWith('[') && imageData.endsWith(']')) {
+          // ลอง parse หลายครั้งในกรณีที่ double encoded
+          dynamic parsed = imageData;
+          for (int i = 0; i < 3; i++) {
+            try {
+              if (parsed is String) {
+                parsed = jsonDecode(parsed);
+              } else {
+                break;
+              }
+            } catch (e) {
+              break;
+            }
+          }
+          
+          if (parsed is List) {
+            for (var img in parsed) {
+              if (img != null && img.toString().isNotEmpty) {
+                // Clean the image name
+                String imgName = img.toString()
+                    .replaceAll('"', '')
+                    .replaceAll('\\', '')
+                    .trim();
+                if (imgName.isNotEmpty) {
+                  imagesList.add(_getAuctionImageUrl(imgName));
+                }
+              }
+            }
+          }
+        } else if (imageData.isNotEmpty && 
+                   imageData != '[]' && 
+                   imageData != '"[]"') {
+          // ถ้าเป็น string เดียว ให้ parse เป็น array
+          imageData = imageData
+              .replaceAll('"', '')
+              .replaceAll('\\', '')
+              .trim();
+          
+          if (imageData.isNotEmpty) {
+            imagesList.add(_getAuctionImageUrl(imageData));
+          }
+        }
+      } catch (e) {
+        print('Error parsing images: $e');
+        // ถ้า parse ไม่ได้ ให้ใช้รูปแรก
+        if (imagePath.isNotEmpty && imagePath != 'assets/images/noimage.jpg') {
+          imagesList.add(imagePath);
+        }
+      }
+    }
+    
+    // ถ้าไม่มีรูปเลย ให้ใช้ noimage.jpg
+    if (imagesList.isEmpty) {
+      imagesList.add('assets/images/noimage.jpg');
+    }
 
     // กำหนดสถานะจากเวลา
     final now = DateTime.now();
@@ -705,7 +776,9 @@ class ProductService {
       'timeRemaining': product['remaining_time'] ??
           _calculateTimeRemaining(product['auction_end_date']),
       'timeUntilStart': _calculateDaysUntilStart(product['auction_start_date']),
-      'image': imagePath,
+      'image': imagePath, // รูปแรกสำหรับ backward compatibility
+      'images': imagesList, // Array ของรูปทั้งหมด
+      'quotation_image': quotationImage, // เก็บข้อมูลดิบไว้ด้วย
       'description': product['purchase_message']
               ?.toString()
               .replaceAll(RegExp(r"^'|'$"), '') ??

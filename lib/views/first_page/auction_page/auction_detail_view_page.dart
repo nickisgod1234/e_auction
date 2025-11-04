@@ -44,6 +44,140 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
   Map<String, dynamic>? _pendingBid;
   Timer? _pendingBidTimer;
   bool _isPendingBidConfirmed = false;
+  
+  // Image gallery state
+  int _selectedImageIndex = 0;
+  List<String> _imageUrls = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _parseImages();
+  }
+  
+  // Parse images from auctionData
+  void _parseImages() {
+    _imageUrls = [];
+    
+    // ใช้ images array ที่ parse แล้วจาก product_service
+    if (widget.auctionData['images'] != null && widget.auctionData['images'] is List) {
+      final imagesList = widget.auctionData['images'] as List;
+      if (imagesList.isNotEmpty) {
+        for (var img in imagesList) {
+          if (img != null && img.toString().isNotEmpty) {
+            _imageUrls.add(img.toString());
+          }
+        }
+      }
+    }
+    
+    // ถ้ายังไม่มีรูป ให้ใช้ image เดียว (backward compatibility)
+    if (_imageUrls.isEmpty && widget.auctionData['image'] != null) {
+      final singleImage = widget.auctionData['image'].toString();
+      if (singleImage.isNotEmpty && singleImage != 'assets/images/noimage.jpg') {
+        _imageUrls.add(singleImage);
+      }
+    }
+    
+    // ถ้ายังไม่มีรูปเลย ให้ parse จาก quotation_image (fallback)
+    if (_imageUrls.isEmpty) {
+      final quotationImage = widget.auctionData['quotation_image'];
+      if (quotationImage != null) {
+        try {
+          String imageData = quotationImage.toString().trim();
+          
+          // ลบ quotes นอกสุดถ้ามี (สำหรับกรณี "[\"img.jpg\"]")
+          if (imageData.startsWith('"') && imageData.endsWith('"')) {
+            imageData = imageData.substring(1, imageData.length - 1);
+            // Unescape backslashes
+            imageData = imageData.replaceAll('\\"', '"').replaceAll('\\\\', '\\');
+          }
+          
+          // ถ้าเป็น JSON array string ให้ parse
+          if (imageData.startsWith('[') && imageData.endsWith(']')) {
+            // ลอง parse หลายครั้งในกรณีที่ double encoded
+            dynamic parsed = imageData;
+            for (int i = 0; i < 3; i++) {
+              try {
+                if (parsed is String) {
+                  parsed = jsonDecode(parsed);
+                } else {
+                  break;
+                }
+              } catch (e) {
+                break;
+              }
+            }
+            
+            if (parsed is List && parsed.isNotEmpty) {
+              for (var img in parsed) {
+                if (img != null && img.toString().isNotEmpty) {
+                  // Clean the image name
+                  String imgName = img.toString()
+                      .replaceAll('"', '')
+                      .replaceAll('\\', '')
+                      .trim();
+                  if (imgName.isNotEmpty) {
+                    _imageUrls.add(_buildImageUrl(imgName));
+                  }
+                }
+              }
+            }
+          } else if (imageData.isNotEmpty && 
+                     imageData != '[]' && 
+                     imageData != '"[]"') {
+            // ถ้าเป็น string เดียว
+            imageData = imageData
+                .replaceAll('"', '')
+                .replaceAll('\\', '')
+                .trim();
+            
+            if (imageData.isNotEmpty) {
+              _imageUrls.add(_buildImageUrl(imageData));
+            }
+          }
+        } catch (e) {
+          print('Error parsing images in auction_detail_view_page: $e');
+        }
+      }
+    }
+    
+    // ถ้ายังไม่มีรูปเลย ให้ใช้ noimage.jpg
+    if (_imageUrls.isEmpty) {
+      _imageUrls.add('assets/images/noimage.jpg');
+    }
+  }
+  
+  // Build image URL from image name
+  String _buildImageUrl(String imageName) {
+    if (imageName.isEmpty || 
+        imageName == '[]' || 
+        imageName == 'assets/images/noimage.jpg' ||
+        imageName.startsWith('http://') ||
+        imageName.startsWith('https://') ||
+        imageName.startsWith('assets/')) {
+      return imageName;
+    }
+    
+    // Check if it's a valid image extension
+    final validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    final hasValidExtension = validExtensions.any((ext) => 
+        imageName.toLowerCase().endsWith(ext));
+    
+    if (!hasValidExtension) {
+      return 'assets/images/noimage.jpg';
+    }
+    
+    // Build full URL
+    String baseUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$imageName';
+    
+    // Convert to HTTP for Android
+    if (Platform.isAndroid) {
+      baseUrl = baseUrl.replaceFirst('https://', 'http://');
+    }
+    
+    return baseUrl;
+  }
 
   // แสดง Custom Toast Message
   void _showCustomToast(BuildContext context, String message,
@@ -862,48 +996,176 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
   }
 
   Widget _buildProductImage() {
-    return Container(
-      width: double.infinity,
-      height: 300,
-      child: Stack(
-        children: [
-          _buildAuctionImage(widget.auctionData['image'],
-              width: double.infinity, height: 300),
-          // ป้ายประเภทสินค้าในรูป
-          if (widget.auctionData['quotation_type_description'] != null && 
-              widget.auctionData['quotation_type_description'].toString().isNotEmpty)
-            Positioned(
-              top: 16,
-              left: 16,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.category,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      widget.auctionData['quotation_type_description'].toString(),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
+    return Column(
+      children: [
+        // Main Image
+        Container(
+          width: double.infinity,
+          height: 300,
+          child: Stack(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  if (_imageUrls.isNotEmpty) {
+                    _showImageGallery();
+                  }
+                },
+                child: _buildAuctionImage(
+                  _imageUrls.isNotEmpty ? _imageUrls[_selectedImageIndex] : 'assets/images/noimage.jpg',
+                  width: double.infinity,
+                  height: 300,
                 ),
               ),
+              // ป้ายประเภทสินค้าในรูป
+              if (widget.auctionData['quotation_type_description'] != null && 
+                  widget.auctionData['quotation_type_description'].toString().isNotEmpty)
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.category,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          widget.auctionData['quotation_type_description'].toString(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        // Thumbnail Gallery - แสดงเสมอตามจำนวนรูปที่มี
+        if (_imageUrls.isNotEmpty)
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _imageUrls.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedImageIndex = index;
+                    });
+                  },
+                  child: Container(
+                    margin: EdgeInsets.only(right: 8),
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _selectedImageIndex == index
+                            ? context.customTheme.primaryColor
+                            : Colors.grey[300]!,
+                        width: _selectedImageIndex == index ? 3 : 1,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: _buildAuctionImage(
+                        _imageUrls[index],
+                        width: 80,
+                        height: 80,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-        ],
-      ),
+          ),
+      ],
+    );
+  }
+  
+  // Show image gallery in full screen
+  void _showImageGallery() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              PageView.builder(
+                controller: PageController(initialPage: _selectedImageIndex),
+                itemCount: _imageUrls.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _selectedImageIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 3.0,
+                    child: Center(
+                      child: _buildAuctionImage(
+                        _imageUrls[index],
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              Positioned(
+                top: 40,
+                right: 16,
+                child: IconButton(
+                  icon: Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              if (_imageUrls.length > 1)
+                Positioned(
+                  bottom: 20,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        _imageUrls.length,
+                        (index) => Container(
+                          margin: EdgeInsets.symmetric(horizontal: 4),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _selectedImageIndex == index
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 

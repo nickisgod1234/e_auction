@@ -109,7 +109,7 @@ class AddAuctionService {
   // Save Auction with new API
   static Future<Map<String, dynamic>> saveAuction({
     required Map<String, dynamic> auctionData,
-    File? imageFile,
+    List<File> imageFiles = const [],
   }) async {
     try {
       final url = '$baseUrl/quotation_controller.php?action=create_flutter_auction';
@@ -126,20 +126,26 @@ class AddAuctionService {
       print('URL: $url');
       print('Data: $dataJson');
 
-      // Add image if provided
-      if (imageFile != null && await imageFile.exists()) {
-        final imageStream = http.ByteStream(imageFile.openRead());
-        final imageLength = await imageFile.length();
-        
-        final multipartFile = http.MultipartFile(
-          'images',
-          imageStream,
-          imageLength,
-          filename: imageFile.path.split('/').last,
-        );
-        
-        request.files.add(multipartFile);
+      // Add images if provided
+      for (int i = 0; i < imageFiles.length; i++) {
+        final imageFile = imageFiles[i];
+        if (await imageFile.exists()) {
+          final imageStream = http.ByteStream(imageFile.openRead());
+          final imageLength = await imageFile.length();
+          
+          final multipartFile = http.MultipartFile(
+            'images[]', // Use array notation for multiple files - PHP will receive as array
+            imageStream,
+            imageLength,
+            filename: imageFile.path.split('/').last,
+          );
+          
+          request.files.add(multipartFile);
+        }
       }
+      
+      // Debug: Print number of images
+      print('DEBUG: Sending ${imageFiles.length} image(s) with field name images[]');
 
       // Send request
       final streamedResponse = await request.send().timeout(

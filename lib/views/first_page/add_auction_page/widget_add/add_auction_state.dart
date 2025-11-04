@@ -23,7 +23,7 @@ class AddAuctionState {
   // State Variables
   DateTime? startDate;
   DateTime? endDate;
-  File? selectedImage;
+  List<File> selectedImages = []; // Changed to support up to 5 images
   bool isPercentage = false;
   double percentageValue = 3.0; // Default 3%
   
@@ -63,9 +63,21 @@ class AddAuctionState {
     // ลบการ dispose seller controllers ออกเพราะไม่ใช้แล้ว
   }
   
-  // Update selected image
-  void updateSelectedImage(File? image) {
-    selectedImage = image;
+  // Update selected images
+  void addSelectedImage(File image) {
+    if (selectedImages.length < 5) {
+      selectedImages.add(image);
+    }
+  }
+  
+  void removeSelectedImage(int index) {
+    if (index >= 0 && index < selectedImages.length) {
+      selectedImages.removeAt(index);
+    }
+  }
+  
+  void clearSelectedImages() {
+    selectedImages.clear();
   }
   
   // Update start date
@@ -213,7 +225,7 @@ class AddAuctionState {
     
     startDate = null;
     endDate = null;
-    selectedImage = null;
+    selectedImages.clear();
     isPercentage = false;
     percentageValue = 3.0;
     selectedQuotationTypeId = null;
