@@ -9,6 +9,230 @@ class ProductApprovalPage extends StatefulWidget {
   State<ProductApprovalPage> createState() => _ProductApprovalPageState();
 }
 
+
+// Separate StatefulWidget for Image Gallery Dialog to avoid freeze issues
+class _ImageGalleryDialog extends StatefulWidget {
+  final List<String> imageUrls;
+  final int initialIndex;
+
+  const _ImageGalleryDialog({
+    required this.imageUrls,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_ImageGalleryDialog> createState() => _ImageGalleryDialogState();
+}
+
+class _ImageGalleryDialogState extends State<_ImageGalleryDialog> {
+  late PageController _pageController;
+  int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.black,
+      child: Stack(
+        children: [
+          // รูปภาพขนาดใหญ่
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.imageUrls.length,
+            onPageChanged: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              return InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 3.0,
+                child: Center(
+                  child: Image.network(
+                    widget.imageUrls[index],
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 300,
+                        height: 300,
+                        color: Colors.grey[800],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.image_not_supported,
+                              color: Colors.grey[400],
+                              size: 64,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'ไม่สามารถโหลดรูปภาพได้',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        width: 300,
+                        height: 300,
+                        color: Colors.grey[800],
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'กำลังโหลดรูปภาพ...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          // ปุ่มปิด
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+          // Thumbnail Gallery (ถ้ามีหลายรูป)
+          if (widget.imageUrls.length > 1)
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                height: 80,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Dot indicators
+                    Container(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          widget.imageUrls.length,
+                          (index) => Container(
+                            margin: EdgeInsets.symmetric(horizontal: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _selectedIndex == index
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Thumbnail Gallery
+                    Expanded(
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.imageUrls.length,
+                        itemBuilder: (context, index) {
+                          return GestureDetector(
+                            onTap: () {
+                              _pageController.animateToPage(
+                                index,
+                                duration: Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            child: Container(
+                              margin: EdgeInsets.only(right: 8),
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _selectedIndex == index
+                                      ? Colors.orange
+                                      : Colors.white.withOpacity(0.3),
+                                  width: _selectedIndex == index ? 3 : 1,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  widget.imageUrls[index],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[800],
+                                      child: Icon(
+                                        Icons.image_not_supported,
+                                        color: Colors.grey[400],
+                                        size: 20,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProductApprovalPageState extends State<ProductApprovalPage> {
   List<ProductQuotation> _products = [];
   bool _isLoading = false;
@@ -60,7 +284,7 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
         _showSuccessSnackBar(
           status == 'approved' ? 'อนุมัติสินค้าสำเร็จ' : 'ปฏิเสธสินค้าสำเร็จ'
         );
-        _loadProducts(); // โหลดข้อมูลใหม่
+        _loadProducts();
       } else {
         _showErrorSnackBar(response.message);
       }
@@ -145,13 +369,13 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     );
   }
 
-  Widget _buildProductImage(ProductQuotation product) {
+  Widget _buildProductImage(ProductQuotation product, int productIndex) {
     final imageUrls = product.imageUrls;
-    print('ProductApprovalPage._buildProductImage - Image URLs: $imageUrls');
     
     if (imageUrls.isEmpty) {
-      print('ProductApprovalPage._buildProductImage - No images available');
       return Container(
+        width: double.infinity,
+        height: double.infinity,
         color: Colors.grey[200],
         child: Icon(
           Icons.image_not_supported,
@@ -162,139 +386,82 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     }
     
     final imageUrl = imageUrls.first;
-    print('ProductApprovalPage._buildProductImage - Loading image: $imageUrl');
     
     return GestureDetector(
-      onTap: () => _showImageDialog(imageUrl),
-      child: Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          print('ProductApprovalPage._buildProductImage - Image load error: $error');
-          print('ProductApprovalPage._buildProductImage - Failed URL: $imageUrl');
-          return Container(
-            color: Colors.grey[200],
-            child: Icon(
-              Icons.image_not_supported,
-              color: Colors.grey[400],
-              size: 30,
-            ),
-          );
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            color: Colors.grey[200],
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                      : null,
+      onTap: () => _showImageDialog(imageUrls, 0),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            imageUrl,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.grey[200],
+                child: Icon(
+                  Icons.image_not_supported,
+                  color: Colors.grey[400],
+                  size: 30,
                 ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showImageDialog(String imageUrl) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.black,
-        child: Stack(
-          children: [
-            // รูปภาพขนาดใหญ่
-            Center(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 3.0,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 300,
-                      height: 300,
-                      color: Colors.grey[800],
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[400],
-                            size: 64,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'ไม่สามารถโหลดรูปภาพได้',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      width: 300,
-                      height: 300,
-                      color: Colors.grey[800],
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'กำลังโหลดรูปภาพ...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+              );
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.grey[200],
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // ปุ่มปิด
+              );
+            },
+          ),
+          if (imageUrls.length > 1)
             Positioned(
-              top: 16,
-              right: 16,
+              top: 2,
+              right: 2,
               child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(
-                    Icons.close,
+                child: Text(
+                  '${imageUrls.length}',
+                  style: TextStyle(
                     color: Colors.white,
-                    size: 28,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+        ],
+      ),
+    );
+  }
+
+  void _showImageDialog(List<String> imageUrls, int initialIndex) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => _ImageGalleryDialog(
+        imageUrls: imageUrls,
+        initialIndex: initialIndex,
       ),
     );
   }
@@ -458,7 +625,7 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                                         ),
                                         child: ClipRRect(
                                           borderRadius: BorderRadius.circular(8),
-                                          child: _buildProductImage(product),
+                                          child: _buildProductImage(product, index),
                                         ),
                                       ),
                                       SizedBox(width: 12),
