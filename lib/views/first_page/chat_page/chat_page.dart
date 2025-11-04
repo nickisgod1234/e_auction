@@ -3,7 +3,6 @@ import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/models/chat_models.dart';
 import 'package:e_auction/services/chat_service.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
-import 'package:e_auction/widgets/typing_indicator.dart';
 import 'dart:async';
 
 class ChatPage extends StatefulWidget {
@@ -24,10 +23,8 @@ class _ChatPageState extends State<ChatPage> {
   bool _isLoading = false;
   bool _isSending = false;
   bool _isPolling = false; // เพิ่ม flag สำหรับป้องกัน polling ซ้ำ
-  bool _isTyping = false; // เพิ่มตัวแปรสำหรับ tracking การพิมพ์
   bool _isInChatScreen = true; // เพิ่ม flag สำหรับตรวจสอบว่าอยู่ในหน้าแชทหรือไม่
   Timer? _pollingTimer;
-  Timer? _typingTimer; // Timer สำหรับส่งสัญญาณหยุดพิมพ์
   
   @override
   void initState() {
@@ -383,6 +380,77 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  // สร้าง Welcome Banner สำหรับแสดงข้อมูลเวลาเปิดบริการ
+  Widget _buildWelcomeBanner() {
+    return Container(
+      margin: EdgeInsets.all(12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.blue[50]!,
+            Colors.blue[100]!,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue[200]!,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.blue[400],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.access_time,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'เวลาทำการ',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[900],
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'แอดมินจะทำงานช่วง 9:00 - 18:00 น.\nของวันจันทร์ - วันศุกร์',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue[800],
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -440,25 +508,15 @@ class _ChatPageState extends State<ChatPage> {
             )
           : Column(
               children: [
+                // Welcome Banner
+                _buildWelcomeBanner(),
                 // Chat messages
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: EdgeInsets.all(16),
-                    itemCount: _messages.length + (_isTyping ? 1 : 0), // เพิ่ม 1 ถ้ากำลังพิมพ์
+                    itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      // แสดง typing indicator ที่ท้ายสุด
-                      if (index == _messages.length && _isTyping) {
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: TypingIndicator(
-                            senderName: 'Admin',
-                            backgroundColor: Colors.grey[200],
-                            dotColor: Colors.grey[500],
-                          ),
-                        );
-                      }
-                      
                       final message = _messages[index];
                       return _buildMessageBubble(message);
                     },
@@ -489,7 +547,6 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                     child: TextField(
                       controller: _messageController,
-                      onChanged: _onTextChanged, // เพิ่ม callback สำหรับ typing indicator
                       decoration: InputDecoration(
                         hintText: 'พิมพ์ข้อความ...',
                         border: InputBorder.none,
@@ -657,23 +714,6 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  // ส่งสัญญาณกำลังพิมพ์
-  void _sendTypingIndicator(bool isTyping) async {
-    if (_currentSession == null || _customerId == null) return;
-    
-    try {
-      await ChatService.sendTypingIndicator(
-        sessionId: _currentSession!.id,
-        customerId: _customerId!,
-        senderType: 'customer',
-        isTyping: isTyping,
-      );
-
-    } catch (e) {
-        
-    }
-  }
-
   // Mark messages as read
   Future<void> _markMessagesAsRead() async {
     if (!_isInChatScreen || _currentSession == null || _customerId == null) {
@@ -699,38 +739,12 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  // เริ่มต้นการพิมพ์
-  void _onTextChanged(String text) {
-    if (!_isTyping && text.isNotEmpty) {
-      _isTyping = true;
-      _sendTypingIndicator(true);
-    }
-    
-    // รีเซ็ต timer สำหรับหยุดพิมพ์
-    _typingTimer?.cancel();
-    if (text.isNotEmpty) {
-      _typingTimer = Timer(Duration(seconds: 2), () {
-        if (_isTyping) {
-          _isTyping = false;
-          _sendTypingIndicator(false);
-        }
-      });
-    } else {
-      // ถ้าไม่มีข้อความ ให้หยุดพิมพ์ทันที
-      if (_isTyping) {
-        _isTyping = false;
-        _sendTypingIndicator(false);
-      }
-    }
-  }
-
   @override
   void dispose() {
     _isInChatScreen = false; // ออกจากหน้าแชท
     _messageController.dispose();
     _scrollController.dispose();
     _pollingTimer?.cancel();
-    _typingTimer?.cancel();
     super.dispose();
   }
 }
