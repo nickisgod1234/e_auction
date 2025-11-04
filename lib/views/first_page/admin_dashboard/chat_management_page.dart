@@ -373,15 +373,25 @@ class _ChatManagementPageState extends State<ChatManagementPage>
 
   Future<void> _refreshData() async {
     try {
-      // เรียก API โดยตรงเพื่อดึงข้อมูลล่าสุด
-      final response = await ChatService.getAllSessions(status: 'all');
-      
-      if (response.success && response.data != null) {
+      // ดึง pending sessions (ทั้งหมดที่รอตอบกลับ) - ไม่ต้องแก้
+      final pendingResponse = await ChatService.getPendingSessions();
+      if (pendingResponse.success && pendingResponse.data != null) {
         if (mounted) {
           setState(() {
-            // แยก sessions ตาม status
-            _pendingSessions = response.data!.where((session) => session['status'] == 'pending').toList();
-            _mySessions = response.data!.where((session) => session['status'] == 'active').toList();
+            _pendingSessions = pendingResponse.data!;
+          });
+        }
+      }
+      
+      // ดึง sessions ที่ admin คนนี้รับผิดชอบเท่านั้น (เฉพาะกำลังสนทนา)
+      final mySessionsResponse = await ChatService.getMySessions(
+        adminId: widget.adminId,
+        status: 'active',
+      );
+      if (mySessionsResponse.success && mySessionsResponse.data != null) {
+        if (mounted) {
+          setState(() {
+            _mySessions = mySessionsResponse.data!;
           });
         }
       }
@@ -398,7 +408,7 @@ class _ChatManagementPageState extends State<ChatManagementPage>
         });
       }
     } catch (e) {
-      print('Error refreshing data: $e');
+    
       // ถ้าเกิดข้อผิดพลาด ให้ใช้ข้อมูลจาก widget
       if (mounted) {
         setState(() {

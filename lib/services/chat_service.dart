@@ -6,7 +6,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 class ChatService {
   // static String get baseUrl => '${Config.apiUrlotplocalauction}api/chat';
   static String get baseUrl => '${Config.apiUrlotpsever}api/chat';
-  
+
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json; charset=UTF-8',
   };
@@ -69,7 +69,7 @@ class ChatService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         return ChatApiResponse<Map<String, dynamic>>(
           success: data['success'] ?? false,
           message: data['message'] ?? 'ส่งข้อความสำเร็จ',
@@ -98,7 +98,8 @@ class ChatService {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/get_messages.php?session_id=$sessionId&customer_id=$customerId'),
+        Uri.parse(
+            '$baseUrl/get_messages.php?session_id=$sessionId&customer_id=$customerId'),
         headers: _headers,
       );
 
@@ -144,17 +145,16 @@ class ChatService {
   }) async {
     try {
       // สร้าง URL พร้อม parameters
-      String url = '$baseUrl/new_messages.php?session_id=$sessionId&customer_id=$customerId';
+      String url =
+          '$baseUrl/new_messages.php?session_id=$sessionId&customer_id=$customerId';
       if (since != null) {
         url += '&since=$since';
       }
-      
-      
+
       final response = await http.get(
         Uri.parse(url),
         headers: _headers,
       );
-
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -207,8 +207,10 @@ class ChatService {
         }),
       );
 
-      print('ChatService.markMessagesAsRead URL: $baseUrl/mark_read.php?session_id=$sessionId');
-      print('ChatService.markMessagesAsRead Body: recipient_type=$recipientType, recipient_id=$recipientId');
+      print(
+          'ChatService.markMessagesAsRead URL: $baseUrl/mark_read.php?session_id=$sessionId');
+      print(
+          'ChatService.markMessagesAsRead Body: recipient_type=$recipientType, recipient_id=$recipientId');
       print('ChatService.markMessagesAsRead Response: ${response.statusCode}');
       print('ChatService.markMessagesAsRead Body: ${response.body}');
 
@@ -278,7 +280,8 @@ class ChatService {
   }
 
   // ดูรายการ session ที่รอตอบกลับ (สำหรับ Admin)
-  static Future<ChatApiResponse<List<Map<String, dynamic>>>> getPendingSessions({
+  static Future<ChatApiResponse<List<Map<String, dynamic>>>>
+      getPendingSessions({
     int page = 1,
     int limit = 20,
   }) async {
@@ -290,8 +293,7 @@ class ChatService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-     
-        
+
         if (data['success'] && data['data'] != null) {
           return ChatApiResponse<List<Map<String, dynamic>>>(
             success: true,
@@ -329,13 +331,14 @@ class ChatService {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/all_sessions.php?status=$status&page=$page&limit=$limit'),
+        Uri.parse(
+            '$baseUrl/all_sessions.php?status=$status&page=$page&limit=$limit'),
         headers: _headers,
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         if (data['success'] && data['data'] != null) {
           return ChatApiResponse<List<Map<String, dynamic>>>(
             success: true,
@@ -374,19 +377,32 @@ class ChatService {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/my_sessions.php?admin_id=$adminId&status=$status&page=$page&limit=$limit'),
+        Uri.parse(
+            '$baseUrl/my_sessions.php?admin_id=$adminId&status=$status&page=$page&limit=$limit'),
         headers: _headers,
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-          
-        if (data['success'] && data['data'] != null) {
-          return ChatApiResponse<List<Map<String, dynamic>>>(
-            success: true,
-            message: data['message'] ?? 'ดึงข้อมูลสำเร็จ',
-            data: List<Map<String, dynamic>>.from(data['data']['sessions']),
-          );
+
+        if (data['success'] == true && data['data'] != null) {
+          // ตรวจสอบว่า data['data']['sessions'] มีอยู่จริง
+          if (data['data']['sessions'] != null) {
+            final sessions =
+                List<Map<String, dynamic>>.from(data['data']['sessions']);
+
+            return ChatApiResponse<List<Map<String, dynamic>>>(
+              success: true,
+              message: data['message'] ?? 'ดึงข้อมูลสำเร็จ',
+              data: sessions,
+            );
+          } else {
+            return ChatApiResponse<List<Map<String, dynamic>>>(
+              success: false,
+              message: data['message'] ?? 'ไม่พบข้อมูล sessions',
+              error: 'sessions field is null',
+            );
+          }
         } else {
           return ChatApiResponse<List<Map<String, dynamic>>>(
             success: false,

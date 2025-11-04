@@ -93,30 +93,32 @@ class ProductService {
   List<Map<String, dynamic>> _filterAuctionQuotations(
       List<Map<String, dynamic>> quotations) {
     
-    // print('DEBUG: ProductService - Filtering ${quotations.length} quotations');
+    print('DEBUG: ProductService - Filtering ${quotations.length} quotations');
     
     final filteredQuotations = quotations.where((quotation) {
       final typeCode = _safeToString(quotation['quotation_type_code']);
-      final status = _safeToString(quotation['status']); // เปลี่ยนเป็น string
+      final statusRaw = quotation['status']; // เก็บค่าเดิมก่อน
+      final status = _safeToString(statusRaw); // เปลี่ยนเป็น string
       final title = _safeToString(quotation['short_text']);
+      final quotationId = _safeToString(quotation['quotation_id']);
            
       // กรองเฉพาะ auction types (AS นำหน้า) และ status = "1" (เปิดใช้งาน)
       final isAuction = typeCode.startsWith('AS');
       final isActive = status == "1"; // เปรียบเทียบกับ string "1"
       final shouldInclude = isAuction && isActive;
       
-      // print('DEBUG: ProductService - Quotation: $title, Type: $typeCode, Status: $status, Include: $shouldInclude');
+      print('DEBUG: ProductService - Quotation ID: $quotationId, Title: $title, Type: $typeCode, Status (raw): $statusRaw, Status (string): $status, Include: $shouldInclude');
       
-      // if (!shouldInclude) {
-      //   print('DEBUG: ProductService - Excluded: $title (Type: $typeCode, Status: $status)');
-      // } else {
-      //   print('DEBUG: ProductService - Included: $title (Type: $typeCode, Status: $status)');
-      // }
+      if (!shouldInclude) {
+        print('DEBUG: ProductService - Excluded: $title (Type: $typeCode, Status: $status)');
+      } else {
+        print('DEBUG: ProductService - Included: $title (Type: $typeCode, Status: $status)');
+      }
       
       return shouldInclude;
     }).toList();
     
-    // print('DEBUG: ProductService - Filtered to ${filteredQuotations.length} auction quotations');
+    print('DEBUG: ProductService - Filtered to ${filteredQuotations.length} auction quotations');
 
     return filteredQuotations;
   }

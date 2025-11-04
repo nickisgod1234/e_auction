@@ -135,6 +135,15 @@ class AddAuctionWidgets {
                   fontWeight: FontWeight.normal,
                 ),
               ),
+              const SizedBox(width: 4),
+              Text(
+                '(ขั้นต่ำ 1 รูป)',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.orange[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),

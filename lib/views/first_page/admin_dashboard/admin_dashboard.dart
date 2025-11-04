@@ -44,14 +44,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _loadAllSessions() async {
-    final response = await ChatService.getAllSessions(status: 'all');
-    if (response.success && response.data != null) {
+    if (_adminId == null) return;
+    
+    // ดึง pending sessions (ทั้งหมดที่รอตอบกลับ) - ไม่ต้องแก้
+    final pendingResponse = await ChatService.getPendingSessions();
+    if (pendingResponse.success && pendingResponse.data != null) {
       setState(() {
-        // แยก sessions ตาม status
-        _pendingSessions = response.data!.where((session) => session['status'] == 'pending').toList();
-        _mySessions = response.data!.where((session) => session['status'] == 'active').toList();
+        _pendingSessions = pendingResponse.data!;
       });
-    } else {
+    }
+    
+    // ดึง sessions ที่ admin คนนี้รับผิดชอบเท่านั้น (เฉพาะกำลังสนทนา)
+    final mySessionsResponse = await ChatService.getMySessions(
+      adminId: _adminId!,
+      status: 'active',
+    );
+    if (mySessionsResponse.success && mySessionsResponse.data != null) {
+      setState(() {
+        _mySessions = mySessionsResponse.data!;
+      });
     }
   }
 
