@@ -381,4 +381,105 @@ class AuthService {
       throw Exception('ไม่สามารถดึงข้อมูลโปรไฟล์ได้: ${e.toString()}');
     }
   }
+
+  // Login with Email and Password
+  Future<Map<String, dynamic>?> loginWithEmail(String email, String password) async {
+    final url = Uri.parse('$baseUrl/login_phone_auction/check_email.php');
+    try {
+      final response = await http.post(
+        url,
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      print('Email Login Status Code: ${response.statusCode}');
+      print('Email Login Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('Parsed Email Login Data: $data');
+
+        if (data['success'] && data['data'] != null) {
+          final status = data['data']['status'];
+          if (status == "exists") {
+            final userData = data['data'];
+            
+            // Debug: แสดงข้อมูลที่ได้รับจาก API
+            print('=== AuthService.loginWithEmail Debug ===');
+            print('API Role: ${userData['role']}');
+            print('API Is Admin: ${userData['is_admin']}');
+            print('API User Type: ${userData['user_type']}');
+            
+            final result = <String, String>{};
+            result['id'] = _safeToString(userData['id']);
+            result['phone_number'] = _safeToString(userData['phone_number']);
+            result['phone'] = _safeToString(userData['phone']) != ''
+                ? _safeToString(userData['phone'])
+                : _safeToString(userData['phone_number']);
+            result['name'] = _safeToString(userData['name']);
+            result['profile_picture'] =
+                _safeToString(userData['profile_picture']);
+            result['type'] = _safeToString(userData['type']);
+            result['email'] = _safeToString(userData['email']);
+            result['password'] = _safeToString(userData['password']);
+            result['address'] = _safeToString(userData['address']);
+            result['status'] = status;
+            result['isdelete'] = _safeToString(userData['isdelete']);
+            result['created_at'] = _safeToString(userData['created_at']);
+            result['updated_at'] = _safeToString(userData['updated_at']);
+            result['company_id'] = _safeToString(userData['company_id']);
+            result['logo'] = _safeToString(userData['logo']) != ''
+                ? _safeToString(userData['logo'])
+                : _safeToString(userData['profile_picture']);
+            result['code'] = _safeToString(userData['code']);
+            result['tax_number'] = _safeToString(userData['tax_number']);
+            result['fullname'] = _safeToString(userData['fullname']) != ''
+                ? _safeToString(userData['fullname'])
+                : _safeToString(userData['name']);
+            result['addr'] = _safeToString(userData['addr']) != ''
+                ? _safeToString(userData['addr'])
+                : _safeToString(userData['address']);
+            result['province_id'] = _safeToString(userData['province_id']);
+            result['district_id'] = _safeToString(userData['district_id']);
+            result['sub_district_id'] =
+                _safeToString(userData['sub_district_id']);
+            result['sub'] = _safeToString(userData['sub']);
+            result['pass'] = _safeToString(userData['pass']) != ''
+                ? _safeToString(userData['pass'])
+                : _safeToString(userData['password']);
+            result['reset_key'] = _safeToString(userData['reset_key']);
+            result['reset_key_exp'] = _safeToString(userData['reset_key_exp']);
+            
+            // เพิ่มข้อมูล role และ is_admin
+            result['role'] = _safeToString(userData['role']);
+            result['is_admin'] = _safeToString(userData['is_admin']);
+            result['user_type'] = _safeToString(userData['user_type']);
+            
+            // Debug: แสดงข้อมูลที่ส่งกลับไป
+            print('=== AuthService Email Login Result Debug ===');
+            print('Result Role: ${result['role']}');
+            print('Result Is Admin: ${result['is_admin']}');
+            print('Result User Type: ${result['user_type']}');
+            
+            print('Email Login Result created successfully');
+            return result;
+          } else {
+            // return เฉพาะ status ให้ UI handle
+            return {'status': status, 'message': data['message'] ?? 'Login failed'};
+          }
+        } else {
+          return {'status': 'error', 'message': data['message'] ?? 'Login failed'};
+        }
+      } else {
+        throw Exception('Failed to login with email: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error in loginWithEmail: $e');
+      print('Error stack trace: ${StackTrace.current}');
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
 }
