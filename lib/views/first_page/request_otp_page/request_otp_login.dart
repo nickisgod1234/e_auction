@@ -34,10 +34,27 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
   // เก็บข้อมูลผู้ใช้จากขั้นตอน phone check
   Map<String, dynamic>? _userDataFromPhoneCheck;
 
+  String _normalizePhoneNumber(String? raw) {
+    if (raw == null) return '';
+    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.isEmpty) return '';
+    if (digitsOnly.startsWith('0')) {
+      return digitsOnly;
+    }
+    if (digitsOnly.length == 9) {
+      return '0$digitsOnly';
+    }
+    return digitsOnly;
+  }
+
   // Helper function to safely get string values from userData
   String _safeGetString(Map<String, dynamic> userData, String key) {
     final value = userData[key];
     if (value == null) return '';
+    if (key == 'phone_number') {
+      final normalized = _normalizePhoneNumber(value.toString());
+      return normalized.isNotEmpty ? normalized : value.toString();
+    }
     return value.toString();
   }
 
@@ -178,11 +195,18 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
       }
 
       // ถ้า isdelete == 'f' หรือค่าว่าง/null ให้เข้าใช้งานได้ตามปกติ
+      final normalizedPhone =
+          _normalizePhoneNumber(userData['phone_number']?.toString());
+      final updatedUserData = Map<String, dynamic>.from(userData);
+      updatedUserData['phone_number'] =
+          normalizedPhone.isNotEmpty ? normalizedPhone : _normalizePhoneNumber(phoneNumber);
+
+      // ถ้า isdelete == 'f' หรือค่าว่าง/null ให้เข้าใช้งานได้ตามปกติ
       // เก็บข้อมูลผู้ใช้ไว้สำหรับใช้ในขั้นตอน OTP verification
-      _userDataFromPhoneCheck = userData;
+      _userDataFromPhoneCheck = updatedUserData;
       
       // ใช้ UserDataManager เพื่อบันทึกข้อมูลผู้ใช้
-      await UserDataManager.saveUserData(userData);
+      await UserDataManager.saveUserData(_userDataFromPhoneCheck!);
       
       // ตรวจสอบข้อมูลที่บันทึกจริงจาก SharedPreferences
       final savedData = await UserDataManager.getUserData();
@@ -197,7 +221,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
       print('Saved Is Admin: ${savedData['is_admin']}');
       
       // แสดงข้อมูลที่บันทึก
-      final phone_number = _safeGetString(userData, 'phone_number');
+      final phone_number = _safeGetString(_userDataFromPhoneCheck!, 'phone_number');
       final phone_id = _safeGetString(userData, 'id');
       final userName = _safeGetString(userData, 'name');
       final role = savedData['role'] ?? ''; // ใช้ข้อมูลจาก SharedPreferences
@@ -554,7 +578,13 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
 
       if (id > 0) {
         // ใช้ข้อมูลจากขั้นตอน phone check แทน response ของ OTP
-        final userDataToSave = _userDataFromPhoneCheck ?? response;
+        final userDataToSaveMap =
+            Map<String, dynamic>.from(_userDataFromPhoneCheck ?? response);
+        final normalizedPhoneNumber = _normalizePhoneNumber(
+            userDataToSaveMap['phone_number']?.toString());
+        userDataToSaveMap['phone_number'] = normalizedPhoneNumber.isNotEmpty
+            ? normalizedPhoneNumber
+            : _normalizePhoneNumber(phoneNumber);
         
         print('=== OTP Verification ===');
         print('Using data from phone check: ${_userDataFromPhoneCheck != null}');
@@ -562,7 +592,7 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
         print('Phone Check ID: ${_userDataFromPhoneCheck?['id']}');
         
         // ใช้ UserDataManager เพื่อบันทึกข้อมูลการล็อกอิน
-        await UserDataManager.saveUserData(userDataToSave);
+        await UserDataManager.saveUserData(userDataToSaveMap);
         
         // ตรวจสอบข้อมูลที่บันทึกจริงจาก SharedPreferences
         final savedData = await UserDataManager.getUserData();

@@ -880,6 +880,9 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                       ?.toString() ??
                   widget.auctionData['id'].toString(),
               baseUrl: Config.apiUrlAuction,
+              auctionTitle: widget.auctionData['title']?.toString() ??
+                  widget.auctionData['short_text']?.toString() ??
+                  '',
             ),
 
             // Product Details
@@ -1423,11 +1426,13 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 class RealtimeAuctionPriceWidget extends StatefulWidget {
   final String quotationId;
   final String baseUrl;
+  final String? auctionTitle;
 
   const RealtimeAuctionPriceWidget({
     Key? key,
     required this.quotationId,
     required this.baseUrl,
+    this.auctionTitle,
   }) : super(key: key);
 
   // Helper method to get HTTP client for Android
@@ -1461,10 +1466,19 @@ class _RealtimeAuctionPriceWidgetState
   Timer? _timer;
   Map<String, dynamic>? _auctionData;
   bool isLoading = true;
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  bool _notificationsInitialized = false;
+  String? _currentUserId;
+  String? _currentUserPhone;
+  String? _lastProcessedBidKey;
+  bool _hasSeededBidHistory = false;
 
   @override
   void initState() {
     super.initState();
+    _initializeNotifications();
+    _loadCurrentUser();
     _loadAuctionData();
     _startTimer();
   }
@@ -1481,6 +1495,156 @@ class _RealtimeAuctionPriceWidgetState
     });
   }
 
+  Future<void> _initializeNotifications() async {
+    if (_notificationsInitialized) return;
+    try {
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      const DarwinInitializationSettings initializationSettingsIOS =
+          DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+
+      const InitializationSettings initializationSettings =
+          InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
+
+      await _notificationsPlugin.initialize(initializationSettings);
+      _notificationsInitialized = true;
+      print('🔔 BID_SUCCESS: Notification plugin initialized in realtime widget');
+    } catch (e) {
+      print('❌ BID_SUCCESS: Failed to initialize notifications: $e');
+    }
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _currentUserId = prefs.getString('id');
+      _currentUserPhone = prefs.getString('phone_number');
+      print(
+          '🔔 BID_SUCCESS: Loaded current user info (id=$_currentUserId, phone=$_currentUserPhone)');
+    } catch (e) {
+      print('❌ BID_SUCCESS: Failed to load current user info: $e');
+    }
+  }
+
+  Future<void> _ensureNotificationSetup() async {
+    if (!_notificationsInitialized) {
+      await _initializeNotifications();
+    }
+
+    if ((_currentUserId == null || _currentUserId!.isEmpty) &&
+        (_currentUserPhone == null || _currentUserPhone!.isEmpty)) {
+      await _loadCurrentUser();
+    }
+  }
+
+  String _buildBidKey(Map<String, dynamic> bid) {
+    final bidId = bid['bid_id']?.toString();
+    if (bidId != null && bidId.isNotEmpty) return bidId;
+
+    final bidTime = bid['bid_time']?.toString() ?? '';
+    final bidAmount = bid['bid_amount']?.toString() ?? '';
+    final bidder =
+        bid['bidder_id']?.toString() ?? bid['bidder_name']?.toString() ?? '';
+    return '$bidTime|$bidAmount|$bidder';
+  }
+
+  bool _isBidFromCurrentUser(Map<String, dynamic> bid) {
+    final bidderId = bid['bidder_id']?.toString();
+    final bidderName = bid['bidder_name']?.toString();
+
+    if (bidderId != null &&
+        bidderId.isNotEmpty &&
+        _currentUserId != null &&
+        _currentUserId!.isNotEmpty &&
+        bidderId == _currentUserId) {
+      return true;
+    }
+
+    if (bidderName != null &&
+        bidderName.isNotEmpty &&
+        _currentUserPhone != null &&
+        _currentUserPhone!.isNotEmpty &&
+        bidderName == _currentUserPhone) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<void> _handleBidNotifications(Map<String, dynamic> data) async {
+    try {
+      final bidHistory = data['bid_history'];
+      if (bidHistory == null || bidHistory is! List || bidHistory.isEmpty) {
+        return;
+      }
+
+      final latestBidRaw = bidHistory.last;
+      if (latestBidRaw is! Map<String, dynamic>) {
+        return;
+      }
+
+      await _ensureNotificationSetup();
+
+      final bidKey = _buildBidKey(latestBidRaw);
+
+      if (!_hasSeededBidHistory) {
+        _lastProcessedBidKey = bidKey;
+        _hasSeededBidHistory = true;
+        return;
+      }
+
+      if (bidKey == _lastProcessedBidKey) {
+        return;
+      }
+
+      if (_isBidFromCurrentUser(latestBidRaw)) {
+        _lastProcessedBidKey = bidKey;
+        return;
+      }
+
+      if (!_notificationsInitialized) {
+        print(
+            '⚠️ BID_SUCCESS: Notifications not initialized, skipping notification');
+        _lastProcessedBidKey = bidKey;
+        return;
+      }
+
+      final productTitle = (widget.auctionTitle != null &&
+              widget.auctionTitle!.isNotEmpty)
+          ? widget.auctionTitle!
+          : data['short_text']?.toString() ??
+              data['title']?.toString() ??
+              'การประมูล';
+      final latestPrice = Format.formatCurrency(latestBidRaw['bid_amount']);
+      final bidderName =
+          latestBidRaw['bidder_name']?.toString() ?? 'ผู้ร่วมประมูล';
+
+      try {
+        await sendBidSuccessNotification(
+          _notificationsPlugin,
+          productTitle,
+          latestPrice,
+          bidderName,
+        );
+        print('🎉 BID_SUCCESS: Notification sent for new bid ($bidKey)');
+      } catch (e) {
+        print('❌ BID_SUCCESS: Error sending bid notification: $e');
+      }
+
+      _lastProcessedBidKey = bidKey;
+    } catch (e) {
+      print('❌ BID_SUCCESS: Error handling bid notifications: $e');
+    }
+  }
+
   Future<void> _loadAuctionData() async {
     try {
       final client = RealtimeAuctionPriceWidget._getHttpClient();
@@ -1492,6 +1656,9 @@ class _RealtimeAuctionPriceWidgetState
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          await _handleBidNotifications(data);
+        }
         setState(() {
           if (data is Map<String, dynamic> &&
               data['quotation_more_information_id'] != null) {

@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (currentAuctions != null) {
         final formattedAuctions = currentAuctions.map((auction) {
           final formatted = _productService.convertToAppFormat(auction);
-          print('DEBUG: HomeScreen - Current auction formatted: ${formatted['title']} - image: ${formatted['image']}');
+
           return formatted;
         }).toList();
 
@@ -118,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // แสดงทุก upcoming auctions รวมถึง AS03
         final formattedAuctions = upcomingAuctions.map((auction) {
           final formatted = _productService.convertToAppFormat(auction);
-          print('DEBUG: HomeScreen - Upcoming auction formatted: ${formatted['title']} - image: ${formatted['image']}');
+       
           return formatted;
         }).toList();
 
