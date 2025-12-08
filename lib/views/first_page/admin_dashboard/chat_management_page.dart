@@ -41,16 +41,9 @@ class _ChatManagementPageState extends State<ChatManagementPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
-    // กำหนดข้อมูลเริ่มต้น
-    _pendingSessions = List.from(widget.pendingSessions);
-    _mySessions = List.from(widget.mySessions);
-    
-    // เลื่อนไปล่างสุดเมื่อโหลดเสร็จ
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _scrollToBottom();
-      }
-    });
+    // กำหนดข้อมูลเริ่มต้นและเรียงลำดับ
+    _pendingSessions = _sortPendingSessions(List.from(widget.pendingSessions));
+    _mySessions = _sortMySessions(List.from(widget.mySessions));
     
     // เริ่ม polling เพื่อ refresh ข้อมูลอัตโนมัติ
     _startPolling();
@@ -65,14 +58,6 @@ class _ChatManagementPageState extends State<ChatManagementPage>
         foregroundColor: Colors.black,
         bottom: TabBar(
           controller: _tabController,
-          onTap: (index) {
-            // เลื่อนไปล่างสุดเมื่อเปลี่ยนแท็บ
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _scrollToBottom();
-              }
-            });
-          },
           tabs: [
             Tab(
               text: 'รอตอบกลับ (${_pendingSessions.length})',
@@ -373,12 +358,12 @@ class _ChatManagementPageState extends State<ChatManagementPage>
 
   Future<void> _refreshData() async {
     try {
-      // ดึง pending sessions (ทั้งหมดที่รอตอบกลับ) - ไม่ต้องแก้
+      // ดึง pending sessions (ทั้งหมดที่รอตอบกลับ)
       final pendingResponse = await ChatService.getPendingSessions();
       if (pendingResponse.success && pendingResponse.data != null) {
         if (mounted) {
           setState(() {
-            _pendingSessions = pendingResponse.data!;
+            _pendingSessions = _sortPendingSessions(pendingResponse.data!);
           });
         }
       }
@@ -391,29 +376,20 @@ class _ChatManagementPageState extends State<ChatManagementPage>
       if (mySessionsResponse.success && mySessionsResponse.data != null) {
         if (mounted) {
           setState(() {
-            _mySessions = mySessionsResponse.data!;
+            _mySessions = _sortMySessions(mySessionsResponse.data!);
           });
         }
       }
       
       // เรียก onRefresh เพื่ออัปเดตข้อมูลใน AdminDashboard ด้วย
       await widget.onRefresh();
-      
-      // เลื่อนไปล่างสุดหลังจาก refresh
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _scrollToBottom();
-          }
-        });
-      }
     } catch (e) {
     
       // ถ้าเกิดข้อผิดพลาด ให้ใช้ข้อมูลจาก widget
       if (mounted) {
         setState(() {
-          _pendingSessions = List.from(widget.pendingSessions);
-          _mySessions = List.from(widget.mySessions);
+          _pendingSessions = _sortPendingSessions(List.from(widget.pendingSessions));
+          _mySessions = _sortMySessions(List.from(widget.mySessions));
         });
       }
     }
@@ -424,29 +400,46 @@ class _ChatManagementPageState extends State<ChatManagementPage>
     _pollingTimer = null;
   }
 
-  void _scrollToBottom() {
-    if (!mounted) return;
-    
-    // เลื่อนไปล่างสุดของแท็บที่กำลังแสดงอยู่
-    if (_tabController.index == 0) {
-      // แท็บ "รอตอบกลับ"
-      if (_pendingScrollController.hasClients) {
-        _pendingScrollController.animateTo(
-          _pendingScrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+  // เรียงลำดับ pending sessions ให้แชทล่าสุดอยู่บนสุด
+  List<Map<String, dynamic>> _sortPendingSessions(List<Map<String, dynamic>> sessions) {
+    sessions.sort((a, b) {
+      final aTime = a['created_at'] as String?;
+      final bTime = b['created_at'] as String?;
+      
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      
+      try {
+        final aDateTime = DateTime.parse(aTime);
+        final bDateTime = DateTime.parse(bTime);
+        return bDateTime.compareTo(aDateTime); // เรียงจากใหม่ไปเก่า
+      } catch (e) {
+        return 0;
       }
-    } else {
-      // แท็บ "กำลังสนทนา"
-      if (_mySessionsScrollController.hasClients) {
-        _mySessionsScrollController.animateTo(
-          _mySessionsScrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+    });
+    return sessions;
+  }
+
+  // เรียงลำดับ my sessions ให้แชทล่าสุดอยู่บนสุด
+  List<Map<String, dynamic>> _sortMySessions(List<Map<String, dynamic>> sessions) {
+    sessions.sort((a, b) {
+      final aTime = a['last_message_at'] as String?;
+      final bTime = b['last_message_at'] as String?;
+      
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      
+      try {
+        final aDateTime = DateTime.parse(aTime);
+        final bDateTime = DateTime.parse(bTime);
+        return bDateTime.compareTo(aDateTime); // เรียงจากใหม่ไปเก่า
+      } catch (e) {
+        return 0;
       }
-    }
+    });
+    return sessions;
   }
 
   @override

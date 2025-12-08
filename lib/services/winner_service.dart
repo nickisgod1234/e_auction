@@ -104,7 +104,25 @@ class WinnerService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        return data;
+        // ถ้า API ส่งกลับมาเป็น List โดยตรง ให้ wrap เป็น Map
+        if (data is List) {
+          return {
+            'status': 'success',
+            'data': data,
+          };
+        }
+        
+        // ถ้าเป็น Map อยู่แล้ว ให้ return ตามเดิม
+        if (data is Map<String, dynamic>) {
+          return data;
+        }
+
+        // กรณีอื่นๆ
+        return {
+          'status': 'error',
+          'message': 'Unknown response format',
+          'data': null,
+        };
       } else {
         throw Exception('Failed to get all winners: ${response.statusCode}');
       }
