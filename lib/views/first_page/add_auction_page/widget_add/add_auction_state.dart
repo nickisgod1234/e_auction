@@ -198,10 +198,7 @@ class AddAuctionState {
         break;
       case 'distance':
         final pricePerKm = deliveryPricePerKmController.text.trim();
-        final distance = deliveryDistanceController.text.trim();
-        if (pricePerKm.isNotEmpty && distance.isNotEmpty) {
-          deliveryInfo = 'ส่งตามระยะทาง: ฿$pricePerKm ต่อ $distance กม.';
-        } else if (pricePerKm.isNotEmpty) {
+        if (pricePerKm.isNotEmpty) {
           deliveryInfo = 'ส่งตามระยะทาง: ฿$pricePerKm ต่อ กม.';
         }
         break;

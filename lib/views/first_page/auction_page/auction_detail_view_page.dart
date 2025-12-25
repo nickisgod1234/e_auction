@@ -19,6 +19,7 @@ import 'package:e_auction/views/first_page/widgets/auction_bid_dialog.dart';
 import 'package:e_auction/views/first_page/widgets/auction_pending_bid_dialog.dart';
 import 'package:e_auction/services/coupon_service.dart';
 import 'package:e_auction/views/first_page/coupon_page/my_coupons_page.dart';
+import 'package:e_auction/models/coupon_model.dart';
 
 
 class AuctionDetailViewPage extends StatefulWidget {
@@ -320,13 +321,30 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
   }
 
   // แสดง Dialog เมื่อได้รับคูปอง
-  void _showCouponReceivedDialog(BuildContext context, dynamic coupon) {
+  void _showCouponReceivedDialog(BuildContext context, Coupon coupon) {
     try {
+      print('🎫 COUPON: กำลังแสดง dialog คูปอง - Code: ${coupon.code}');
+      print('🎫 COUPON: Context mounted: ${context.mounted}');
+      
+      // ตรวจสอบว่า context ยัง valid อยู่ ถ้าไม่ใช้ navigatorKey แทน
+      BuildContext? validContext = context.mounted ? context : null;
+      if (validContext == null) {
+        print('❌ COUPON: Context is not mounted, using navigatorKey');
+        validContext = navigatorKey.currentContext;
+        if (validContext == null || !validContext.mounted) {
+          print('❌ COUPON: navigatorKey context also not available');
+          throw Exception('No valid context available');
+        }
+      }
+      
+      // ใช้ root navigator
       showDialog(
-        context: context,
-        barrierDismissible: false,
+        context: validContext,
+        barrierDismissible: true,
         useRootNavigator: true,
-        builder: (context) => Dialog(
+        builder: (BuildContext dialogContext) {
+          print('🎫 COUPON: Dialog builder called');
+          return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             padding: EdgeInsets.all(24),
@@ -375,7 +393,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        coupon.code ?? '',
+                        coupon.code,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -389,39 +407,91 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                 SizedBox(height: 16),
                 // Coupon Details
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: Colors.grey[50],
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withOpacity(0.2)),
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (coupon.discountPercent != null)
-                        Text(
-                          'ส่วนลด ${coupon.discountPercent}%',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      if (coupon.maxDiscountAmount != null) ...[
-                        SizedBox(height: 4),
-                        Text(
-                          'สูงสุด ${Format.formatCurrency(coupon.maxDiscountAmount.toInt())}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.discount, color: Colors.orange, size: 20),
+                          SizedBox(width: 8),
+                          if (coupon.discountPercent != null)
+                            Text(
+                              'ส่วนลด ${coupon.discountPercent}%',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange[800],
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (coupon.maxDiscountAmount != null || coupon.minPurchaseAmount != null) ...[
+                        SizedBox(height: 12),
+                        Divider(color: Colors.grey[300]),
+                        SizedBox(height: 8),
                       ],
-                      if (coupon.minPurchaseAmount != null) ...[
-                        SizedBox(height: 4),
-                        Text(
-                          'ขั้นต่ำ ${Format.formatCurrency(coupon.minPurchaseAmount.toInt())}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
+                      if (coupon.maxDiscountAmount != null)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.trending_up, size: 16, color: Colors.grey[600]),
+                              SizedBox(width: 8),
+                              Text(
+                                'ส่วนลดสูงสุด ${Format.formatCurrency(coupon.maxDiscountAmount!.toInt())}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (coupon.minPurchaseAmount != null)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.shopping_cart, size: 16, color: Colors.grey[600]),
+                              SizedBox(width: 8),
+                              Text(
+                                'ขั้นต่ำ ${Format.formatCurrency(coupon.minPurchaseAmount!.toInt())}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (coupon.expiresAt != null) ...[
+                        SizedBox(height: 8),
+                        Divider(color: Colors.grey[300]),
+                        SizedBox(height: 8),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                              SizedBox(width: 8),
+                              Text(
+                                'หมดอายุ: ${DateFormat('dd/MM/yyyy').format(coupon.expiresAt!)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -433,7 +503,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                   children: [
                     Expanded(
                       child: TextButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
                         child: Text('ปิด'),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.grey[700],
@@ -452,7 +522,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
                           padding: EdgeInsets.symmetric(vertical: 16),
                         ),
                         onPressed: () {
-                          Navigator.pop(context);
+                          Navigator.of(dialogContext).pop();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -470,16 +540,21 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
               ],
             ),
           ),
-        ),
+        );
+        },
       );
-    } catch (e) {
-      print('🔍 DEBUG: Error showing coupon dialog: $e');
+      print('🎫 COUPON: showDialog called successfully');
+    } catch (e, stackTrace) {
+      print('❌ COUPON: Error showing coupon dialog: $e');
+      print('❌ COUPON: Stack trace: $stackTrace');
       // Fallback to toast
-      _showCustomToast(
-        context,
-        '🎉 คุณได้รับคูปองส่วนลด! รหัส: ${coupon.code}',
-        isSuccess: true,
-      );
+      if (mounted) {
+        _showCustomToast(
+          context,
+          '🎉 คุณได้รับคูปองส่วนลด! รหัส: ${coupon.code}',
+          isSuccess: true,
+        );
+      }
     }
   }
 
@@ -693,29 +768,76 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
         print('🎉 SUCCESS: $successMessage');
         print('🔍 DEBUG: Success message logged to console');
         
-        // สร้างคูปองให้ผู้ใช้เมื่อประมูลสำเร็จ
+        // สร้างคูปองให้ผู้ใช้เมื่อประมูลสำเร็จ (แค่ครั้งแรกเท่านั้น)
         try {
-          print('🎫 COUPON: กำลังสร้างคูปองให้ผู้ใช้...');
+          print('🎫 COUPON: กำลังตรวจสอบและสร้างคูปองให้ผู้ใช้...');
           final couponService = CouponService();
           final quotationId = _pendingBid!['quotationId'].toString();
           final quotationTitle = widget.auctionData['title']?.toString();
+          final userId = _pendingBid!['bidderId'];
           
-          final coupon = await couponService.createBidRewardCoupon(
-            userId: _pendingBid!['bidderId'],
-            userName: _pendingBid!['bidderName'],
-            userPhone: _pendingBid!['bidderName'], // ใช้ bidderName เป็น phone
-            quotationId: quotationId,
-            quotationTitle: quotationTitle,
-          );
+          // ตรวจสอบว่าผู้ใช้เคยได้รับคูปองสำหรับสินค้านี้แล้วหรือยัง
+          final hasExistingCoupon = await couponService.hasCouponForQuotation(userId, quotationId);
           
-          if (coupon != null) {
-            print('🎫 COUPON: สร้างคูปองสำเร็จ - Code: ${coupon.code}');
-            // แสดง dialog แจ้งเตือนว่าผู้ใช้ได้รับคูปอง
-            if (mounted) {
-              _showCouponReceivedDialog(context, coupon);
-            }
+          if (hasExistingCoupon) {
+            print('🎫 COUPON: ผู้ใช้เคยได้รับคูปองสำหรับสินค้านี้แล้ว - ไม่แสดง dialog');
           } else {
-            print('❌ COUPON: ไม่สามารถสร้างคูปองได้');
+            // สร้างคูปองใหม่ (จะตรวจสอบภายใน method เองอีกครั้ง)
+            final coupon = await couponService.createBidRewardCoupon(
+              userId: userId,
+              userName: _pendingBid!['bidderName'],
+              userPhone: _pendingBid!['bidderName'], // ใช้ bidderName เป็น phone
+              quotationId: quotationId,
+              quotationTitle: quotationTitle,
+              checkExisting: true, // ตรวจสอบว่ามีคูปองอยู่แล้วหรือไม่
+            );
+            
+            if (coupon != null) {
+              print('🎫 COUPON: สร้างคูปองสำเร็จ - Code: ${coupon.code} (ครั้งแรกสำหรับสินค้านี้)');
+              
+              // รอให้แน่ใจว่า dialog อื่นๆ และ loading ปิดแล้วก่อนแสดง dialog คูปอง
+              await Future.delayed(Duration(milliseconds: 1000));
+              
+              // แสดง dialog แจ้งเตือนว่าผู้ใช้ได้รับคูปอง (แค่ครั้งแรก)
+              // ใช้ context จาก widget ที่ยัง mounted อยู่
+              if (mounted) {
+                print('🎫 COUPON: กำลังแสดง dialog (ครั้งแรก)...');
+                // ใช้ SchedulerBinding เพื่อให้แน่ใจว่าแสดงหลังจาก frame ถัดไป
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    print('🎫 COUPON: addPostFrameCallback - กำลังแสดง dialog');
+                    // ใช้ context จาก widget ที่ยัง mounted อยู่
+                    final currentContext = this.context;
+                    try {
+                      _showCouponReceivedDialog(currentContext, coupon);
+                    } catch (e, stackTrace) {
+                      print('❌ COUPON: Error showing dialog: $e');
+                      print('❌ COUPON: Stack trace: $stackTrace');
+                      // Fallback to toast
+                      if (mounted && currentContext.mounted) {
+                        _showCustomToast(
+                          currentContext,
+                          '🎉 คุณได้รับคูปองส่วนลด! รหัส: ${coupon.code}',
+                          isSuccess: true,
+                        );
+                      } else if (navigatorKey.currentContext != null && navigatorKey.currentContext!.mounted) {
+                        _showCustomToast(
+                          navigatorKey.currentContext!,
+                          '🎉 คุณได้รับคูปองส่วนลด! รหัส: ${coupon.code}',
+                          isSuccess: true,
+                        );
+                      }
+                    }
+                  } else {
+                    print('❌ COUPON: Widget not mounted, cannot show dialog');
+                  }
+                });
+              } else {
+                print('❌ COUPON: Widget not mounted');
+              }
+            } else {
+              print('🎫 COUPON: ไม่สร้างคูปอง (เคยได้รับแล้วหรือเกิดข้อผิดพลาด)');
+            }
           }
         } catch (e) {
           print('❌ COUPON: Error creating coupon: $e');

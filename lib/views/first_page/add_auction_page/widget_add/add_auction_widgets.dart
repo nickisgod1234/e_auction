@@ -102,6 +102,20 @@ class SimpleNumberInputFormatter extends TextInputFormatter {
 }
 
 class AddAuctionWidgets {
+  // Helper function to format number with commas
+  static String _formatNumber(String value) {
+    if (value.isEmpty) return '0';
+    try {
+      // Remove any non-digit characters
+      final cleanValue = value.replaceAll(RegExp(r'[^\d]'), '');
+      if (cleanValue.isEmpty) return '0';
+      final number = int.parse(cleanValue);
+      return NumberFormat('#,###').format(number);
+    } catch (e) {
+      return value;
+    }
+  }
+
 
   // Image Section Widget
   static Widget buildImageSection({
@@ -1482,11 +1496,9 @@ class AddAuctionWidgets {
   static Widget buildDeliverySection({
     required String? deliveryType,
     required TextEditingController deliveryPriceController,
-    required TextEditingController deliveryDistanceController,
     required TextEditingController deliveryPricePerKmController,
     required Function(String?) onDeliveryTypeChanged,
     required Function(String) onDeliveryPriceChanged,
-    required Function(String) onDeliveryDistanceChanged,
     required Function(String) onDeliveryPricePerKmChanged,
   }) {
     return Container(
@@ -1620,56 +1632,118 @@ class AddAuctionWidgets {
               ),
               inputFormatters: [SimpleNumberInputFormatter()],
             ),
+            const SizedBox(height: 12),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: deliveryPriceController,
+              builder: (context, value, child) {
+                if (value.text.isEmpty) return const SizedBox.shrink();
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calculate, size: 20, color: Colors.orange[700]),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ราคาการจัดส่ง',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '฿${_formatNumber(value.text)}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ],
           
           if (deliveryType == 'distance') ...[
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: deliveryPricePerKmController,
-                    keyboardType: TextInputType.number,
-                    onChanged: onDeliveryPricePerKmChanged,
-                    decoration: InputDecoration(
-                      labelText: 'ราคาต่อ กม. (บาท) *',
-                      hintText: 'เช่น 10',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 16,
-                      ),
-                      prefixIcon: Icon(Icons.attach_money, color: Colors.purple[600]),
-                      suffixText: '฿/กม.',
-                    ),
-                    inputFormatters: [SimpleNumberInputFormatter()],
-                  ),
+            TextFormField(
+              controller: deliveryPricePerKmController,
+              keyboardType: TextInputType.number,
+              onChanged: onDeliveryPricePerKmChanged,
+              decoration: InputDecoration(
+                labelText: 'ราคาต่อ กม. (บาท) *',
+                hintText: 'เช่น 10',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: deliveryDistanceController,
-                    keyboardType: TextInputType.number,
-                    onChanged: onDeliveryDistanceChanged,
-                    decoration: InputDecoration(
-                      labelText: 'ระยะทาง (กม.) *',
-                      hintText: 'เช่น 50',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 16,
-                      ),
-                      prefixIcon: Icon(Icons.straighten, color: Colors.purple[600]),
-                      suffixText: 'กม.',
-                    ),
-                    inputFormatters: [SimpleNumberInputFormatter()],
-                  ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
                 ),
-              ],
+                prefixIcon: Icon(Icons.attach_money, color: Colors.purple[600]),
+                suffixText: '฿/กม.',
+              ),
+              inputFormatters: [SimpleNumberInputFormatter()],
+            ),
+            const SizedBox(height: 12),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: deliveryPricePerKmController,
+              builder: (context, value, child) {
+                if (value.text.isEmpty) return const SizedBox.shrink();
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.purple[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.purple[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calculate, size: 20, color: Colors.purple[700]),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ราคาการจัดส่ง',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.purple[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '฿${_formatNumber(value.text)} ต่อ กม.',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.purple[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 8),
             Container(
@@ -1685,7 +1759,7 @@ class AddAuctionWidgets {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'ตัวอย่าง: ราคา 10 บาท/กม. ระยะทาง 50 กม. = ค่าจัดส่ง 500 บาท',
+                      'ราคาจะคำนวณตามระยะทางจริงที่ลูกค้าต้องการจัดส่ง',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.purple[900],

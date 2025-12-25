@@ -1,4 +1,3 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/models/coupon_model.dart';
 import 'dart:math';
 
@@ -12,15 +11,43 @@ class CouponService {
   static List<Coupon> _mockCoupons = [];
   static int _couponCounter = 1;
 
-  /// สร้างคูปองให้ผู้ใช้เมื่อประมูลสำเร็จ
+  /// ตรวจสอบว่าผู้ใช้เคยได้รับคูปองสำหรับสินค้านี้แล้วหรือยัง
+  Future<bool> hasCouponForQuotation(String userId, String quotationId) async {
+    try {
+      await _loadCouponsFromStorage();
+      
+      // ตรวจสอบว่ามีคูปองสำหรับ quotation_id และ user_id นี้แล้วหรือยัง
+      final existingCoupon = _mockCoupons.any((coupon) =>
+          coupon.userId == userId &&
+          coupon.quotationId == quotationId &&
+          coupon.type == 'bid_reward');
+      
+      return existingCoupon;
+    } catch (e) {
+      print('❌ COUPON: Error checking existing coupon: $e');
+      return false;
+    }
+  }
+
+  /// สร้างคูปองให้ผู้ใช้เมื่อประมูลสำเร็จ (แสดง dialog แค่ครั้งแรกเท่านั้น)
   Future<Coupon?> createBidRewardCoupon({
     required String userId,
     String? userName,
     String? userPhone,
     required String quotationId,
     String? quotationTitle,
+    bool checkExisting = true, // ตรวจสอบว่ามีคูปองอยู่แล้วหรือไม่
   }) async {
     try {
+      // ตรวจสอบว่าผู้ใช้เคยได้รับคูปองสำหรับสินค้านี้แล้วหรือยัง
+      if (checkExisting) {
+        final hasExisting = await hasCouponForQuotation(userId, quotationId);
+        if (hasExisting) {
+          print('🎫 COUPON: ผู้ใช้เคยได้รับคูปองสำหรับสินค้านี้แล้ว - Quotation: $quotationId');
+          return null; // ไม่สร้างคูปองใหม่
+        }
+      }
+      
       // สร้างรหัสคูปองแบบสุ่ม
       final code = _generateCouponCode();
       
@@ -52,7 +79,7 @@ class CouponService {
       // เก็บใน SharedPreferences (สำหรับ mock)
       await _saveCouponsToStorage();
       
-      print('🎫 COUPON: สร้างคูปองสำเร็จ - Code: $code, User: $userId');
+      print('🎫 COUPON: สร้างคูปองสำเร็จ - Code: $code, User: $userId, Quotation: $quotationId');
       
       return coupon;
     } catch (e) {

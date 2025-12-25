@@ -1360,16 +1360,12 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
               AddAuctionWidgets.buildDeliverySection(
                 deliveryType: _state.deliveryType,
                 deliveryPriceController: _state.deliveryPriceController,
-                deliveryDistanceController: _state.deliveryDistanceController,
                 deliveryPricePerKmController: _state.deliveryPricePerKmController,
                 onDeliveryTypeChanged: (value) {
                   _state.deliveryType = value;
                   setState(() {});
                 },
                 onDeliveryPriceChanged: (value) {
-                  setState(() {});
-                },
-                onDeliveryDistanceChanged: (value) {
                   setState(() {});
                 },
                 onDeliveryPricePerKmChanged: (value) {
