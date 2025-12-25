@@ -1080,7 +1080,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
             ),
 
             // Product Details
-            _buildProductDetails(context),
+            // _buildProductDetails(context),
 
             // Item Notes
             _buildItemNotes(context),

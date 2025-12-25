@@ -1356,6 +1356,27 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 validator: (value) => null, // Optional
               ),
 
+              // Delivery Section
+              AddAuctionWidgets.buildDeliverySection(
+                deliveryType: _state.deliveryType,
+                deliveryPriceController: _state.deliveryPriceController,
+                deliveryDistanceController: _state.deliveryDistanceController,
+                deliveryPricePerKmController: _state.deliveryPricePerKmController,
+                onDeliveryTypeChanged: (value) {
+                  _state.deliveryType = value;
+                  setState(() {});
+                },
+                onDeliveryPriceChanged: (value) {
+                  setState(() {});
+                },
+                onDeliveryDistanceChanged: (value) {
+                  setState(() {});
+                },
+                onDeliveryPricePerKmChanged: (value) {
+                  setState(() {});
+                },
+              ),
+
               // Quantity Fields for AS03 - Hidden
               // if (_state.selectedQuotationTypeCode == 'AS03')
               //   AddAuctionWidgets.buildQuantityFields(

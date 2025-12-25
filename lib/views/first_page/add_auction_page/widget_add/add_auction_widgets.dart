@@ -1477,4 +1477,255 @@ class AddAuctionWidgets {
       ),
     );
   }
+
+  // Build Delivery Section
+  static Widget buildDeliverySection({
+    required String? deliveryType,
+    required TextEditingController deliveryPriceController,
+    required TextEditingController deliveryDistanceController,
+    required TextEditingController deliveryPricePerKmController,
+    required Function(String?) onDeliveryTypeChanged,
+    required Function(String) onDeliveryPriceChanged,
+    required Function(String) onDeliveryDistanceChanged,
+    required Function(String) onDeliveryPricePerKmChanged,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.local_shipping,
+                  color: Colors.blue[700],
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'การจัดส่ง',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    Text(
+                      'เลือกประเภทการจัดส่ง',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Delivery Type Dropdown
+          DropdownButtonFormField<String>(
+            value: deliveryType,
+            decoration: InputDecoration(
+              labelText: 'ประเภทการจัดส่ง',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 16,
+              ),
+              prefixIcon: Icon(Icons.delivery_dining, color: Colors.blue[700]),
+            ),
+            items: [
+              DropdownMenuItem<String>(
+                value: 'free',
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, color: Colors.green[600], size: 20),
+                    const SizedBox(width: 8),
+                    Text('จัดส่งฟรี'),
+                  ],
+                ),
+              ),
+              DropdownMenuItem<String>(
+                value: 'fixed',
+                child: Row(
+                  children: [
+                    Icon(Icons.attach_money, color: Colors.orange[600], size: 20),
+                    const SizedBox(width: 8),
+                    Text('ส่งราคาเหมา'),
+                  ],
+                ),
+              ),
+              DropdownMenuItem<String>(
+                value: 'distance',
+                child: Row(
+                  children: [
+                    Icon(Icons.straighten, color: Colors.purple[600], size: 20),
+                    const SizedBox(width: 8),
+                    Text('ส่งตามระยะทาง'),
+                  ],
+                ),
+              ),
+            ],
+            onChanged: onDeliveryTypeChanged,
+          ),
+          
+          // Conditional Fields based on delivery type
+          if (deliveryType == 'fixed') ...[
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: deliveryPriceController,
+              keyboardType: TextInputType.number,
+              onChanged: onDeliveryPriceChanged,
+              decoration: InputDecoration(
+                labelText: 'ราคาเหมา (บาท) *',
+                hintText: 'เช่น 100',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
+                prefixIcon: Icon(Icons.currency_exchange, color: Colors.orange[600]),
+                suffixText: '฿',
+              ),
+              inputFormatters: [SimpleNumberInputFormatter()],
+            ),
+          ],
+          
+          if (deliveryType == 'distance') ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: deliveryPricePerKmController,
+                    keyboardType: TextInputType.number,
+                    onChanged: onDeliveryPricePerKmChanged,
+                    decoration: InputDecoration(
+                      labelText: 'ราคาต่อ กม. (บาท) *',
+                      hintText: 'เช่น 10',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 16,
+                      ),
+                      prefixIcon: Icon(Icons.attach_money, color: Colors.purple[600]),
+                      suffixText: '฿/กม.',
+                    ),
+                    inputFormatters: [SimpleNumberInputFormatter()],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: deliveryDistanceController,
+                    keyboardType: TextInputType.number,
+                    onChanged: onDeliveryDistanceChanged,
+                    decoration: InputDecoration(
+                      labelText: 'ระยะทาง (กม.) *',
+                      hintText: 'เช่น 50',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 16,
+                      ),
+                      prefixIcon: Icon(Icons.straighten, color: Colors.purple[600]),
+                      suffixText: 'กม.',
+                    ),
+                    inputFormatters: [SimpleNumberInputFormatter()],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purple[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.purple[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.purple[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ตัวอย่าง: ราคา 10 บาท/กม. ระยะทาง 50 กม. = ค่าจัดส่ง 500 บาท',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.purple[900],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
+          if (deliveryType == 'free') ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, size: 16, color: Colors.green[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'จัดส่งฟรีทั่วประเทศ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green[900],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 } 

@@ -244,8 +244,8 @@ class ProductDetailModal extends StatelessWidget {
   }
 
   String _getNotes() {
-    if (product.messages != null && product.messages!.isNotEmpty) {
-      return product.messages!.first.quotationMessage ?? '-';
+    if (product.itemNote != null && product.itemNote!.isNotEmpty) {
+      return product.itemNote!;
     }
     return '-';
   }

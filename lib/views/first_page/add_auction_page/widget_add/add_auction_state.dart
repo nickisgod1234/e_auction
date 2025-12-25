@@ -44,6 +44,12 @@ class AddAuctionState {
   // Flag to indicate if data is loaded from previous auction
   bool isRelistingFromPrevious = false;
   
+  // Delivery/Delivery options
+  String? deliveryType; // 'free', 'fixed', 'distance'
+  final TextEditingController deliveryPriceController = TextEditingController();
+  final TextEditingController deliveryDistanceController = TextEditingController();
+  final TextEditingController deliveryPricePerKmController = TextEditingController();
+  
   // Initialize default values
   void initializeDefaults() {
     startingPriceController.text = '0';
@@ -51,6 +57,10 @@ class AddAuctionState {
     costPriceController.text = '';
     quantityController.text = '';
     isRelistingFromPrevious = false;
+    deliveryType = null;
+    deliveryPriceController.clear();
+    deliveryDistanceController.clear();
+    deliveryPricePerKmController.clear();
   }
   
   // Dispose all controllers
@@ -64,6 +74,9 @@ class AddAuctionState {
     quantityController.dispose();
     maxQuantityController.dispose();
     currentQuantityController.dispose();
+    deliveryPriceController.dispose();
+    deliveryDistanceController.dispose();
+    deliveryPricePerKmController.dispose();
     // ลบการ dispose seller controllers ออกเพราะไม่ใช้แล้ว
   }
   
@@ -168,12 +181,56 @@ class AddAuctionState {
     return AddAuctionService.validateAuctionData(getAuctionData());
   }
   
+  // Build delivery info string
+  String _buildDeliveryInfo() {
+    if (deliveryType == null) return '';
+    
+    String deliveryInfo = '';
+    switch (deliveryType) {
+      case 'free':
+        deliveryInfo = 'จัดส่งฟรี';
+        break;
+      case 'fixed':
+        final price = deliveryPriceController.text.trim();
+        if (price.isNotEmpty) {
+          deliveryInfo = 'ส่งราคาเหมา: ฿${price}';
+        }
+        break;
+      case 'distance':
+        final pricePerKm = deliveryPricePerKmController.text.trim();
+        final distance = deliveryDistanceController.text.trim();
+        if (pricePerKm.isNotEmpty && distance.isNotEmpty) {
+          deliveryInfo = 'ส่งตามระยะทาง: ฿$pricePerKm ต่อ $distance กม.';
+        } else if (pricePerKm.isNotEmpty) {
+          deliveryInfo = 'ส่งตามระยะทาง: ฿$pricePerKm ต่อ กม.';
+        }
+        break;
+    }
+    return deliveryInfo;
+  }
+
+  // Get combined notes with delivery info
+  String getCombinedNotes() {
+    final notes = notesController.text.trim();
+    final deliveryInfo = _buildDeliveryInfo();
+    
+    if (notes.isEmpty && deliveryInfo.isEmpty) {
+      return '';
+    } else if (notes.isEmpty) {
+      return deliveryInfo;
+    } else if (deliveryInfo.isEmpty) {
+      return notes;
+    } else {
+      return '$notes | $deliveryInfo';
+    }
+  }
+
   // Get auction data for API
   Map<String, dynamic> getAuctionData() {
     final data = {
       'product_name': productNameController.text,
       'description': descriptionController.text,
-      'notes': notesController.text,
+      'notes': getCombinedNotes(), // Combine notes with delivery info
       'starting_price': getCurrentPrice(),
       'min_increment': getMinIncrement(),
       'start_date': startDate != null ? DateFormat('yyyy-MM-dd').format(startDate!) : '',
@@ -225,6 +282,10 @@ class AddAuctionState {
     minIncrementController.text = '100';
     maxQuantityController.clear();
     currentQuantityController.clear();
+    deliveryType = null;
+    deliveryPriceController.clear();
+    deliveryDistanceController.clear();
+    deliveryPricePerKmController.clear();
     // ลบการ clear seller controllers ออกเพราะไม่ใช้แล้ว
     
     startDate = null;

@@ -21,7 +21,8 @@ class ProductApprovalService {
     if (Platform.isAndroid) {
       // สำหรับ Android ให้ bypass SSL verification
       final client = HttpClient();
-      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+      client.badCertificateCallback =
+          (X509Certificate cert, String host, int port) {
         return true; // ยอมรับ certificate ทั้งหมด
       };
       return IOClient(client);
@@ -38,7 +39,6 @@ class ProductApprovalService {
     }
     return baseUrl;
   }
-
 
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
@@ -57,14 +57,16 @@ class ProductApprovalService {
       if (type != null && type.isNotEmpty) queryParams['type'] = type;
       if (date != null && date.isNotEmpty) queryParams['date'] = date;
 
-      final uri = Uri.parse('${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php')
+      final uri = Uri.parse(
+              '${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php')
           .replace(queryParameters: queryParams);
 
       print('ProductApprovalService.getPendingProducts URL: $uri');
 
       final response = await _client.get(uri, headers: _headers);
 
-      print('ProductApprovalService.getPendingProducts Response: ${response.statusCode}');
+      print(
+          'ProductApprovalService.getPendingProducts Response: ${response.statusCode}');
       print('ProductApprovalService.getPendingProducts Body: ${response.body}');
 
       if (response.statusCode == 200) {
@@ -72,8 +74,10 @@ class ProductApprovalService {
         print('ProductApprovalService.getPendingProducts Raw Data: $data');
         return ProductApprovalResponse.fromJson(data);
       } else {
-        print('ProductApprovalService.getPendingProducts Error Status: ${response.statusCode}');
-        print('ProductApprovalService.getPendingProducts Error Body: ${response.body}');
+        print(
+            'ProductApprovalService.getPendingProducts Error Status: ${response.statusCode}');
+        print(
+            'ProductApprovalService.getPendingProducts Error Body: ${response.body}');
         return ProductApprovalResponse(
           status: 'error',
           message: 'เกิดข้อผิดพลาดในการดึงข้อมูล',
@@ -92,15 +96,11 @@ class ProductApprovalService {
   // ดึงรายละเอียดสินค้า
   Future<ProductApprovalResponse> getProductDetail(int quotationId) async {
     try {
-      final uri = Uri.parse('${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php')
+      final uri = Uri.parse(
+              '${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php')
           .replace(queryParameters: {'id': quotationId.toString()});
 
-      print('ProductApprovalService.getProductDetail URL: $uri');
-
       final response = await _client.get(uri, headers: _headers);
-
-      print('ProductApprovalService.getProductDetail Response: ${response.statusCode}');
-      print('ProductApprovalService.getProductDetail Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -131,13 +131,16 @@ class ProductApprovalService {
       final requestData = {
         'quotation_id': quotationId,
         'status': status,
-        'comment': comment ?? (status == 'approved' ? 'อนุมัติโดย admin' : 'ปฏิเสธโดย admin'),
+        'comment': comment ??
+            (status == 'approved' ? 'อนุมัติโดย admin' : 'ปฏิเสธโดย admin'),
       };
 
-      final uri = Uri.parse('${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php');
+      final uri = Uri.parse(
+          '${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php');
 
       print('ProductApprovalService.approveProduct URL: $uri');
-      print('ProductApprovalService.approveProduct Body: ${jsonEncode(requestData)}');
+      print(
+          'ProductApprovalService.approveProduct Body: ${jsonEncode(requestData)}');
 
       final response = await _client.post(
         uri,
@@ -145,7 +148,8 @@ class ProductApprovalService {
         body: jsonEncode(requestData),
       );
 
-      print('ProductApprovalService.approveProduct Response: ${response.statusCode}');
+      print(
+          'ProductApprovalService.approveProduct Response: ${response.statusCode}');
       print('ProductApprovalService.approveProduct Body: ${response.body}');
 
       if (response.statusCode == 200) {
@@ -181,26 +185,26 @@ class ProductApprovalResponse {
 
   factory ProductApprovalResponse.fromJson(Map<String, dynamic> json) {
     print('ProductApprovalResponse.fromJson Input: $json');
-    
+
     List<ProductQuotation> quotations = [];
-    
+
     if (json['data'] != null) {
-      print('ProductApprovalResponse.fromJson Data type: ${json['data'].runtimeType}');
+      print(
+          'ProductApprovalResponse.fromJson Data type: ${json['data'].runtimeType}');
       print('ProductApprovalResponse.fromJson Data content: ${json['data']}');
-      
+
       if (json['data'] is List) {
-        quotations = (json['data'] as List)
-            .map((item) {
-              print('ProductApprovalResponse.fromJson Processing item: $item');
-              return ProductQuotation.fromJson(item);
-            })
-            .toList();
+        quotations = (json['data'] as List).map((item) {
+          print('ProductApprovalResponse.fromJson Processing item: $item');
+          return ProductQuotation.fromJson(item);
+        }).toList();
       } else if (json['data'] is Map) {
         quotations = [ProductQuotation.fromJson(json['data'])];
       }
     }
 
-    print('ProductApprovalResponse.fromJson Final quotations count: ${quotations.length}');
+    print(
+        'ProductApprovalResponse.fromJson Final quotations count: ${quotations.length}');
 
     return ProductApprovalResponse(
       status: json['status'] ?? 'error',
@@ -215,6 +219,7 @@ class ProductQuotation {
   final String? sequence;
   final String? description;
   final String? additionalNotes;
+  final String? itemNote; // Add itemNote field
   final String? typeDescription;
   final String? phone;
   final double? starPrice;
@@ -231,6 +236,7 @@ class ProductQuotation {
     this.sequence,
     this.description,
     this.additionalNotes,
+    this.itemNote,
     this.typeDescription,
     this.phone,
     this.starPrice,
@@ -244,8 +250,7 @@ class ProductQuotation {
   });
 
   factory ProductQuotation.fromJson(Map<String, dynamic> json) {
-    print('ProductQuotation.fromJson Input: $json');
-    
+
     List<QuotationMessage>? messages;
     if (json['messages'] != null) {
       messages = (json['messages'] as List)
@@ -256,7 +261,6 @@ class ProductQuotation {
     // Safe type conversion
     int quotationId = 0;
     if (json['quotation_id'] != null) {
-      print('ProductQuotation.fromJson quotation_id type: ${json['quotation_id'].runtimeType}, value: ${json['quotation_id']}');
       if (json['quotation_id'] is int) {
         quotationId = json['quotation_id'];
       } else if (json['quotation_id'] is String) {
@@ -300,6 +304,7 @@ class ProductQuotation {
       sequence: json['sequence']?.toString(),
       description: json['description']?.toString(),
       additionalNotes: json['additional_notes']?.toString(),
+      itemNote: json['item_note']?.toString(),
       typeDescription: json['type_description']?.toString(),
       phone: json['phone']?.toString(),
       starPrice: starPrice,
@@ -346,7 +351,7 @@ class ProductQuotation {
 
   String get formattedPhone {
     if (phone == null || phone!.trim().isEmpty) return '-';
-    
+
     String phoneNumber = phone!.trim();
     if (phoneNumber.length == 9 && !phoneNumber.startsWith('0')) {
       phoneNumber = '0$phoneNumber';
@@ -357,86 +362,68 @@ class ProductQuotation {
   String get formattedPrice {
     if (starPrice == null) return '-';
     return '฿${starPrice!.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    )}';
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        )}';
   }
 
   String get formattedMinIncrement {
     if (minimumIncrease == null) return '-';
     return '฿${minimumIncrease!.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    )}';
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        )}';
   }
 
   List<String> get imageUrls {
-    print('ProductQuotation.imageUrls - quotationImage: $quotationImage');
-    
     if (quotationImage == null || quotationImage!.isEmpty) {
-      print('ProductQuotation.imageUrls - No image data');
       return [];
     }
-    
+
     try {
       String imageData = quotationImage!;
-      print('ProductQuotation.imageUrls - Raw image data: $imageData');
-      
+
       // ลบ quotes และ escape characters ที่ไม่จำเป็น
       imageData = imageData.trim();
-      
-      // ลอง parse JSON หลายครั้งเพื่อจัดการกับ double encoding
-      for (int i = 0; i < 3; i++) {
-        try {
-          if (imageData is String) {
-            imageData = jsonDecode(imageData);
-            print('ProductQuotation.imageUrls - Parse attempt ${i + 1} successful: $imageData');
-          } else {
-            print('ProductQuotation.imageUrls - Parse attempt ${i + 1} - Already parsed, breaking');
-            break;
-          }
-        } catch (e) {
-          print('ProductQuotation.imageUrls - Parse attempt ${i + 1} failed: $e');
-          break;
-        }
+
+      // ลอง parse JSON เพื่อจัดการกับ double encoding
+      try {
+        imageData = jsonDecode(imageData);
+      } catch (e) {
+        // ถ้า parse ไม่ได้ก็ใช้ค่าเดิม
       }
-      
+
       // ตรวจสอบว่า imageData เป็น List หรือไม่
       if (imageData is List) {
         final urls = (imageData as List).map((img) {
           // ใช้ baseUrl จาก Config
-          String baseUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
-          print('ProductQuotation.imageUrls - Generated URL: $baseUrl');
+          String baseUrl =
+              '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
           return baseUrl;
         }).toList();
-        
-        print('ProductQuotation.imageUrls - Final URLs: $urls');
+
         return urls;
       } else {
-        print('ProductQuotation.imageUrls - imageData is not a List after parsing: ${imageData.runtimeType}, value: $imageData');
         // ถ้าไม่ใช่ List ให้ลอง parse อีกครั้ง
         try {
-          if (imageData is String) {
-            final parsed = jsonDecode(imageData);
-            if (parsed is List) {
-              final urls = (parsed as List).map((img) {
-                String baseUrl = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
-                print('ProductQuotation.imageUrls - Generated URL (retry): $baseUrl');
-                return baseUrl;
-              }).toList();
-              
-              print('ProductQuotation.imageUrls - Final URLs (retry): $urls');
-              return urls;
-            }
+          final parsed = jsonDecode(imageData);
+          if (parsed is List) {
+            final urls = parsed.map((img) {
+              String baseUrl =
+                  '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
+              return baseUrl;
+            }).toList();
+
+            return urls;
           }
         } catch (e) {
-          print('ProductQuotation.imageUrls - Retry parse failed: $e');
+          // Ignore parse errors
         }
       }
     } catch (e) {
       print('Error parsing image data: $e');
     }
-    
+
     print('ProductQuotation.imageUrls - Returning empty list');
     return [];
   }
