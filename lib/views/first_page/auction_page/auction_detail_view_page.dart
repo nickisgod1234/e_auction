@@ -1658,6 +1658,38 @@ class _RealtimeAuctionPriceWidgetState
         final data = jsonDecode(response.body);
         if (data is Map<String, dynamic>) {
           await _handleBidNotifications(data);
+          
+          // Print เบอร์โทรศัพท์ทั้งหมดที่ bid ในสินค้านี้
+          if (data['bid_history'] != null && data['bid_history'] is List) {
+            final bidHistory = data['bid_history'] as List;
+            print('📱 ========== เบอร์โทรศัพท์ที่ Bid ในสินค้านี้ ==========');
+            print('📱 สินค้า: ${widget.auctionTitle ?? data['short_text'] ?? data['title'] ?? 'ไม่ระบุ'}');
+            print('📱 Quotation ID: ${widget.quotationId}');
+            print('📱 จำนวนผู้ประมูลทั้งหมด: ${bidHistory.length} คน');
+            print('📱 ----------------------------------------');
+            
+            // เก็บ unique เบอร์โทรศัพท์
+            final Set<String> uniquePhones = {};
+            
+            for (int i = 0; i < bidHistory.length; i++) {
+              final bid = bidHistory[i];
+              final bidderName = bid['bidder_name']?.toString() ?? 'ไม่ระบุ';
+              final bidAmount = bid['bid_amount']?.toString() ?? '0';
+              final bidTime = bid['bid_time']?.toString() ?? 'ไม่ระบุ';
+              
+              // เพิ่มเบอร์เข้า unique set
+              if (bidderName != 'ไม่ระบุ' && bidderName.isNotEmpty) {
+                uniquePhones.add(bidderName);
+              }
+              
+              print('📱 [${i + 1}] เบอร์: $bidderName | ราคา: ${Format.formatCurrency(int.tryParse(bidAmount) ?? 0)} | เวลา: $bidTime');
+            }
+            
+            print('📱 ----------------------------------------');
+            print('📱 เบอร์โทรศัพท์ที่ไม่ซ้ำกัน: ${uniquePhones.length} เบอร์');
+            print('📱 เบอร์ทั้งหมด: ${uniquePhones.toList().join(", ")}');
+            print('📱 ========================================');
+          }
         }
         setState(() {
           if (data is Map<String, dynamic> &&
@@ -1694,10 +1726,53 @@ class _RealtimeAuctionPriceWidgetState
   String _maskPhoneNumber(String? phoneNumber) {
     if (phoneNumber == null || phoneNumber.isEmpty) return 'ไม่ระบุ';
 
-    // ถ้าเป็นเบอร์โทรศัพท์ (มีตัวเลข 10 หลัก)
-    if (phoneNumber.length >= 10 && RegExp(r'^\d+$').hasMatch(phoneNumber)) {
-      if (phoneNumber.length >= 4) {
-        return '${phoneNumber.substring(0, phoneNumber.length - 4)}****';
+    // ลบ whitespace และตรวจสอบว่าเป็นตัวเลขทั้งหมดหรือไม่
+    final cleaned = phoneNumber.trim();
+    
+    // ตรวจสอบว่าเป็นตัวเลขทั้งหมดหรือไม่
+    if (!RegExp(r'^\d+$').hasMatch(cleaned)) {
+      // ถ้าไม่ใช่ตัวเลขทั้งหมด ให้แสดงตามปกติ
+      return phoneNumber;
+    }
+    
+    // ลบ 0 นำหน้าทั้งหมดที่เกิน 1 ตัว
+    // เช่น "000000805944670" -> "805944670" หรือ "0000008059" -> "8059"
+    String normalized = cleaned;
+    if (cleaned.startsWith('0')) {
+      // นับจำนวน 0 นำหน้า
+      int leadingZeros = 0;
+      for (int i = 0; i < cleaned.length; i++) {
+        if (cleaned[i] == '0') {
+          leadingZeros++;
+        } else {
+          break;
+        }
+      }
+      
+      // ถ้ามี 0 นำหน้ามากกว่า 1 ตัว ให้ลบออกเหลือแค่ 1 ตัว
+      // แต่ถ้าเป็น 0 ทั้งหมด ให้แสดงตามปกติ
+      if (leadingZeros > 1 && leadingZeros < cleaned.length) {
+        // ลบ 0 นำหน้าทั้งหมด แล้วเพิ่ม 0 กลับไป 1 ตัว (ถ้าความยาวพอ)
+        normalized = cleaned.substring(leadingZeros);
+        // ถ้า normalized ยังมี 8-9 หลัก ให้เพิ่ม 0 นำหน้า 1 ตัว
+        if (normalized.length >= 8 && normalized.length <= 9) {
+          normalized = '0$normalized';
+        }
+      }
+    }
+    
+    // ตรวจสอบว่าเป็นเบอร์โทรศัพท์ (มีตัวเลข 8-10 หลัก)
+    // รองรับเบอร์ 8 หลัก (เช่น 80594467), 9 หลัก (เช่น 805944670), และ 10 หลัก (เช่น 0805944670)
+    if (normalized.length >= 8 && normalized.length <= 10) {
+      if (normalized.length >= 4) {
+        // Mask 4 หลักสุดท้าย
+        final prefix = normalized.substring(0, normalized.length - 4);
+        // ตรวจสอบว่า prefix ไม่ใช่ 0 ทั้งหมด (กรณีข้อมูลผิดปกติ)
+        if (RegExp(r'^0+$').hasMatch(prefix)) {
+          // ถ้า prefix เป็น 0 ทั้งหมด อาจเป็นข้อมูลผิดปกติ ให้แสดงตามปกติ
+          return phoneNumber;
+        }
+        return '$prefix****';
       } else {
         return '****';
       }
@@ -1967,6 +2042,11 @@ class _RealtimeAuctionPriceWidgetState
                           (_auctionData?['bid_history'] as List)[reversedIndex];
                       final isLatestBid = index ==
                           0; // รายการล่าสุด (ตอนนี้ index 0 จะเป็นรายการล่าสุด)
+                      
+                      // Print ข้อมูล bid แต่ละรายการ
+                      final bidderName = bid['bidder_name']?.toString() ?? 'ไม่ระบุ';
+                      final bidAmount = bid['bid_amount']?.toString() ?? '0';
+                      print('🔍 UI Render - Bid #${index + 1}: เบอร์=$bidderName, ราคา=${Format.formatCurrency(int.tryParse(bidAmount) ?? 0)}, isLatest=$isLatestBid');
                       return Container(
                         margin: EdgeInsets.only(bottom: 4),
                         decoration: BoxDecoration(
@@ -2029,7 +2109,7 @@ class _RealtimeAuctionPriceWidgetState
                             ],
                           ),
                           subtitle: Text(
-                              'โดย: ${_maskPhoneNumber(bid['bidder_name'])}'),
+                              'โดย: ${_maskPhoneNumber(bid['bidder_name']?.toString())}'),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,

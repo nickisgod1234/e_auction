@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:e_auction/noti_ios/noti_ios.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class ProductService {
   final String baseUrl;
@@ -890,6 +893,234 @@ class ProductService {
       }
     } catch (e) {
       return null;
+    }
+  }
+
+  /// ตรวจสอบและตั้งเวลาแจ้งเตือนเมื่อใกล้หมดเวลาประมูลก่อน 5 นาที (สำหรับ iOS)
+  /// 
+  /// ฟังก์ชันนี้จะ:
+  /// 1. ดึงข้อมูล auction ที่กำลังดำเนินการ
+  /// 2. ตรวจสอบว่าเหลือเวลา 5 นาทีหรือไม่
+  /// 3. ตรวจสอบว่าเคยตั้งเวลาแจ้งเตือนแล้วหรือยัง (ใช้ SharedPreferences)
+  /// 4. ตั้งเวลาแจ้งเตือนล่วงหน้า (scheduled notification) เพื่อให้แจ้งเตือนแม้เมื่อออกจากแอพ
+  Future<void> checkAndNotifyNearExpiryAuctions(
+    FlutterLocalNotificationsPlugin plugin,
+  ) async {
+    try {
+      print('⏰ NEAR_EXPIRY: เริ่มตรวจสอบการประมูลที่ใกล้หมดเวลา...');
+      
+      // ดึงข้อมูล auction ที่กำลังดำเนินการ
+      final currentAuctions = await getCurrentAuctions();
+      if (currentAuctions == null || currentAuctions.isEmpty) {
+        print('⏰ NEAR_EXPIRY: ไม่พบการประมูลที่กำลังดำเนินการ');
+        return;
+      }
+
+      final now = DateTime.now();
+      final prefs = await SharedPreferences.getInstance();
+      
+      for (var auction in currentAuctions) {
+        final endDateStr = auction['auction_end_date'];
+        if (endDateStr == null || endDateStr.toString().isEmpty) {
+          continue;
+        }
+
+        try {
+          final endDate = DateTime.parse(endDateStr);
+          final timeRemaining = endDate.difference(now);
+          
+          // ตรวจสอบว่าเหลือเวลา 5 นาทีหรือน้อยกว่า (แต่ยังไม่หมดเวลา)
+          final minutesRemaining = timeRemaining.inMinutes;
+          final secondsRemaining = timeRemaining.inSeconds;
+          final isNearExpiry = minutesRemaining <= 5 && minutesRemaining > 0;
+          
+          if (isNearExpiry) {
+            // ดึง auction ID จาก field ต่างๆ (ลำดับความสำคัญ: quotation_more_information_id > quotation_id)
+            final quotationMoreInfoId = auction['quotation_more_information_id']?.toString();
+            final quotationId = auction['quotation_id']?.toString();
+            final auctionId = quotationMoreInfoId ?? quotationId ?? '';
+            
+            // Debug: แสดงข้อมูล ID ทั้งหมด
+            print('⏰ NEAR_EXPIRY: Debug - quotation_more_information_id: $quotationMoreInfoId');
+            print('⏰ NEAR_EXPIRY: Debug - quotation_id: $quotationId');
+            print('⏰ NEAR_EXPIRY: Debug - auctionId ที่ใช้: $auctionId');
+            
+            final notificationKey = 'near_expiry_scheduled_$auctionId';
+            final immediateNotificationKey = 'near_expiry_immediate_$auctionId';
+            
+            // ตรวจสอบว่าเคยตั้งเวลาแจ้งเตือนแล้วหรือยัง
+            final alreadyScheduled = prefs.getBool(notificationKey) ?? false;
+            final alreadyNotifiedImmediate = prefs.getBool(immediateNotificationKey) ?? false;
+            
+            final auctionTitle = auction['short_text'] ?? 
+                                auction['description'] ?? 
+                                'สินค้าประมูล';
+            
+            print('⏰ NEAR_EXPIRY: พบการประมูลที่ใกล้หมดเวลา: $auctionTitle');
+            print('⏰ NEAR_EXPIRY: Auction ID: $auctionId');
+            print('⏰ NEAR_EXPIRY: เหลือเวลา: $minutesRemaining นาที ($secondsRemaining วินาที)');
+            print('⏰ NEAR_EXPIRY: alreadyScheduled: $alreadyScheduled, alreadyNotifiedImmediate: $alreadyNotifiedImmediate');
+            
+            // คำนวณเวลาที่จะแจ้งเตือน (5 นาทีก่อนหมดเวลา)
+            final notificationTime = endDate.subtract(Duration(minutes: 5));
+            
+            // ถ้าเหลือเวลา <= 5 นาที และยังไม่เคยแจ้งเตือนทันที ให้แจ้งเตือนทันที
+            if (!alreadyNotifiedImmediate) {
+              // แจ้งเตือนทันที
+              await sendImmediateAuctionNotification(
+                plugin,
+                '⏰ ใกล้หมดเวลาประมูล!',
+                'การประมูล "$auctionTitle" จะหมดเวลาในอีก $minutesRemaining นาที',
+                payload: 'near_expiry_auction_$auctionId',
+              );
+              await prefs.setBool(immediateNotificationKey, true);
+              print('✅ NEAR_EXPIRY: ส่งการแจ้งเตือนทันทีสำหรับ: $auctionTitle (เหลือ $minutesRemaining นาที)');
+            }
+            
+            // ถ้ายังไม่เคยตั้งเวลา scheduled notification และเวลาที่จะแจ้งเตือนยังไม่ผ่านไป
+            if (!alreadyScheduled && notificationTime.isAfter(now)) {
+              // ตั้งเวลาแจ้งเตือนล่วงหน้า (scheduled notification)
+              final notificationId = 2000 + (int.tryParse(auctionId) ?? 0) % 1000; // ใช้ ID ที่ไม่ซ้ำกัน
+              
+              await plugin.zonedSchedule(
+                notificationId,
+                '⏰ ใกล้หมดเวลาประมูล!',
+                'การประมูล "$auctionTitle" จะหมดเวลาในอีก 5 นาที',
+                tz.TZDateTime.from(notificationTime, tz.local),
+                NotificationDetails(
+                  iOS: DarwinNotificationDetails(
+                    presentAlert: true,
+                    presentBadge: true,
+                    presentSound: true,
+                    sound: 'default',
+                    interruptionLevel: InterruptionLevel.active,
+                  ),
+                  android: AndroidNotificationDetails(
+                    'near_expiry_channel',
+                    'Near Expiry Notifications',
+                    channelDescription: 'Notifications for auctions near expiry',
+                    importance: Importance.max,
+                    priority: Priority.high,
+                    showWhen: true,
+                  ),
+                ),
+                androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+                uiLocalNotificationDateInterpretation:
+                    UILocalNotificationDateInterpretation.absoluteTime,
+                payload: 'near_expiry_auction_$auctionId',
+              );
+              
+              await prefs.setBool(notificationKey, true);
+              print('✅ NEAR_EXPIRY: ตั้งเวลาแจ้งเตือนล่วงหน้าสำเร็จสำหรับ: $auctionTitle');
+              print('⏰ NEAR_EXPIRY: จะแจ้งเตือนที่: ${notificationTime.toString()}');
+            } else if (alreadyScheduled) {
+              print('⏰ NEAR_EXPIRY: เคยตั้งเวลาแจ้งเตือนแล้วสำหรับ auction ID: $auctionId');
+            }
+          } else if (minutesRemaining > 5) {
+            // ถ้ายังเหลือเวลามากกว่า 5 นาที ให้ตรวจสอบว่าควรตั้งเวลาแจ้งเตือนล่วงหน้าหรือไม่
+            final quotationMoreInfoId = auction['quotation_more_information_id']?.toString();
+            final quotationId = auction['quotation_id']?.toString();
+            final auctionId = quotationMoreInfoId ?? quotationId ?? '';
+            
+            // Debug: แสดงข้อมูล ID ทั้งหมด
+            print('⏰ NEAR_EXPIRY: Debug - quotation_more_information_id: $quotationMoreInfoId');
+            print('⏰ NEAR_EXPIRY: Debug - quotation_id: $quotationId');
+            print('⏰ NEAR_EXPIRY: Debug - auctionId ที่ใช้: $auctionId');
+            
+            final notificationKey = 'near_expiry_scheduled_$auctionId';
+            final alreadyScheduled = prefs.getBool(notificationKey) ?? false;
+            
+            // ถ้ายังไม่เคยตั้งเวลา และเหลือเวลามากกว่า 5 นาที ให้ตั้งเวลาแจ้งเตือนล่วงหน้า
+            if (!alreadyScheduled) {
+              final auctionTitle = auction['short_text'] ?? 
+                                  auction['description'] ?? 
+                                  'สินค้าประมูล';
+              
+              // คำนวณเวลาที่จะแจ้งเตือน (5 นาทีก่อนหมดเวลา)
+              final notificationTime = endDate.subtract(Duration(minutes: 5));
+              
+              // ตรวจสอบว่าเวลาที่จะแจ้งเตือนยังไม่ผ่านไป
+              if (notificationTime.isAfter(now)) {
+                final notificationId = 2000 + (int.tryParse(auctionId) ?? 0) % 1000;
+                
+                await plugin.zonedSchedule(
+                  notificationId,
+                  '⏰ ใกล้หมดเวลาประมูล!',
+                  'การประมูล "$auctionTitle" จะหมดเวลาในอีก 5 นาที',
+                  tz.TZDateTime.from(notificationTime, tz.local),
+                  NotificationDetails(
+                    iOS: DarwinNotificationDetails(
+                      presentAlert: true,
+                      presentBadge: true,
+                      presentSound: true,
+                      sound: 'default',
+                      interruptionLevel: InterruptionLevel.active,
+                    ),
+                    android: AndroidNotificationDetails(
+                      'near_expiry_channel',
+                      'Near Expiry Notifications',
+                      channelDescription: 'Notifications for auctions near expiry',
+                      importance: Importance.max,
+                      priority: Priority.high,
+                      showWhen: true,
+                    ),
+                  ),
+                  androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+                  uiLocalNotificationDateInterpretation:
+                      UILocalNotificationDateInterpretation.absoluteTime,
+                  payload: 'near_expiry_auction_$auctionId',
+                );
+                
+                await prefs.setBool(notificationKey, true);
+                print('✅ NEAR_EXPIRY: ตั้งเวลาแจ้งเตือนล่วงหน้าสำเร็จสำหรับ: $auctionTitle (จะแจ้งเตือนที่: ${notificationTime.toString()})');
+              }
+            }
+          }
+        } catch (e) {
+          print('❌ NEAR_EXPIRY: เกิดข้อผิดพลาดในการตรวจสอบ auction: $e');
+          continue;
+        }
+      }
+      
+      print('✅ NEAR_EXPIRY: ตรวจสอบเสร็จสิ้น');
+    } catch (e) {
+      print('❌ NEAR_EXPIRY: เกิดข้อผิดพลาด: $e');
+    }
+  }
+
+  /// ตรวจสอบและรีเซ็ตสถานะการแจ้งเตือนสำหรับ auction ที่หมดเวลาแล้ว
+  /// เพื่อให้สามารถแจ้งเตือนได้อีกครั้งถ้ามี auction ใหม่
+  /// และลบ scheduled notifications ที่หมดเวลาแล้ว
+  Future<void> cleanupExpiredNotificationFlags(
+    FlutterLocalNotificationsPlugin plugin,
+  ) async {
+    try {
+      final completedAuctions = await getCompletedAuctions();
+      if (completedAuctions == null || completedAuctions.isEmpty) {
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      
+      for (var auction in completedAuctions) {
+        final quotationMoreInfoId = auction['quotation_more_information_id']?.toString();
+        final quotationId = auction['quotation_id']?.toString();
+        final auctionId = quotationMoreInfoId ?? quotationId ?? '';
+        final notificationKey = 'near_expiry_scheduled_$auctionId';
+        final immediateNotificationKey = 'near_expiry_immediate_$auctionId';
+        
+        // ลบ flag สำหรับ auction ที่หมดเวลาแล้ว
+        await prefs.remove(notificationKey);
+        await prefs.remove(immediateNotificationKey);
+        
+        // ลบ scheduled notification ที่หมดเวลาแล้ว
+        final notificationId = 2000 + (int.tryParse(auctionId) ?? 0) % 1000;
+        await plugin.cancel(notificationId);
+      }
+      
+      print('✅ CLEANUP: ลบ notification flags และ scheduled notifications สำหรับ auction ที่หมดเวลาแล้ว');
+    } catch (e) {
+      print('❌ CLEANUP: เกิดข้อผิดพลาดในการลบ notification flags: $e');
     }
   }
 
