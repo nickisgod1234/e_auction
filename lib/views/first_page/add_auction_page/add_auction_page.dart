@@ -4,12 +4,245 @@ import 'widget_add/add_auction_methods.dart';
 import 'widget_add/add_auction_state.dart';
 import 'promotion_policy_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
+import 'package:e_auction/utils/format.dart';
 
 class AddAuctionPage extends StatefulWidget {
   const AddAuctionPage({super.key});
 
   @override
   State<AddAuctionPage> createState() => _AddAuctionPageState();
+}
+
+// Dialog for selecting previous auction to relist
+class _RelistAuctionDialog extends StatelessWidget {
+  final List<Map<String, dynamic>> previousAuctions;
+  final Function(Map<String, dynamic>) onSelect;
+
+  const _RelistAuctionDialog({
+    required this.previousAuctions,
+    required this.onSelect,
+  });
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '-';
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('dd/MM/yyyy').format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: double.maxFinite,
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green[600],
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.repeat, color: Colors.white, size: 24),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'เลือกสินค้าเก่ามาลงซ้ำ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Flexible(
+              child: previousAuctions.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
+                          SizedBox(height: 16),
+                          Text(
+                            'ไม่มีสินค้าเก่า',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: previousAuctions.length,
+                      padding: EdgeInsets.all(8),
+                      itemBuilder: (context, index) {
+                        final auction = previousAuctions[index];
+                        
+                        // Build image URL from image data
+                        String? displayImageUrl;
+                        final imageData = auction['image_url']?.toString() ?? '';
+                        if (imageData.isNotEmpty) {
+                          final imageUrls = AddAuctionMethods.parseImageUrls(imageData);
+                          if (imageUrls.isNotEmpty) {
+                            displayImageUrl = AddAuctionMethods.buildImageUrl(imageUrls.first);
+                          } else {
+                            displayImageUrl = AddAuctionMethods.buildImageUrl(imageData);
+                          }
+                        }
+                        
+                        return Card(
+                          margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: InkWell(
+                            onTap: () => onSelect(auction),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  // Image or placeholder
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: displayImageUrl != null && displayImageUrl.isNotEmpty
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              displayImageUrl,
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null) return child;
+                                                return Center(
+                                                  child: CircularProgressIndicator(
+                                                    value: loadingProgress.expectedTotalBytes != null
+                                                        ? loadingProgress.cumulativeBytesLoaded /
+                                                            loadingProgress.expectedTotalBytes!
+                                                        : null,
+                                                  ),
+                                                );
+                                              },
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Icon(Icons.image, color: Colors.grey[400]);
+                                              },
+                                            ),
+                                          )
+                                        : Icon(Icons.image, color: Colors.grey[400]),
+                                  ),
+                                  SizedBox(width: 12),
+                                  // Details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          auction['product_name'] ?? 'ไม่มีชื่อสินค้า',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.attach_money, size: 14, color: Colors.grey[600]),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              Format.formatCurrency(
+                                                double.tryParse(auction['starting_price'] ?? '0') ?? 0,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'สิ้นสุด: ${_formatDate(auction['end_date'])}',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(Icons.chevron_right, color: Colors.grey[400]),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            // Footer
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text('ยกเลิก'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _AddAuctionPageState extends State<AddAuctionPage> {
@@ -21,6 +254,420 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
     _state = AddAuctionState();
     _state.initializeDefaults();
     _loadQuotationTypes();
+  }
+
+  Future<void> _showRelistDialog() async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Load previous auctions
+      final previousAuctions = await AddAuctionMethods.getUserPreviousAuctions();
+      
+      // Close loading
+      Navigator.of(context).pop();
+
+      if (previousAuctions.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('คุณยังไม่มีสินค้าที่เคยลงไปแล้ว'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Show selection dialog
+      showDialog(
+        context: context,
+        builder: (context) => _RelistAuctionDialog(
+          previousAuctions: previousAuctions,
+          onSelect: (auction) {
+            _loadPreviousAuctionData(auction);
+            Navigator.of(context).pop();
+          },
+        ),
+      );
+    } catch (e) {
+      // Close loading if still open
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาด: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _loadPreviousAuctionData(Map<String, dynamic> auction) async {
+    // Set flag to indicate relisting
+    _state.isRelistingFromPrevious = true;
+    
+    // Load ALL data from previous auction EXCEPT dates
+    _state.productNameController.text = auction['product_name'] ?? '';
+    _state.descriptionController.text = auction['description'] ?? '';
+    _state.notesController.text = auction['notes'] ?? '';
+    _state.startingPriceController.text = auction['starting_price'] ?? '0';
+    _state.minIncrementController.text = auction['min_increment'] ?? '0';
+    
+    // DO NOT load dates - user must select new dates
+    _state.startDate = null;
+    _state.endDate = null;
+
+    // Set quotation type
+    if (auction['purchase_order_type_id'] != null) {
+      _state.updateSelectedQuotationType(
+        auction['purchase_order_type_id'],
+        auction['quotation_type_name'],
+        auction['quotation_type_code'],
+      );
+    }
+
+    // Set quantity if available
+    if (auction['quantity'] != null) {
+      _state.quantityController.text = auction['quantity'];
+    }
+
+    // Load images from previous auction
+    _state.clearSelectedImages();
+    final imageUrl = auction['image_url']?.toString() ?? '';
+    
+    if (imageUrl.isNotEmpty) {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      try {
+        // Parse image URLs
+        List<String> imageUrls = AddAuctionMethods.parseImageUrls(imageUrl);
+        
+        if (imageUrls.isEmpty) {
+          // Try to build URL from single image name
+          final builtUrl = AddAuctionMethods.buildImageUrl(imageUrl);
+          if (builtUrl.isNotEmpty) {
+            imageUrls = [builtUrl];
+          }
+        } else {
+          // Build full URLs for each image name
+          imageUrls = imageUrls.map((img) {
+            final builtUrl = AddAuctionMethods.buildImageUrl(img);
+            return builtUrl.isNotEmpty ? builtUrl : img;
+          }).where((url) => url.isNotEmpty).toList();
+        }
+
+        // Download images (limit to 5 images)
+        int downloadedCount = 0;
+        for (final url in imageUrls) {
+          if (downloadedCount >= 5) break;
+          
+          final file = await AddAuctionMethods.downloadImageFromUrl(url);
+          if (file != null) {
+            _state.addSelectedImage(file);
+            downloadedCount++;
+          }
+        }
+
+        // Close loading dialog
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
+
+        setState(() {});
+
+        // Show success dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 24),
+                SizedBox(width: 8),
+                Text('โหลดข้อมูลสินค้าเก่าแล้ว'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, size: 16, color: Colors.green[700]),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'โหลดข้อมูลสินค้าเก่าทั้งหมดแล้ว (รวมรูปภาพ ${downloadedCount} รูป)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[900],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'กรุณาเลือก:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'วันที่เริ่มต้นและสิ้นสุด (จำเป็น)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('เข้าใจแล้ว'),
+              ),
+            ],
+          ),
+        );
+      } catch (e) {
+        // Close loading dialog if still open
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
+        
+        setState(() {});
+
+        // Show dialog with warning about images
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue, size: 24),
+                SizedBox(width: 8),
+                Text('โหลดข้อมูลสินค้าเก่าแล้ว'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, size: 16, color: Colors.green[700]),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'โหลดข้อมูลสินค้าเก่าทั้งหมดแล้ว',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[900],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'กรุณาเลือก:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'วันที่เริ่มต้นและสิ้นสุด (จำเป็น)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange[700]),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'ไม่สามารถโหลดรูปภาพได้ กรุณาเลือกรูปภาพใหม่',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[900],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('เข้าใจแล้ว'),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      setState(() {});
+
+      // Show dialog without image info
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue, size: 24),
+              SizedBox(width: 8),
+              Text('โหลดข้อมูลสินค้าเก่าแล้ว'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 16, color: Colors.green[700]),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'โหลดข้อมูลสินค้าเก่าทั้งหมดแล้ว',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'กรุณาเลือก:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 16, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'วันที่เริ่มต้นและสิ้นสุด (จำเป็น)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange[700]),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'กรุณาเลือกรูปภาพสินค้า',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('เข้าใจแล้ว'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -518,6 +1165,22 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
         elevation: 0,
         actions: [
           IconButton(
+            onPressed: _showRelistDialog,
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.repeat,
+                color: Colors.green[700],
+                size: 20,
+              ),
+            ),
+            tooltip: 'ลงซ้ำจากสินค้าเก่า',
+          ),
+          IconButton(
             onPressed: () {
               _showAdminContactDialog(context);
             },
@@ -542,6 +1205,31 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // Relist Button Banner
+              // Container(
+              //   margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              //   child: ElevatedButton.icon(
+              //     onPressed: _showRelistDialog,
+              //     icon: Icon(Icons.repeat, color: Colors.white),
+              //     label: Text(
+              //       'ลงซ้ำจากสินค้าเก่า',
+              //       style: TextStyle(
+              //         fontSize: 16,
+              //         fontWeight: FontWeight.bold,
+              //         color: Colors.white,
+              //       ),
+              //     ),
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: Colors.green[600],
+              //       padding: const EdgeInsets.symmetric(vertical: 16),
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(12),
+              //       ),
+              //       elevation: 2,
+              //     ),
+              //   ),
+              // ),
+
               // Promotion Banner
               Container(
                 margin: const EdgeInsets.all(16),

@@ -41,12 +41,16 @@ class AddAuctionState {
   final TextEditingController maxQuantityController = TextEditingController();
   final TextEditingController currentQuantityController = TextEditingController();
   
+  // Flag to indicate if data is loaded from previous auction
+  bool isRelistingFromPrevious = false;
+  
   // Initialize default values
   void initializeDefaults() {
     startingPriceController.text = '0';
     minIncrementController.text = '0';
     costPriceController.text = '';
     quantityController.text = '';
+    isRelistingFromPrevious = false;
   }
   
   // Dispose all controllers

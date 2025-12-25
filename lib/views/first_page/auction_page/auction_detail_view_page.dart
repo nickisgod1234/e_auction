@@ -17,6 +17,8 @@ import 'package:e_auction/noti_ios/noti_ios.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:e_auction/views/first_page/widgets/auction_bid_dialog.dart';
 import 'package:e_auction/views/first_page/widgets/auction_pending_bid_dialog.dart';
+import 'package:e_auction/services/coupon_service.dart';
+import 'package:e_auction/views/first_page/coupon_page/my_coupons_page.dart';
 
 
 class AuctionDetailViewPage extends StatefulWidget {
@@ -317,6 +319,170 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     }
   }
 
+  // แสดง Dialog เมื่อได้รับคูปอง
+  void _showCouponReceivedDialog(BuildContext context, dynamic coupon) {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        useRootNavigator: true,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.local_offer, color: Colors.orange, size: 48),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  '🎉 คุณได้รับคูปองส่วนลด!',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[800],
+                  ),
+                ),
+                SizedBox(height: 16),
+                // Coupon Code
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.orange.shade400, Colors.orange.shade600],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'รหัสคูปอง',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        coupon.code ?? '',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+                // Coupon Details
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      if (coupon.discountPercent != null)
+                        Text(
+                          'ส่วนลด ${coupon.discountPercent}%',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      if (coupon.maxDiscountAmount != null) ...[
+                        SizedBox(height: 4),
+                        Text(
+                          'สูงสุด ${Format.formatCurrency(coupon.maxDiscountAmount.toInt())}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                      if (coupon.minPurchaseAmount != null) ...[
+                        SizedBox(height: 4),
+                        Text(
+                          'ขั้นต่ำ ${Format.formatCurrency(coupon.minPurchaseAmount.toInt())}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('ปิด'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MyCouponsPage(),
+                            ),
+                          );
+                        },
+                        child: Text('ดูคูปองของฉัน',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      print('🔍 DEBUG: Error showing coupon dialog: $e');
+      // Fallback to toast
+      _showCustomToast(
+        context,
+        '🎉 คุณได้รับคูปองส่วนลด! รหัส: ${coupon.code}',
+        isSuccess: true,
+      );
+    }
+  }
+
   // เพิ่มเมธอดสำหรับแสดง dialog ลงประมูล
   void _showBidDialog(BuildContext context) async {
     final productService = ProductService(baseUrl: _getBaseUrl());
@@ -526,6 +692,34 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
         // ใช้ print แทน dialog เพื่อหลีกเลี่ยง context issues
         print('🎉 SUCCESS: $successMessage');
         print('🔍 DEBUG: Success message logged to console');
+        
+        // สร้างคูปองให้ผู้ใช้เมื่อประมูลสำเร็จ
+        try {
+          print('🎫 COUPON: กำลังสร้างคูปองให้ผู้ใช้...');
+          final couponService = CouponService();
+          final quotationId = _pendingBid!['quotationId'].toString();
+          final quotationTitle = widget.auctionData['title']?.toString();
+          
+          final coupon = await couponService.createBidRewardCoupon(
+            userId: _pendingBid!['bidderId'],
+            userName: _pendingBid!['bidderName'],
+            userPhone: _pendingBid!['bidderName'], // ใช้ bidderName เป็น phone
+            quotationId: quotationId,
+            quotationTitle: quotationTitle,
+          );
+          
+          if (coupon != null) {
+            print('🎫 COUPON: สร้างคูปองสำเร็จ - Code: ${coupon.code}');
+            // แสดง dialog แจ้งเตือนว่าผู้ใช้ได้รับคูปอง
+            if (mounted) {
+              _showCouponReceivedDialog(context, coupon);
+            }
+          } else {
+            print('❌ COUPON: ไม่สามารถสร้างคูปองได้');
+          }
+        } catch (e) {
+          print('❌ COUPON: Error creating coupon: $e');
+        }
         
         // ส่งแจ้งเตือนเมื่อ bid สำเร็จ
         print('🔔 BID_SUCCESS: About to send notification...');

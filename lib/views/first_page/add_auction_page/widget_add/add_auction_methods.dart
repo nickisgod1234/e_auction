@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:e_auction/services/add_auction_service/add_auction_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class AddAuctionMethods {
   // Image Picker Methods
@@ -263,5 +267,117 @@ class AddAuctionMethods {
   // Format Auction Data for API
   static Future<Map<String, dynamic>> formatAuctionDataForAPI(Map<String, dynamic> data) async {
     return await AddAuctionService.formatAuctionDataForAPI(data);
+  }
+
+  // Get User Previous Auctions
+  static Future<List<Map<String, dynamic>>> getUserPreviousAuctions() async {
+    return await AddAuctionService.getUserPreviousAuctions();
+  }
+
+  // Download image from URL and convert to File
+  static Future<File?> downloadImageFromUrl(String imageUrl) async {
+    try {
+      // Skip if URL is empty or invalid
+      if (imageUrl.isEmpty || 
+          imageUrl == 'assets/images/noimage.jpg' ||
+          (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://'))) {
+        return null;
+      }
+
+      // Download image
+      final response = await http.get(Uri.parse(imageUrl)).timeout(
+        Duration(seconds: 30),
+      );
+
+      if (response.statusCode == 200) {
+        // Get temporary directory
+        final directory = await getTemporaryDirectory();
+        
+        // Generate unique filename
+        final fileName = path.basename(imageUrl);
+        final fileExtension = path.extension(fileName).isEmpty 
+            ? '.jpg' 
+            : path.extension(fileName);
+        final uniqueFileName = '${DateTime.now().millisecondsSinceEpoch}$fileExtension';
+        final filePath = path.join(directory.path, uniqueFileName);
+        
+        // Save file
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
+        
+        return file;
+      } else {
+        print('Failed to download image: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error downloading image: $e');
+      return null;
+    }
+  }
+
+  // Parse image URLs from quotation_image field
+  static List<String> parseImageUrls(String? imageData) {
+    if (imageData == null || imageData.isEmpty) {
+      return [];
+    }
+
+    try {
+      // Try to parse as JSON array
+      final decoded = jsonDecode(imageData);
+      if (decoded is List) {
+        return decoded.map((e) => e.toString()).where((url) => url.isNotEmpty).toList();
+      } else if (decoded is String) {
+        return [decoded];
+      }
+    } catch (e) {
+      // If not JSON, treat as single string
+      if (imageData.isNotEmpty && 
+          imageData != '[]' && 
+          imageData != '"[]"') {
+        // Clean the string
+        String cleanImage = imageData
+            .replaceAll('"', '')
+            .replaceAll('\\', '')
+            .replaceAll('[', '')
+            .replaceAll(']', '')
+            .trim();
+        
+        if (cleanImage.isNotEmpty) {
+          return [cleanImage];
+        }
+      }
+    }
+
+    return [];
+  }
+
+  // Build full image URL from image name
+  static String buildImageUrl(String imageName) {
+    if (imageName.isEmpty || 
+        imageName == 'assets/images/noimage.jpg' ||
+        imageName.startsWith('http://') ||
+        imageName.startsWith('https://')) {
+      return imageName;
+    }
+
+    // Check if it's a valid image extension
+    final validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    final hasValidExtension = validExtensions.any((ext) => 
+        imageName.toLowerCase().endsWith(ext));
+    
+    if (!hasValidExtension) {
+      return '';
+    }
+
+    // Build full URL
+    String baseUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$imageName';
+    
+    // Convert to HTTP for Android
+    if (Platform.isAndroid) {
+      baseUrl = baseUrl.replaceFirst('https://', 'http://');
+    }
+    
+    return baseUrl;
   }
 } 

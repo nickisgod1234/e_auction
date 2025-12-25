@@ -298,4 +298,112 @@ class AddAuctionService {
     
     return formattedData;
   }
+
+  // Get user's previous auctions (for relisting)
+  static Future<List<Map<String, dynamic>>> getUserPreviousAuctions() async {
+    http.Client? client;
+    try {
+      // Get customer_id from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final userIdStr = prefs.getString('id') ?? '';
+      
+      if (userIdStr.isEmpty) {
+        return [];
+      }
+
+      final customerId = int.tryParse(userIdStr) ?? 0;
+      if (customerId == 0) {
+        return [];
+      }
+
+      // Use ProductService to get all quotations
+      // Note: We'll filter by customer_id on the client side since API might not support it
+      final url = Uri.parse(
+          '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
+      
+      client = _createHttpClient();
+      
+      final response = await client.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('Request timeout after 30 seconds');
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        
+        // Filter auctions by customer_id and only completed/ended auctions
+        final now = DateTime.now();
+        final userAuctions = data.where((item) {
+          final itemCustomerId = item['customer_id']?.toString() ?? '';
+          final endDateStr = item['auction_end_date']?.toString() ?? '';
+          
+          // Check if this auction belongs to the user
+          if (itemCustomerId != userIdStr) {
+            return false;
+          }
+          
+          // Only include completed auctions (ended)
+          if (endDateStr.isNotEmpty) {
+            try {
+              final endDate = DateTime.parse(endDateStr);
+              return now.isAfter(endDate);
+            } catch (e) {
+              return false;
+            }
+          }
+          
+          return false;
+        }).map((item) {
+          return {
+            'id': item['quotation_more_information_id']?.toString() ?? item['quotation_id']?.toString() ?? '',
+            'quotation_id': item['quotation_id']?.toString() ?? '',
+            'quotation_more_information_id': item['quotation_more_information_id']?.toString() ?? '',
+            'product_name': item['short_text']?.toString() ?? item['description']?.toString() ?? '',
+            'description': item['description']?.toString() ?? item['quotation_description']?.toString() ?? '',
+            'notes': item['item_note']?.toString() ?? '',
+            'starting_price': item['star_price']?.toString() ?? '0',
+            'min_increment': item['minimum_increase']?.toString() ?? '0',
+            'start_date': item['auction_start_date']?.toString() ?? '',
+            'end_date': item['auction_end_date']?.toString() ?? '',
+            'purchase_order_type_id': item['quotation_type_id']?.toString() ?? '',
+            'quotation_type_code': item['quotation_type_code']?.toString() ?? '',
+            'quotation_type_name': item['quotation_type_description']?.toString() ?? '',
+            'image_url': item['quotation_image']?.toString() ?? '',
+            'quantity': item['quantity']?.toString() ?? '1',
+          };
+        }).toList();
+
+        return userAuctions.cast<Map<String, dynamic>>();
+      } else {
+        throw Exception(
+            'Failed to load previous auctions: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      if (e is SocketException) {
+        throw Exception(
+            'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+      } else if (e is TimeoutException) {
+        throw Exception('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง');
+      } else {
+        print('Error loading previous auctions: $e');
+        return [];
+      }
+    } finally {
+      if (client != null) {
+        try {
+          client.close();
+        } catch (closeError) {
+          // Ignore close errors
+        }
+      }
+    }
+  }
 }

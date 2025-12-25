@@ -30,6 +30,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/utils/time_calculator.dart';
+import 'package:e_auction/views/first_page/coupon_page/my_coupons_page.dart';
+import 'package:e_auction/services/coupon_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -54,6 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingCurrent = true;
   bool _isLoadingUpcoming = true;
   String? _errorMessage;
+  
+  // Coupon data
+  int _activeCouponCount = 0;
+  final CouponService _couponService = CouponService();
 
   @override
   void initState() {
@@ -61,6 +67,27 @@ class _HomeScreenState extends State<HomeScreen> {
     _productService = ProductService(baseUrl: Config.apiUrlAuction);
     _checkAndShowPdpaDialog();
     _loadAuctionData();
+    _loadCouponCount();
+  }
+  
+  Future<void> _loadCouponCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('id') ?? '';
+      
+      if (userId.isNotEmpty) {
+        final coupons = await _couponService.getUserCoupons(userId);
+        final activeCoupons = coupons.where((c) => c.canUse).length;
+        
+        if (mounted) {
+          setState(() {
+            _activeCouponCount = activeCoupons;
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading coupon count: $e');
+    }
   }
 
   Future<void> _loadAuctionData() async {
@@ -581,45 +608,51 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
         actions: [
-          // Stack(
-          //   children: [
-          //     IconButton(
-          //       icon: Icon(Icons.notifications_outlined, color: Colors.black),
-          //       onPressed: () {
-          //         Navigator.push(
-          //           context,
-          //           MaterialPageRoute(
-          //             builder: (context) => NotificationPage(),
-          //           ),
-          //         );
-          //       },
-          //     ),
-          //     Positioned(
-          //       right: 8,
-          //       top: 8,
-          //       child: Container(
-          //         padding: const EdgeInsets.all(2),
-          //         decoration: BoxDecoration(
-          //           color: Colors.red,
-          //           borderRadius: BorderRadius.circular(10),
-          //         ),
-          //         constraints: const BoxConstraints(
-          //           minWidth: 16,
-          //           minHeight: 16,
-          //         ),
-          //         child: const Text(
-          //           '1',
-          //           style: TextStyle(
-          //             color: Colors.white,
-          //             fontSize: 10,
-          //             fontWeight: FontWeight.bold,
-          //           ),
-          //           textAlign: TextAlign.center,
-          //         ),
-          //       ),
-          //     ),
-          //   ],
-          // ),
+          // Coupon Icon with Badge
+          Stack(
+            children: [
+              IconButton(
+                icon: Icon(Icons.local_offer, color: Colors.black),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MyCouponsPage(),
+                    ),
+                  ).then((_) {
+                    // Reload coupon count when returning from coupon page
+                    _loadCouponCount();
+                  });
+                },
+                tooltip: 'คูปองของฉัน',
+              ),
+              if (_activeCouponCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      _activeCouponCount > 99 ? '99+' : '$_activeCouponCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           if (Platform.isAndroid)
             Container(
               margin: EdgeInsets.only(right: 8),

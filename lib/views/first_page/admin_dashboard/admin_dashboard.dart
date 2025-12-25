@@ -6,6 +6,7 @@ import 'package:e_auction/views/first_page/admin_dashboard/product_approval_page
 import 'package:e_auction/views/first_page/admin_dashboard/chat_management_page.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/user_management_page.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/winner_management_page.dart';
+import 'package:e_auction/views/first_page/admin_dashboard/coupon_management_page.dart';
 import 'dart:async';
 
 class AdminDashboard extends StatefulWidget {
@@ -230,6 +231,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  void _openCouponManagement() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CouponManagementPage(),
+      ),
+    );
+  }
+
   void _openSettings() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -295,6 +305,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     subtitle: 'ดูรายการผู้ชนะ',
                     color: Colors.amber,
                     onTap: () => _openWinnerManagement(),
+                  ),
+                  _buildDashboardCard(
+                    icon: Icons.local_offer,
+                    title: 'จัดการคูปอง',
+                    subtitle: 'ดูและจัดการคูปอง',
+                    color: Colors.pink,
+                    onTap: () => _openCouponManagement(),
                   ),
                   _buildDashboardCard(
                     icon: Icons.settings,
