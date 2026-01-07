@@ -1,0 +1,346 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="AS03 - Flow Diagram" id="AS03-Flow">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="ระบบประมูลแบบลดจำนวน (AS03) - Flow การทำงาน" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=16;fontColor=#1976D2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="750" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Section 1: Create Auction -->
+        <mxCell id="section1" value="1. สร้างประมูล AS03" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontStyle=1;fontSize=14;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="750" height="35" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="start1" value="เริ่มต้น" style="ellipse;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#388E3C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="130" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow1" value="" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#1976D2;" edge="1" parent="1" source="start1" target="input1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="110" y="200" as="sourcePoint" />
+            <mxPoint x="110" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="input1" value="กรอกข้อมูลประมูล&#xa;• เลือก Type: AS03&#xa;• ชื่อสินค้า&#xa;• รายละเอียด&#xa;• จำนวนสินค้าทั้งหมด&#xa;• ราคาเหมา&#xa;• วันที่เริ่มต้น/สิ้นสุด&#xa;• อัปโหลดรูปภาพ" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="200" height="150" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow2" value="ข้อมูลครบ" style="endArrow=block;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#1976D2;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#1976D2;" edge="1" parent="1" source="input1" target="validate1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="250" y="275" as="sourcePoint" />
+            <mxPoint x="270" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="validate1" value="ตรวจสอบข้อมูล&#xa;• ชื่อสินค้าไม่ว่าง&#xa;• ราคาเหมา &gt; 0&#xa;• จำนวนสินค้า &gt; 0&#xa;• วันที่ถูกต้อง" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="200" width="180" height="150" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow3" value="ผ่าน" style="endArrow=block;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#388E3C;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#388E3C;" edge="1" parent="1" source="validate1" target="format1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="460" y="275" as="sourcePoint" />
+            <mxPoint x="480" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow3b" value="ไม่ผ่าน" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#D32F2F;fontSize=10;dashed=1;labelBackgroundColor=#FFFFFF;labelBorderColor=#D32F2F;" edge="1" parent="1" source="validate1" target="input1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="360" y="360" as="sourcePoint" />
+            <mxPoint x="360" y="360" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="360" y="390" />
+              <mxPoint x="140" y="390" />
+              <mxPoint x="140" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="format1" value="จัดรูปแบบข้อมูล&#xa;• แปลงราคาเป็น int&#xa;• min_increment = 1&#xa;• เพิ่ม quotation_type_code: AS03" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#7B1FA2;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="480" y="200" width="180" height="150" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow4" value="" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#1976D2;" edge="1" parent="1" source="format1" target="save1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="360" as="sourcePoint" />
+            <mxPoint x="570" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="save1" value="บันทึกประมูล&#xa;(ส่งข้อมูลไป Server)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C5E1A5;strokeColor=#558B2F;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="380" width="200" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow5" value="สำเร็จ" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#388E3C;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#388E3C;" edge="1" parent="1" source="save1" target="end1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="440" as="sourcePoint" />
+            <mxPoint x="620" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="end1" value="แสดงผลสำเร็จ" style="ellipse;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#388E3C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="570" y="460" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Section 2: View Auction List -->
+        <mxCell id="section2" value="2. ดูรายการประมูล" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#388E3C;fontStyle=1;fontSize=14;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="540" width="750" height="35" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="start2" value="เปิดหน้า Home" style="ellipse;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#388E3C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="590" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow6" value="" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#388E3C;" edge="1" parent="1" source="start2" target="load2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="110" y="650" as="sourcePoint" />
+            <mxPoint x="110" y="660" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="load2" value="โหลดข้อมูลประมูล AS03" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="660" width="200" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow7" value="" style="endArrow=block;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#388E3C;" edge="1" parent="1" source="load2" target="filter2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="250" y="700" as="sourcePoint" />
+            <mxPoint x="270" y="700" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="filter2" value="กรองรายการ&#xa;• current: กำลังประมูล&#xa;• upcoming: ยังไม่เริ่ม&#xa;• completed: สิ้นสุดแล้ว&#xa;• ซ่อน: หมดเวลาก่อนครบจำนวน" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="640" width="200" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow8" value="" style="endArrow=block;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#388E3C;" edge="1" parent="1" source="filter2" target="display2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="480" y="700" as="sourcePoint" />
+            <mxPoint x="500" y="700" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="display2" value="แสดงรายการประมูล&#xa;• รูปภาพ&#xa;• ชื่อสินค้า&#xa;• ราคาต่อชิ้น&#xa;• จำนวนคงเหลือ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C5E1A5;strokeColor=#558B2F;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="500" y="660" width="200" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow9" value="กดที่ประมูล" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#388E3C;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="display2" target="detail3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="770" as="sourcePoint" />
+            <mxPoint x="600" y="790" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Section 3: View Detail -->
+        <mxCell id="section3" value="3. ดูรายละเอียดประมูล" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F57F17;fontStyle=1;fontSize=14;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="800" width="750" height="35" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="detail3" value="เปิดหน้า Detail" style="ellipse;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#388E3C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="570" y="850" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow10" value="" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#F57F17;" edge="1" parent="1" source="detail3" target="load3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="910" as="sourcePoint" />
+            <mxPoint x="620" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="load3" value="โหลดข้อมูลล่าสุด" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="520" y="920" width="200" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow11" value="" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#F57F17;" edge="1" parent="1" source="load3" target="display3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="1010" as="sourcePoint" />
+            <mxPoint x="620" y="1020" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="display3" value="แสดงรายละเอียด&#xa;• รูปภาพหลายรูป + Gallery&#xa;• ชื่อสินค้า, รายละเอียด&#xa;• ราคาเหมา, จำนวนคงเหลือ&#xa;• ผู้จองล่าสุด (5 คน)&#xa;• สถานะการประมูล" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C5E1A5;strokeColor=#558B2F;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="480" y="1020" width="280" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow12" value="กดปุ่ม 'เข้าร่วมการจอง'" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#C2185B;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="display3" target="dialog4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="1150" as="sourcePoint" />
+            <mxPoint x="620" y="1170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Section 4: Book Item -->
+        <mxCell id="section4" value="4. จองสินค้า" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C2185B;fontStyle=1;fontSize=14;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1170" width="750" height="35" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="dialog4" value="แสดง Dialog&#xa;• แสดงจำนวนคงเหลือ&#xa;• Input: จำนวนที่จะจอง" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="520" y="1220" width="200" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow13" value="กรอกจำนวน + ยืนยัน" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#C2185B;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="dialog4" target="validate4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="1330" as="sourcePoint" />
+            <mxPoint x="620" y="1350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="validate4" value="ตรวจสอบ&#xa;• จำนวน &gt; 0&#xa;• จำนวน &lt;= จำนวนคงเหลือ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="540" y="1350" width="160" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow14" value="ผ่าน" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#388E3C;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#388E3C;" edge="1" parent="1" source="validate4" target="join4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="1430" as="sourcePoint" />
+            <mxPoint x="620" y="1450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow14b" value="ไม่ผ่าน" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#D32F2F;fontSize=10;dashed=1;labelBackgroundColor=#FFFFFF;labelBorderColor=#D32F2F;" edge="1" parent="1" source="validate4" target="dialog4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="1430" as="sourcePoint" />
+            <mxPoint x="620" y="1430" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="620" y="1460" />
+              <mxPoint x="800" y="1460" />
+              <mxPoint x="800" y="1270" />
+              <mxPoint x="720" y="1270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="join4" value="จองสินค้า&#xa;• ดึง userId, phoneNumber&#xa;• ส่งข้อมูลไป Server" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#7B1FA2;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="540" y="1450" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow15" value="สำเร็จ" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#C2185B;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#C2185B;" edge="1" parent="1" source="join4" target="countdown4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="1540" as="sourcePoint" />
+            <mxPoint x="620" y="1560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="countdown4" value="เริ่ม Countdown 15 วินาที&#xa;• แสดง 'ยกเลิกได้ใน X วินาที'&#xa;• ปุ่ม 'ยกเลิกการจอง'" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="520" y="1560" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow16" value="15 วินาทีผ่าน" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#C2185B;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#C2185B;" edge="1" parent="1" source="countdown4" target="result4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="1650" as="sourcePoint" />
+            <mxPoint x="620" y="1670" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="result4" value="แสดงผล&#xa;• 'คุณจองแล้ว: X รายการ'&#xa;• ปุ่ม 'จองเพิ่ม' (ไม่ disable)&#xa;• อัปเดตข้อมูลล่าสุด" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C5E1A5;strokeColor=#558B2F;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="520" y="1670" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow17" value="จองเพิ่ม?" style="endArrow=block;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#C2185B;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#C2185B;" edge="1" parent="1" source="result4" target="check4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="730" y="1715" as="sourcePoint" />
+            <mxPoint x="750" y="1715" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="check4" value="ต้องการจองเพิ่ม?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="750" y="1640" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow18" value="ใช่" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#C2185B;fontSize=10;dashed=1;labelBackgroundColor=#FFFFFF;labelBorderColor=#C2185B;" edge="1" parent="1" source="check4" target="dialog4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="810" y="1730" as="sourcePoint" />
+            <mxPoint x="810" y="1730" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="810" y="1760" />
+              <mxPoint x="620" y="1760" />
+              <mxPoint x="620" y="1270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow19" value="ไม่" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#455A64;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#455A64;" edge="1" parent="1" source="check4" target="end4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="810" y="1730" as="sourcePoint" />
+            <mxPoint x="810" y="1770" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="end4" value="เสร็จสิ้น" style="ellipse;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#388E3C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="770" y="1770" width="80" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Section 5: Auction End -->
+        <mxCell id="section5" value="5. สิ้นสุดการประมูล" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#455A64;fontStyle=1;fontSize=14;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1840" width="750" height="35" as="geometry" />
+        </mxCell>
+
+        <mxCell id="check5" value="ตรวจสอบเงื่อนไข&#xa;• ครบจำนวน:&#xa;  current_quantity_sold &gt;=&#xa;  max_quantity_available&#xa;• หมดเวลา:&#xa;  now &gt; endDate" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1890" width="240" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow20" value="ครบจำนวน" style="endArrow=block;html=1;rounded=0;exitX=1;exitY=0.25;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#455A64;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#455A64;" edge="1" parent="1" source="check5" target="end5a">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="1920" as="sourcePoint" />
+            <mxPoint x="570" y="1940" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow21" value="หมดเวลา" style="endArrow=block;html=1;rounded=0;exitX=1;exitY=0.75;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#455A64;fontSize=10;labelBackgroundColor=#FFFFFF;labelBorderColor=#455A64;" edge="1" parent="1" source="check5" target="end5b">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="1980" as="sourcePoint" />
+            <mxPoint x="570" y="2000" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow22" value="ยังไม่สิ้นสุด" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#388E3C;fontSize=10;dashed=1;labelBackgroundColor=#FFFFFF;labelBorderColor=#388E3C;" edge="1" parent="1" source="check5" target="continue5">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="420" y="2020" as="sourcePoint" />
+            <mxPoint x="420" y="2040" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="end5a" value="แสดง 'สิ้นสุดการประมูล'&#xa;เหตุผล: สินค้าครบจำนวนแล้ว" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C5E1A5;strokeColor=#558B2F;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="570" y="1900" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="end5b" value="แสดง 'สิ้นสุดการประมูล'&#xa;เหตุผล: หมดเวลาการประมูลแล้ว" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C5E1A5;strokeColor=#558B2F;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="570" y="1980" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="continue5" value="ยังประมูลต่อ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#7B1FA2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="370" y="2040" width="100" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow23" value="ถ้าหมดเวลาก่อนครบจำนวน" style="endArrow=block;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#D32F2F;fontSize=10;dashed=1;labelBackgroundColor=#FFFFFF;labelBorderColor=#D32F2F;" edge="1" parent="1" source="check5" target="hide5">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="420" y="2020" as="sourcePoint" />
+            <mxPoint x="420" y="2020" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="420" y="2040" />
+              <mxPoint x="200" y="2040" />
+              <mxPoint x="200" y="2110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="hide5" value="ซ่อนจากรายการ&#xa;(ไม่แสดงใน filter ใดๆ)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#D32F2F;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="150" y="2110" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Notes -->
+        <mxCell id="note1" value="⭐ Key Points:&#xa;• max_quantity_available = จำนวนสินค้าทั้งหมด&#xa;• bidder_name = เบอร์โทร (phone_number)&#xa;• min_increment = 1 (สำหรับ AS03)&#xa;• ผู้ใช้จองได้หลายครั้ง&#xa;• Countdown 15 วินาที (ยกเลิกได้)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;align=left;verticalAlign=top;spacingLeft=8;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="200" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note2" value="📋 สถานะการประมูล:&#xa;• กำลังประมูล: ยังไม่ครบจำนวน + ยังไม่หมดเวลา&#xa;• สิ้นสุดแล้ว: ครบจำนวน หรือ หมดเวลา&#xa;• ซ่อน: หมดเวลาก่อนครบจำนวน" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0277BD;align=left;verticalAlign=top;spacingLeft=8;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="40" y="350" width="200" height="90" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -36,10 +36,15 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
   Timer? _countdownTimer;
   int? _pendingBookingQuantity;
 
+  // Image gallery state
+  int _selectedImageIndex = 0;
+  List<String> _imageUrls = [];
+
   @override
   void initState() {
     super.initState();
     _productService = ProductService(baseUrl: Config.apiUrlAuction);
+    _parseImages();
     _checkIfUserHasJoined();
     // โหลดข้อมูลทันทีเมื่อเปิดหน้า
     _loadLatestData();
@@ -50,6 +55,133 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
   void dispose() {
     super.dispose();
     _countdownTimer?.cancel();
+  }
+
+  // Parse images from auctionData
+  void _parseImages() {
+    _imageUrls = [];
+    
+    // ใช้ข้อมูลจาก _latestAuctionData ถ้ามี (ข้อมูลล่าสุด) หรือ widget.auctionData (ข้อมูลเริ่มต้น)
+    final dataSource = _latestAuctionData ?? widget.auctionData;
+    
+    // ใช้ images array ที่ parse แล้วจาก product_service
+    if (dataSource['images'] != null && dataSource['images'] is List) {
+      final imagesList = dataSource['images'] as List;
+      if (imagesList.isNotEmpty) {
+        for (var img in imagesList) {
+          if (img != null && img.toString().isNotEmpty) {
+            _imageUrls.add(img.toString());
+          }
+        }
+      }
+    }
+    
+    // ถ้ายังไม่มีรูป ให้ใช้ image เดียว (backward compatibility)
+    if (_imageUrls.isEmpty && dataSource['image'] != null) {
+      final singleImage = dataSource['image'].toString();
+      if (singleImage.isNotEmpty && singleImage != 'assets/images/noimage.jpg') {
+        _imageUrls.add(singleImage);
+      }
+    }
+    
+    // ถ้ายังไม่มีรูปเลย ให้ parse จาก quotation_image (fallback)
+    if (_imageUrls.isEmpty) {
+      final quotationImage = dataSource['quotation_image'];
+      if (quotationImage != null) {
+        try {
+          String imageData = quotationImage.toString().trim();
+          
+          // ลบ quotes นอกสุดถ้ามี (สำหรับกรณี "[\"img.jpg\"]")
+          if (imageData.startsWith('"') && imageData.endsWith('"')) {
+            imageData = imageData.substring(1, imageData.length - 1);
+            // Unescape backslashes
+            imageData = imageData.replaceAll('\\"', '"').replaceAll('\\\\', '\\');
+          }
+          
+          // ถ้าเป็น JSON array string ให้ parse
+          if (imageData.startsWith('[') && imageData.endsWith(']')) {
+            // ลอง parse หลายครั้งในกรณีที่ double encoded
+            dynamic parsed = imageData;
+            for (int i = 0; i < 3; i++) {
+              try {
+                if (parsed is String) {
+                  parsed = jsonDecode(parsed);
+                } else {
+                  break;
+                }
+              } catch (e) {
+                break;
+              }
+            }
+            
+            if (parsed is List && parsed.isNotEmpty) {
+              for (var img in parsed) {
+                if (img != null && img.toString().isNotEmpty) {
+                  // Clean the image name
+                  String imgName = img.toString()
+                      .replaceAll('"', '')
+                      .replaceAll('\\', '')
+                      .trim();
+                  if (imgName.isNotEmpty) {
+                    _imageUrls.add(_buildImageUrl(imgName));
+                  }
+                }
+              }
+            }
+          } else if (imageData.isNotEmpty && 
+                     imageData != '[]' && 
+                     imageData != '"[]"') {
+            // ถ้าเป็น string เดียว
+            imageData = imageData
+                .replaceAll('"', '')
+                .replaceAll('\\', '')
+                .trim();
+            
+            if (imageData.isNotEmpty) {
+              _imageUrls.add(_buildImageUrl(imageData));
+            }
+          }
+        } catch (e) {
+          print('Error parsing images in quantity_reduction_auction_detail_page: $e');
+        }
+      }
+    }
+    
+    // ถ้ายังไม่มีรูปเลย ให้ใช้ noimage.jpg
+    if (_imageUrls.isEmpty) {
+      _imageUrls.add('assets/images/noimage.jpg');
+    }
+  }
+  
+  // Build image URL from image name
+  String _buildImageUrl(String imageName) {
+    if (imageName.isEmpty || 
+        imageName == '[]' || 
+        imageName == 'assets/images/noimage.jpg' ||
+        imageName.startsWith('http://') ||
+        imageName.startsWith('https://') ||
+        imageName.startsWith('assets/')) {
+      return imageName;
+    }
+    
+    // Check if it's a valid image extension
+    final validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    final hasValidExtension = validExtensions.any((ext) => 
+        imageName.toLowerCase().endsWith(ext));
+    
+    if (!hasValidExtension) {
+      return 'assets/images/noimage.jpg';
+    }
+    
+    // Build full URL
+    String baseUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$imageName';
+    
+    // Convert to HTTP for Android
+    if (Platform.isAndroid) {
+      baseUrl = baseUrl.replaceFirst('https://', 'http://');
+    }
+    
+    return baseUrl;
   }
 
   Future<void> _loadLatestData() async {
@@ -76,6 +208,8 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
             if (bidHistoryData != null) {
               _latestAuctionData!['bid_history'] = bidHistoryData;
             }
+            // Parse images ใหม่เมื่อโหลดข้อมูลล่าสุด
+            _parseImages();
           });
           print('DEBUG: _loadLatestData - Loaded data from ProductService: $_latestAuctionData');
         } else {
@@ -987,41 +1121,98 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
   }
 
   Widget _buildProductImage() {
-    return Container(
-      width: double.infinity,
-      height: 300,
-      child: Stack(
-        children: [
-          _buildAuctionImage(widget.auctionData['image'], width: double.infinity, height: 300),
-          // ป้ายประเภทสินค้าในรูป
-          Positioned(
-            top: 16,
-            left: 16,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(16),
+    return Column(
+      children: [
+        // Main Image
+        Container(
+          width: double.infinity,
+          height: 300,
+          child: Stack(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  if (_imageUrls.isNotEmpty && _imageUrls.length > 1) {
+                    _showImageGallery();
+                  }
+                },
+                child: _buildAuctionImage(
+                  _imageUrls.isNotEmpty ? _imageUrls[_selectedImageIndex] : 'assets/images/noimage.jpg',
+                  width: double.infinity,
+                  height: 300,
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.trending_down, color: Colors.white, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'ประมูลแบบลดจำนวน',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+              // ป้ายประเภทสินค้าในรูป
+              Positioned(
+                top: 16,
+                left: 16,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.trending_down, color: Colors.white, size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        'ประมูลแบบลดจำนวน',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Thumbnail Gallery - แสดงเมื่อมีมากกว่า 1 รูป
+        if (_imageUrls.length > 1)
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _imageUrls.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedImageIndex = index;
+                    });
+                  },
+                  child: Container(
+                    margin: EdgeInsets.only(right: 8),
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _selectedImageIndex == index
+                            ? Colors.purple
+                            : Colors.grey[300]!,
+                        width: _selectedImageIndex == index ? 3 : 1,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: _buildAuctionImage(
+                        _imageUrls[index],
+                        width: 80,
+                        height: 80,
+                      ),
                     ),
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -1031,6 +1222,79 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
       width: width,
       height: height,
       fit: BoxFit.cover,
+    );
+  }
+
+  // Show image gallery in full screen
+  void _showImageGallery() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              PageView.builder(
+                controller: PageController(initialPage: _selectedImageIndex),
+                itemCount: _imageUrls.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _selectedImageIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 3.0,
+                    child: Center(
+                      child: _buildAuctionImage(
+                        _imageUrls[index],
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              // Close button
+              Positioned(
+                top: 40,
+                right: 20,
+                child: IconButton(
+                  icon: Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ),
+              // Image counter
+              if (_imageUrls.length > 1)
+                Positioned(
+                  bottom: 40,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${_selectedImageIndex + 1} / ${_imageUrls.length}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
