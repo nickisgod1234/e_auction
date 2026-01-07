@@ -292,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }).toList();
     }
 
-    // เพิ่มเงื่อนไขสำหรับ AS03: ถ้าสินค้าครบจำนวนหรือเวลาหมดให้หายไป
+    // เพิ่มเงื่อนไขสำหรับ AS03: ถ้าหมดเวลาก่อนครบจำนวนให้ซ่อนสินค้า
     return filteredAuctions.where((auction) {
       final typeCode = auction['quotation_type_code']?.toString() ?? '';
       final typeCode2 = auction['type_code']?.toString() ?? '';
@@ -300,16 +300,22 @@ class _HomeScreenState extends State<HomeScreen> {
       
       if (isAS03) {
         // ตรวจสอบว่าสินค้าครบจำนวนหรือไม่
-        final currentQuantitySold = auction['current_quantity_sold'] ?? 0;
-        final maxQuantityAvailable = auction['max_quantity_available'] ?? 0;
+        final currentQuantitySold = int.tryParse(auction['current_quantity_sold']?.toString() ?? '0') ?? 0;
+        final maxQuantityAvailable = int.tryParse(auction['max_quantity_available']?.toString() ?? '0') ?? 0;
         final isQuantityFull = currentQuantitySold >= maxQuantityAvailable && maxQuantityAvailable > 0;
         
         // ตรวจสอบว่าเวลาหมดหรือไม่
-        final endDate = auction['auction_end_date'];
+        final endDate = auction['auction_end_date']?.toString() ?? auction['end_date']?.toString();
         final isTimeExpired = _isTimeExpired(endDate);
         
-        // ถ้าสินค้าครบจำนวนหรือเวลาหมด ให้ไม่แสดง card
-        return !isQuantityFull && !isTimeExpired;
+        // ถ้าหมดเวลาก่อนครบจำนวน = ซ่อนสินค้า (ไม่แสดง)
+        if (isTimeExpired && !isQuantityFull) {
+          return false; // ซ่อนสินค้า
+        }
+        
+        // ถ้าครบจำนวน = แสดง (แต่จะแสดงว่า "สิ้นสุดการประมูล" ในหน้า detail)
+        // ถ้าหมดเวลาแต่ครบจำนวนแล้ว = แสดง (แต่จะแสดงว่า "สิ้นสุดการประมูล" ในหน้า detail)
+        return true;
       }
       
       return true; // สำหรับ type อื่นๆ แสดงตามปกติ
@@ -317,11 +323,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Helper method to check if time is expired
-  bool _isTimeExpired(dynamic endDate) {
-    if (endDate == null) return false;
+  bool _isTimeExpired(String? endDate) {
+    if (endDate == null || endDate.isEmpty) return false;
     
     try {
-      final end = DateTime.parse(endDate.toString());
+      final end = DateTime.parse(endDate);
       final now = DateTime.now();
       return now.isAfter(end);
     } catch (e) {

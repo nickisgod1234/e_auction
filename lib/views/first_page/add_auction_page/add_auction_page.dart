@@ -1373,55 +1373,59 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
                 },
               ),
 
-              // Quantity Fields for AS03 - Hidden
-              // if (_state.selectedQuotationTypeCode == 'AS03')
-              //   AddAuctionWidgets.buildQuantityFields(
-              //     maxQuantityController: _state.maxQuantityController,
-              //     currentQuantityController: _state.currentQuantityController,
-              //   ),
+              // Bulk Sale Section for AS03
+              if (_state.selectedQuotationTypeCode == 'AS03')
+                AddAuctionWidgets.buildBulkSaleSection(
+                  startingPriceController: _state.startingPriceController,
+                  maxQuantityController: _state.maxQuantityController,
+                  onStartingPriceChanged: (value) {
+                    setState(() {});
+                  },
+                ),
 
-              // Combined Price Section
-              AddAuctionWidgets.buildCombinedPriceSection(
-                startingPriceController: _state.startingPriceController,
-                minIncrementController: _state.minIncrementController,
-                isPercentage: _state.isPercentage,
-                percentageValue: _state.percentageValue,
-                currentPrice: _state.getCurrentPrice(),
-                hasStartingPrice: _state.getCurrentPrice() > 0,
-                onStartingPriceChanged: (value) {
-                  // อัปเดตราคาปัจจุบันเมื่อราคาเริ่มต้นเปลี่ยน
-                  final currentPrice = _state.getCurrentPrice();
-                  final minIncrement = _state.getMinIncrement();
+              // Combined Price Section (for non-AS03 types)
+              if (_state.selectedQuotationTypeCode != 'AS03')
+                AddAuctionWidgets.buildCombinedPriceSection(
+                  startingPriceController: _state.startingPriceController,
+                  minIncrementController: _state.minIncrementController,
+                  isPercentage: _state.isPercentage,
+                  percentageValue: _state.percentageValue,
+                  currentPrice: _state.getCurrentPrice(),
+                  hasStartingPrice: _state.getCurrentPrice() > 0,
+                  onStartingPriceChanged: (value) {
+                    // อัปเดตราคาปัจจุบันเมื่อราคาเริ่มต้นเปลี่ยน
+                    final currentPrice = _state.getCurrentPrice();
+                    final minIncrement = _state.getMinIncrement();
 
-                  // ถ้าขั้นต่ำการเพิ่มเกินราคาปัจจุบัน ให้ reset เป็น 0
-                  if (minIncrement > currentPrice && currentPrice > 0) {
-                    _state.minIncrementController.clear();
-                  }
+                    // ถ้าขั้นต่ำการเพิ่มเกินราคาปัจจุบัน ให้ reset เป็น 0
+                    if (minIncrement > currentPrice && currentPrice > 0) {
+                      _state.minIncrementController.clear();
+                    }
 
-                  setState(() {});
-                },
-                onMinIncrementChanged: (value) {
-                  // อัปเดตขั้นต่ำการเพิ่มเมื่อจำนวนเงินคงที่เปลี่ยน
-                  setState(() {});
-                },
-                onPercentageChanged: _updatePercentageMode,
-                onPercentageValueChanged: _updatePercentageValue,
-                // เพิ่ม parameters สำหรับการคำนวณราคา
-                costPriceController: _state.costPriceController,
-                quantityController: _state.quantityController,
-                onCostPriceChanged: (value) {
-                  setState(() {});
-                },
-                onQuantityChanged: (value) {
-                  setState(() {});
-                },
-                context: context,
-                showCostCalculation: _state.showCostCalculation,
-                onShowCostCalculationChanged: (show) {
-                  _state.updateShowCostCalculation(show);
-                  setState(() {});
-                },
-              ),
+                    setState(() {});
+                  },
+                  onMinIncrementChanged: (value) {
+                    // อัปเดตขั้นต่ำการเพิ่มเมื่อจำนวนเงินคงที่เปลี่ยน
+                    setState(() {});
+                  },
+                  onPercentageChanged: _updatePercentageMode,
+                  onPercentageValueChanged: _updatePercentageValue,
+                  // เพิ่ม parameters สำหรับการคำนวณราคา
+                  costPriceController: _state.costPriceController,
+                  quantityController: _state.quantityController,
+                  onCostPriceChanged: (value) {
+                    setState(() {});
+                  },
+                  onQuantityChanged: (value) {
+                    setState(() {});
+                  },
+                  context: context,
+                  showCostCalculation: _state.showCostCalculation,
+                  onShowCostCalculationChanged: (show) {
+                    _state.updateShowCostCalculation(show);
+                    setState(() {});
+                  },
+                ),
 
               // Bidder Count Section
               // AddAuctionWidgets.buildBidderCountSection(

@@ -51,10 +51,10 @@ class AddAuctionService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
 
-        // Filter only auction types (starting with 'A') - exclude AS03
+        // Filter only auction types (starting with 'A')
         final auctionTypes = data.where((item) {
           final code = item['quotation_type_code']?.toString() ?? '';
-          return code.startsWith('A') && code != 'AS03';
+          return code.startsWith('A');
         }).map((item) {
           final code = item['quotation_type_code']?.toString() ?? '';
           String customName = item['description']?.toString() ?? '';
@@ -67,9 +67,9 @@ class AddAuctionService {
             case 'AS02':
               customName = 'ประมูลแบบราคาลดลง(ได้ราคาต่ำสุดเป็นผู้ชนะ)';
               break;
-            // case 'AS03': - Hidden
-            //   customName = 'การซื้อสินค้าตามจำนวนที่ต้องการ';
-            //   break;
+            case 'AS03':
+              customName = 'การซื้อสินค้าตามจำนวนที่ต้องการ';
+              break;
           }
           
           return {
@@ -137,6 +137,40 @@ class AddAuctionService {
       print('Data: $dataJson');
       print('Data length: ${dataJson.length}');
       print('Images count: ${imageFiles.length}');
+      
+      // Check if max_quantity_available is in the data
+      try {
+        final decodedData = jsonDecode(dataJson);
+        if (decodedData is Map) {
+          print('DEBUG: Checking max_quantity_available in JSON:');
+          print('Has max_quantity_available: ${decodedData.containsKey('max_quantity_available')}');
+          if (decodedData.containsKey('max_quantity_available')) {
+            print('max_quantity_available value: ${decodedData['max_quantity_available']}');
+            print('max_quantity_available type: ${decodedData['max_quantity_available'].runtimeType}');
+          } else {
+            print('ERROR: max_quantity_available is NOT in the JSON data!');
+            print('Available keys: ${decodedData.keys.toList()}');
+          }
+        }
+      } catch (e) {
+        print('DEBUG: Error checking JSON data: $e');
+      }
+      
+      // For AS03, also add max_quantity_available as a separate field (in case API needs it)
+      // This is in addition to the JSON data
+      try {
+        final decodedData = jsonDecode(dataJson);
+        if (decodedData is Map && decodedData.containsKey('max_quantity_available')) {
+          final maxQty = decodedData['max_quantity_available'];
+          if (maxQty != null) {
+            final qty = maxQty is int ? maxQty : (int.tryParse(maxQty.toString()) ?? 0);
+            request.fields['max_quantity_available'] = qty.toString();
+            print('DEBUG: Also added max_quantity_available as separate form field: $qty');
+          }
+        }
+      } catch (e) {
+        print('DEBUG: Error adding max_quantity_available as separate field: $e');
+      }
 
       // Add images if provided
       // API expects: images[] field name (with brackets for array)
@@ -230,6 +264,7 @@ class AddAuctionService {
   // Validate Auction Data
   static Map<String, dynamic> validateAuctionData(Map<String, dynamic> data) {
     final errors = <String, String>{};
+    final isAS03 = data['quotation_type_code']?.toString() == 'AS03';
 
     // Required fields validation
     if (data['product_name']?.toString().isEmpty ?? true) {
@@ -240,18 +275,24 @@ class AddAuctionService {
       errors['description'] = 'กรุณากรอกรายละเอียดสินค้า';
     }
 
-    // Fix starting_price validation
+    // Fix starting_price validation (for AS03, this is bulk price)
     final startingPrice = data['starting_price'];
     if (startingPrice == null) {
-      errors['starting_price'] = 'กรุณากรอกราคาเริ่มต้น';
+      errors['starting_price'] = isAS03 
+          ? 'กรุณากรอกราคาเหมา' 
+          : 'กรุณากรอกราคาเริ่มต้น';
     } else {
       try {
         final price = double.tryParse(startingPrice.toString());
         if (price == null || price <= 0) {
-          errors['starting_price'] = 'กรุณากรอกราคาเริ่มต้น';
+          errors['starting_price'] = isAS03 
+              ? 'กรุณากรอกราคาเหมา' 
+              : 'กรุณากรอกราคาเริ่มต้น';
         }
       } catch (e) {
-        errors['starting_price'] = 'กรุณากรอกราคาเริ่มต้น';
+        errors['starting_price'] = isAS03 
+            ? 'กรุณากรอกราคาเหมา' 
+            : 'กรุณากรอกราคาเริ่มต้น';
       }
     }
 
@@ -269,6 +310,24 @@ class AddAuctionService {
       errors['purchase_order_type_id'] = 'กรุณาเลือกประเภทสินค้า';
     }
 
+    // For AS03, validate quantity fields instead of min_increment
+    if (isAS03) {
+      // Validate max_quantity_available (จำนวนสินค้าทั้งหมด - ส่งไป API)
+      final maxQuantityAvailable = data['max_quantity_available'];
+      if (maxQuantityAvailable == null || maxQuantityAvailable.toString().isEmpty) {
+        errors['max_quantity_available'] = 'กรุณากรอกจำนวนสินค้าทั้งหมด';
+      } else {
+        try {
+          final qty = int.tryParse(maxQuantityAvailable.toString());
+          if (qty == null || qty <= 0) {
+            errors['max_quantity_available'] = 'กรุณากรอกจำนวนสินค้าที่ถูกต้อง';
+          }
+        } catch (e) {
+          errors['max_quantity_available'] = 'กรุณากรอกจำนวนสินค้าที่ถูกต้อง';
+        }
+      }
+    }
+
     return {
       'isValid': errors.isEmpty,
       'errors': errors,
@@ -278,28 +337,53 @@ class AddAuctionService {
   // Format Auction Data for new API
   static Future<Map<String, dynamic>> formatAuctionDataForAPI(
       Map<String, dynamic> data) async {
-    // Convert prices to integers to remove .0
+    // Check if this is AS03 (bulk sale)
+    // Try to get quotation_type_code from data, or check if max_quantity_available exists (indicates AS03)
+    String? quotationTypeCode = data['quotation_type_code']?.toString();
+    
+    // If quotation_type_code is null but max_quantity_available exists, it's likely AS03
+    if (quotationTypeCode == null && data.containsKey('max_quantity_available')) {
+      quotationTypeCode = 'AS03';
+      print('DEBUG: formatAuctionDataForAPI - quotation_type_code was null, but max_quantity_available exists, assuming AS03');
+    }
+    
+    final isAS03 = quotationTypeCode == 'AS03';
+    
+    // Debug: Check quotation type
+    print('DEBUG: formatAuctionDataForAPI - quotation_type_code: $quotationTypeCode, isAS03: $isAS03');
+    print('DEBUG: formatAuctionDataForAPI - data keys: ${data.keys.toList()}');
+    print('DEBUG: formatAuctionDataForAPI - has max_quantity_available: ${data.containsKey('max_quantity_available')}');
+    
+    // Convert prices to integers (API expects int, not string)
     final startingPrice = data['starting_price'];
     final minIncrement = data['min_increment'];
     
-    String startingPriceStr = '0';
-    String minIncrementStr = '100';
+    int startingPriceInt = 0;
+    int minIncrementInt = 100;
     
     if (startingPrice != null) {
       try {
         final price = double.tryParse(startingPrice.toString());
-        startingPriceStr = price?.toInt().toString() ?? '0';
+        startingPriceInt = price?.toInt() ?? 0;
       } catch (e) {
-        startingPriceStr = '0';
+        startingPriceInt = 0;
       }
     }
     
-    if (minIncrement != null) {
+    // For AS03, set min_increment to 1 (API requires > 0)
+    // For other types, use the provided min_increment or default to 100
+    if (isAS03) {
+      minIncrementInt = 1; // API requires min_increment > 0 even for bulk sales
+    } else if (minIncrement != null) {
       try {
         final increment = double.tryParse(minIncrement.toString());
-        minIncrementStr = increment?.toInt().toString() ?? '100';
+        if (increment != null && increment > 0) {
+          minIncrementInt = increment.toInt();
+        } else {
+          minIncrementInt = 100; // Default if invalid
+        }
       } catch (e) {
-        minIncrementStr = '100';
+        minIncrementInt = 100;
       }
     }
     
@@ -320,8 +404,8 @@ class AddAuctionService {
       'description': data['description']?.toString() ?? '',
       'customer_id': customerId, // เพิ่ม customer_id จาก user session
       'notes': data['notes']?.toString() ?? '',
-      'starting_price': startingPriceStr,
-      'min_increment': minIncrementStr,
+      'starting_price': startingPriceInt, // Send as int (not string)
+      'min_increment': minIncrementInt, // Send as int (not string)
       'start_date': data['start_date']?.toString() ?? '',
       'end_date': data['end_date']?.toString() ?? '',
       'purchase_order_type_id': data['purchase_order_type_id']?.toString() ?? '',
@@ -330,11 +414,50 @@ class AddAuctionService {
       'sourcing': true, // ใช้ boolean แทน string 'true'
       'created_by': 2, // ควรดึงจาก user session - ใช้ int แทน string
       'vendor_id': 8, // ควรดึงจาก user session - ใช้ int แทน string
+      // เก็บ quotation_type_code ไว้เพื่อใช้ในการตรวจสอบในครั้งต่อไป
+      'quotation_type_code': quotationTypeCode ?? data['quotation_type_code']?.toString(),
     };
+    
+    // Add quantity data for AS03 (use max_quantity_available for API)
+    // IMPORTANT: Always add max_quantity_available for AS03, even if 0
+    // Also check if max_quantity_available already exists in data (from previous format call)
+    if (isAS03 || data.containsKey('max_quantity_available')) {
+      final maxQuantityAvailable = data['max_quantity_available'];
+      print('DEBUG: AS03 detected (isAS03: $isAS03) or max_quantity_available exists - value: $maxQuantityAvailable (type: ${maxQuantityAvailable.runtimeType})');
+      
+      // Convert to int (API expects int, not string)
+      int qty = 0;
+      if (maxQuantityAvailable != null) {
+        if (maxQuantityAvailable is int) {
+          qty = maxQuantityAvailable;
+        } else if (maxQuantityAvailable is String) {
+          qty = int.tryParse(maxQuantityAvailable.trim()) ?? 0;
+        } else {
+          qty = int.tryParse(maxQuantityAvailable.toString().trim()) ?? 0;
+        }
+      }
+      
+      // Always add max_quantity_available for AS03 (even if 0)
+      formattedData['max_quantity_available'] = qty;
+      print('DEBUG: Added max_quantity_available to formattedData: $qty (type: ${qty.runtimeType})');
+    } else {
+      print('DEBUG: Not AS03 - isAS03: $isAS03, quotation_type_code: $quotationTypeCode, has max_quantity_available: ${data.containsKey('max_quantity_available')}');
+    }
     
     // Debug: Print the formatted data
     print('DEBUG: Formatted auction data for API:');
     print('Formatted Data: $formattedData');
+    print('Is AS03: $isAS03');
+    print('Quotation Type Code: $quotationTypeCode');
+    if (isAS03) {
+      print('Max Quantity Available: ${formattedData['max_quantity_available']}');
+      print('Max Quantity Available Type: ${formattedData['max_quantity_available'].runtimeType}');
+      if (!formattedData.containsKey('max_quantity_available')) {
+        print('ERROR: max_quantity_available is missing from formattedData!');
+      }
+    } else {
+      print('WARNING: Not AS03, max_quantity_available will not be added');
+    }
     
     return formattedData;
   }

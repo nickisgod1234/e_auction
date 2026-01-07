@@ -77,15 +77,35 @@ class _QuantityReductionAuctionsPageState extends State<QuantityReductionAuction
       final startDate = DateTime.tryParse(auction['auction_start_date'] ?? '');
       final endDate = DateTime.tryParse(auction['auction_end_date'] ?? '');
       
-      if (startDate == null || endDate == null) return false;
+      // สำหรับ AS03 ต้องตรวจสอบว่าครบจำนวนหรือไม่
+      final currentQuantitySold = int.tryParse(auction['current_quantity_sold']?.toString() ?? '0') ?? 0;
+      final maxQuantityAvailable = int.tryParse(auction['max_quantity_available']?.toString() ?? '0') ?? 0;
+      final isQuantityFull = currentQuantitySold >= maxQuantityAvailable && maxQuantityAvailable > 0;
+      
+      // ตรวจสอบว่าหมดเวลาหรือไม่
+      final isTimeExpired = endDate != null && now.isAfter(endDate);
+      
+      // ถ้าหมดเวลาก่อนครบจำนวน = ซ่อนสินค้า (ไม่แสดงใน filter ใดๆ)
+      if (isTimeExpired && !isQuantityFull) {
+        return false;
+      }
 
       switch (_selectedFilter) {
         case 'current':
-          return now.isAfter(startDate) && now.isBefore(endDate);
+          // กำลังประมูล = ยังไม่ครบจำนวน และยังไม่หมดเวลา และเริ่มแล้ว
+          if (isQuantityFull || isTimeExpired) return false;
+          return startDate != null && now.isAfter(startDate);
+          
         case 'upcoming':
-          return now.isBefore(startDate);
+          // ยังไม่เริ่ม = ยังไม่ถึงวันเริ่มต้น และยังไม่ครบจำนวน
+          if (isQuantityFull || isTimeExpired) return false;
+          return startDate != null && now.isBefore(startDate);
+          
         case 'completed':
-          return now.isAfter(endDate);
+          // จบแล้ว = ครบจำนวนแล้ว (ไม่ว่าจะหมดเวลาหรือไม่)
+          // หรือ หมดเวลาแล้ว (แต่ต้องครบจำนวนแล้ว - ตามที่กำหนดไว้ใน home_screen)
+          return isQuantityFull || (isTimeExpired && isQuantityFull);
+          
         default:
           return true;
       }

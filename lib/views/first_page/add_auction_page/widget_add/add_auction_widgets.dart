@@ -1251,7 +1251,245 @@ class AddAuctionWidgets {
     );
   }
 
-  // Quantity Fields for AS03 Widget
+  // Bulk Sale Section for AS03 Widget
+  static Widget buildBulkSaleSection({
+    required TextEditingController startingPriceController,
+    required TextEditingController maxQuantityController,
+    required Function(String) onStartingPriceChanged,
+  }) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with icon
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.inventory_2,
+                  color: Colors.orange[700],
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'การขายสินค้าแบบเหมา',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'ขายเป็นชุด ราคาเดียว ไม่มีการประมูล',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Info Card
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'ตัวอย่าง: ขายเก้าอี้ 20 ตัว ราคาเหมา 1,000 บาท - ผู้ซื้อจะลงชื่อเพื่อจองสินค้า',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange[900],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Quantity Fields
+          const Text(
+            'จำนวนสินค้า',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          buildTextField(
+            label: 'จำนวนสินค้าทั้งหมด *',
+            controller: maxQuantityController,
+            keyboardType: TextInputType.number,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'กรุณากรอกจำนวนสินค้าทั้งหมด';
+              }
+              final quantity = int.tryParse(value);
+              if (quantity == null || quantity <= 0) {
+                return 'กรุณากรอกจำนวนสินค้าที่ถูกต้อง';
+              }
+              return null;
+            },
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Bulk Price Field
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: const TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'ราคาเหมาทั้งชุด (บาท)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' *',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: startingPriceController,
+                  keyboardType: TextInputType.number,
+                  onChanged: onStartingPriceChanged,
+                  validator: AddAuctionMethods.validatePrice,
+                  inputFormatters: [SimpleNumberInputFormatter()],
+                  decoration: InputDecoration(
+                    hintText: 'เช่น 1000',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    prefixText: '฿',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Price Display
+                if (startingPriceController.text.isNotEmpty)
+                  Builder(
+                    builder: (context) {
+                      final price = double.tryParse(startingPriceController.text.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+                      final quantity = int.tryParse(maxQuantityController.text) ?? 0;
+                      final pricePerUnit = quantity > 0 ? price / quantity : 0;
+                      
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.orange[50]!, Colors.orange[100]!],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange[200]!),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'ราคาเหมาทั้งชุด:',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  Format.formatCurrency(price),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (quantity > 0) ...[
+                              const SizedBox(height: 8),
+                              Divider(color: Colors.orange[200]),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'ราคาต่อชิ้น (${NumberFormat('#,###').format(quantity)} ชิ้น):',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    Format.formatCurrency(pricePerUnit),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Quantity Fields for AS03 Widget (Legacy - kept for backward compatibility)
   static Widget buildQuantityFields({
     required TextEditingController maxQuantityController,
     required TextEditingController currentQuantityController,
@@ -1470,8 +1708,7 @@ class AddAuctionWidgets {
                       )
                     : const Text('เลือกประเภทสินค้า'),
                 isExpanded: true,
-                //  items: quotationTypes.map((type) { ใช้ type ทั้งหมด
-                items: quotationTypes.where((type) => type['code'] != 'AS03').map((type) {
+                items: quotationTypes.map((type) {
                   return DropdownMenuItem<String>(
                     value: type['id'].toString(),
                     child: Text('${type['code']} - ${type['name']}'),

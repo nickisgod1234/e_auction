@@ -176,8 +176,19 @@ class AddAuctionMethods {
     required Map<String, dynamic> auctionData,
     List<File>? imageFiles,
   }) async {
-    // Format data for API
-    final formattedData = await AddAuctionService.formatAuctionDataForAPI(auctionData);
+    // Check if data is already formatted (has quotation_type_code or already has max_quantity_available for AS03)
+    // If already formatted, use it directly; otherwise format it
+    Map<String, dynamic> formattedData;
+    if (auctionData.containsKey('quotation_type_code') || 
+        (auctionData.containsKey('max_quantity_available') && auctionData.containsKey('sourcing'))) {
+      // Data is already formatted, use it directly
+      print('DEBUG: AddAuctionMethods.saveAuction - Data is already formatted, using directly');
+      formattedData = Map<String, dynamic>.from(auctionData);
+    } else {
+      // Format data for API
+      print('DEBUG: AddAuctionMethods.saveAuction - Formatting data for API');
+      formattedData = await AddAuctionService.formatAuctionDataForAPI(auctionData);
+    }
     
     // Validate data
     final validation = AddAuctionService.validateAuctionData(formattedData);

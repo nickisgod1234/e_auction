@@ -60,6 +60,11 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
   }
 
   Color _getStatusColor(String status) {
+    // ถ้าเป็นการประมูลแบบลดตามจำนวน (AS03) ใช้สีม่วง
+    if (_isAS03Type()) {
+      return Colors.green;
+    }
+    
     switch (status) {
       case 'current':
         return Colors.green;
@@ -239,7 +244,9 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.8),
+                        color: _isAS03Type() 
+                            ? Colors.purple.withOpacity(0.8) 
+                            : Colors.blue.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
