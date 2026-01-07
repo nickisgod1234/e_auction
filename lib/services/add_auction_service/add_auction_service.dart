@@ -107,17 +107,27 @@ class AddAuctionService {
   }
 
   // Save Auction with new API
+  // API Documentation: See docs/API_DOCUMENTATION.md
+  // Endpoint: POST /quotation_controller.php?action=create_flutter_auction
   static Future<Map<String, dynamic>> saveAuction({
     required Map<String, dynamic> auctionData,
     List<File> imageFiles = const [],
   }) async {
     try {
+      // Validate image count (max 5 images according to API)
+      const maxImages = 5;
+      if (imageFiles.length > maxImages) {
+        throw Exception(
+            'Cannot upload more than $maxImages images. You tried to upload ${imageFiles.length} images.');
+      }
+
       final url = '$baseUrl/quotation_controller.php?action=create_flutter_auction';
 
       // Create multipart request
       final request = http.MultipartRequest('POST', Uri.parse(url));
 
-      // Add data as JSON string
+      // Add data as JSON string (required by API)
+      // API expects: request.fields['data'] = jsonEncode(auctionData)
       final dataJson = jsonEncode(auctionData);
       request.fields['data'] = dataJson;
       
@@ -125,8 +135,11 @@ class AddAuctionService {
       print('DEBUG: Sending auction data to API:');
       print('URL: $url');
       print('Data: $dataJson');
+      print('Data length: ${dataJson.length}');
+      print('Images count: ${imageFiles.length}');
 
       // Add images if provided
+      // API expects: images[] field name (with brackets for array)
       for (int i = 0; i < imageFiles.length; i++) {
         final imageFile = imageFiles[i];
         if (await imageFile.exists()) {
@@ -134,7 +147,7 @@ class AddAuctionService {
           final imageLength = await imageFile.length();
           
           final multipartFile = http.MultipartFile(
-            'images[]', // Use array notation for multiple files - PHP will receive as array
+            'images[]', // Use array notation - PHP will receive as $_FILES['images']
             imageStream,
             imageLength,
             filename: imageFile.path.split('/').last,
@@ -158,22 +171,49 @@ class AddAuctionService {
       // Get response
       final response = await http.Response.fromStream(streamedResponse);
 
+      // API returns 201 on success, 200 is also acceptable
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final Map<String, dynamic> result = jsonDecode(response.body);
-        
-        // Debug: Print the response
-        print('DEBUG: API Response:');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-        print('Parsed Result: $result');
-        
-        return result;
+        try {
+          final Map<String, dynamic> result = jsonDecode(response.body);
+          
+          // Debug: Print the response
+          print('DEBUG: API Response:');
+          print('Status Code: ${response.statusCode}');
+          print('Response Body: ${response.body}');
+          print('Parsed Result: $result');
+          
+          // Check if response has error status
+          if (result['status'] == 'error') {
+            final errorMessage = result['message'] ?? 'Unknown error';
+            throw Exception('API Error: $errorMessage');
+          }
+          
+          return result;
+        } catch (e) {
+          if (e is FormatException) {
+            throw Exception('Invalid JSON response from server: ${response.body}');
+          }
+          rethrow;
+        }
       } else {
+        // Try to parse error response
+        String errorMessage = 'Failed to save auction (${response.statusCode})';
+        try {
+          final errorResponse = jsonDecode(response.body);
+          if (errorResponse is Map && errorResponse['message'] != null) {
+            errorMessage = errorResponse['message'].toString();
+          } else {
+            errorMessage = response.body;
+          }
+        } catch (e) {
+          errorMessage = response.body;
+        }
+        
         print('DEBUG: API Error Response:');
         print('Status Code: ${response.statusCode}');
         print('Response Body: ${response.body}');
-        throw Exception(
-            'Failed to save auction: ${response.statusCode} - ${response.body}');
+        
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is SocketException) {
@@ -287,7 +327,7 @@ class AddAuctionService {
       'purchase_order_type_id': data['purchase_order_type_id']?.toString() ?? '',
       // ลบ seller_name และ seller_phone ออกเพราะไม่ใช้แล้ว
       // เพิ่มข้อมูลที่จำเป็นตามตัวอย่าง API response
-      'sourcing': 'true',
+      'sourcing': true, // ใช้ boolean แทน string 'true'
       'created_by': 2, // ควรดึงจาก user session - ใช้ int แทน string
       'vendor_id': 8, // ควรดึงจาก user session - ใช้ int แทน string
     };

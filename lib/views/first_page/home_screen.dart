@@ -30,8 +30,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/utils/time_calculator.dart';
-import 'package:e_auction/views/first_page/coupon_page/my_coupons_page.dart';
-import 'package:e_auction/services/coupon_service.dart';
+// TODO: Import สำหรับระบบคูปอง - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้า
+// import 'package:e_auction/views/first_page/coupon_page/my_coupons_page.dart';
+// import 'package:e_auction/services/coupon_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -57,9 +58,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingUpcoming = true;
   String? _errorMessage;
   
+  // TODO: Coupon data - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้า
   // Coupon data
-  int _activeCouponCount = 0;
-  final CouponService _couponService = CouponService();
+  // int _activeCouponCount = 0;
+  // final CouponService _couponService = CouponService();
 
   @override
   void initState() {
@@ -67,28 +69,28 @@ class _HomeScreenState extends State<HomeScreen> {
     _productService = ProductService(baseUrl: Config.apiUrlAuction);
     _checkAndShowPdpaDialog();
     _loadAuctionData();
-    _loadCouponCount();
+    // _loadCouponCount();
   }
   
-  Future<void> _loadCouponCount() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('id') ?? '';
+  // Future<void> _loadCouponCount() async {
+  //   try {
+  //     final prefs = await SharedPreferences.getInstance();
+  //     final userId = prefs.getString('id') ?? '';
       
-      if (userId.isNotEmpty) {
-        final coupons = await _couponService.getUserCoupons(userId);
-        final activeCoupons = coupons.where((c) => c.canUse).length;
+  //     if (userId.isNotEmpty) {
+  //       final coupons = await _couponService.getUserCoupons(userId);
+  //       final activeCoupons = coupons.where((c) => c.canUse).length;
         
-        if (mounted) {
-          setState(() {
-            _activeCouponCount = activeCoupons;
-          });
-        }
-      }
-    } catch (e) {
-      print('❌ Error loading coupon count: $e');
-    }
-  }
+  //       if (mounted) {
+  //         setState(() {
+  //           _activeCouponCount = activeCoupons;
+  //         });
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print('❌ Error loading coupon count: $e');
+  //   }
+  // }
 
   Future<void> _loadAuctionData() async {
     await Future.wait([
@@ -609,50 +611,50 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
         actions: [
           // Coupon Icon with Badge
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(Icons.local_offer, color: Colors.black),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MyCouponsPage(),
-                    ),
-                  ).then((_) {
-                    // Reload coupon count when returning from coupon page
-                    _loadCouponCount();
-                  });
-                },
-                tooltip: 'คูปองของฉัน',
-              ),
-              if (_activeCouponCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      _activeCouponCount > 99 ? '99+' : '$_activeCouponCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          // Stack(
+          //   children: [
+          //     IconButton(
+          //       icon: Icon(Icons.local_offer, color: Colors.black),
+          //       onPressed: () {
+          //         Navigator.push(
+          //           context,
+          //           MaterialPageRoute(
+          //             builder: (context) => const MyCouponsPage(),
+          //           ),
+          //         ).then((_) {
+          //           // Reload coupon count when returning from coupon page
+          //           _loadCouponCount();
+          //         });
+          //       },
+          //       tooltip: 'คูปองของฉัน',
+          //     ),
+          //     if (_activeCouponCount > 0)
+          //       Positioned(
+          //         right: 8,
+          //         top: 8,
+          //         child: Container(
+          //           padding: const EdgeInsets.all(4),
+          //           decoration: BoxDecoration(
+          //             color: Colors.orange,
+          //             borderRadius: BorderRadius.circular(10),
+          //           ),
+          //           constraints: const BoxConstraints(
+          //             minWidth: 18,
+          //             minHeight: 18,
+          //           ),
+          //           child: Text(
+          //             _activeCouponCount > 99 ? '99+' : '$_activeCouponCount',
+          //             style: const TextStyle(
+          //               color: Colors.white,
+          //               fontSize: 10,
+          //               fontWeight: FontWeight.bold,
+          //             ),
+          //             textAlign: TextAlign.center,
+          //           ),
+          //         ),
+          //       ),
+          //   ],
+          // ),
           if (Platform.isAndroid)
             Container(
               margin: EdgeInsets.only(right: 8),

@@ -11,7 +11,8 @@ import 'package:e_auction/services/auth_service/auth_service.dart';
 import 'package:e_auction/views/first_page/home_screen.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
-import 'package:e_auction/views/first_page/request_otp_page/email_login.dart';
+// TODO: Import สำหรับ email login - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้าหรือระบบคูปอง
+// import 'package:e_auction/views/first_page/request_otp_page/email_login.dart';
 
 class RequestOtpLoginPage extends StatefulWidget {
   @override
@@ -995,25 +996,26 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                 ),
                               ),
                               SizedBox(height: 10),
+                              // TODO: ปุ่มล็อกอินด้วยอีเมล - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้าหรือระบบคูปอง
                               // ปุ่มล็อกอินด้วยอีเมล
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => EmailLoginPage(),
-                                    ),
-                                  );
-                                },
-                                icon: Icon(Icons.email, color: Colors.white),
-                                label: Text("ล็อกอินด้วยอีเมล"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: Size(double.infinity, 50),
-                                ),
-                              ),
-                              SizedBox(height: 10),
+                              // ElevatedButton.icon(
+                              //   onPressed: () {
+                              //     Navigator.push(
+                              //       context,
+                              //       MaterialPageRoute(
+                              //         builder: (context) => EmailLoginPage(),
+                              //       ),
+                              //     );
+                              //   },
+                              //   icon: Icon(Icons.email, color: Colors.white),
+                              //   label: Text("ล็อกอินด้วยอีเมล"),
+                              //   style: ElevatedButton.styleFrom(
+                              //     backgroundColor: Colors.blue,
+                              //     foregroundColor: Colors.white,
+                              //     minimumSize: Size(double.infinity, 50),
+                              //   ),
+                              // ),
+                              // SizedBox(height: 10),
                             ],
                             if (_isPhoneLoginMode) ...[
                               TextField(
@@ -1069,27 +1071,28 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                 // ลบปุ่มกรอก OTP ออก (ไม่ต้องให้ผู้ใช้กดเอง)
                               ],
                               SizedBox(height: 10),
+                              // TODO: ปุ่มกลับไปล็อกอินด้วยอีเมล - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้าหรือระบบคูปอง
                               // ปุ่มกลับไปล็อกอินด้วยอีเมล
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => EmailLoginPage(),
-                                    ),
-                                  );
-                                },
-                                icon: Icon(Icons.email, color: Colors.blue),
-                                label: Text("ล็อกอินด้วยอีเมล"),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.blue,
-                                  side: BorderSide(color: Colors.blue),
-                                  minimumSize: Size(double.infinity, 50),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
+                              // OutlinedButton.icon(
+                              //   onPressed: () {
+                              //     Navigator.push(
+                              //       context,
+                              //       MaterialPageRoute(
+                              //         builder: (context) => EmailLoginPage(),
+                              //       ),
+                              //     );
+                              //   },
+                              //   icon: Icon(Icons.email, color: Colors.blue),
+                              //   label: Text("ล็อกอินด้วยอีเมล"),
+                              //   style: OutlinedButton.styleFrom(
+                              //     foregroundColor: Colors.blue,
+                              //     side: BorderSide(color: Colors.blue),
+                              //     minimumSize: Size(double.infinity, 50),
+                              //     shape: RoundedRectangleBorder(
+                              //       borderRadius: BorderRadius.circular(8),
+                              //     ),
+                              //   ),
+                              // ),
                             ],
                           ],
                         ),
