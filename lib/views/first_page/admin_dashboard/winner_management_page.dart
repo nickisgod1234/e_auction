@@ -3,6 +3,7 @@ import 'package:e_auction/services/winner_service.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/views/first_page/widgets/auction_image_widget.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,15 +14,125 @@ class WinnerManagementPage extends StatefulWidget {
   State<WinnerManagementPage> createState() => _WinnerManagementPageState();
 }
 
-class _WinnerManagementPageState extends State<WinnerManagementPage> {
+class _WinnerManagementPageState extends State<WinnerManagementPage> with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _winners = [];
+  List<Map<String, dynamic>> _pendingAuctions = [];
   bool _isLoading = false;
+  bool _isLoadingPending = false;
   String _searchQuery = '';
+  String _pendingSearchQuery = '';
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadWinners();
+    _loadPendingAuctions();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPendingAuctions() async {
+    setState(() => _isLoadingPending = true);
+    
+    try {
+      final auctions = await WinnerService.getEndedAuctionsWithoutWinner();
+      
+      // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
+      final convertedAuctions = auctions.map((auction) {
+        final images = _parseQuotationImages(auction['quotation_image']);
+        return {
+          ...auction,
+          'images': images,
+          'title': auction['short_text'] ?? 
+                   auction['quotation_description'] ?? 
+                   'ไม่ระบุชื่อสินค้า',
+          'description': auction['short_text'] ?? 
+                        auction['quotation_description'] ?? 
+                        'ไม่มีคำอธิบาย',
+        };
+      }).toList();
+      
+      setState(() {
+        _pendingAuctions = convertedAuctions;
+      });
+    } catch (e) {
+      print('Error loading pending auctions: $e');
+      _showErrorSnackBar('เกิดข้อผิดพลาดในการโหลดข้อมูล: $e');
+      setState(() {
+        _pendingAuctions = [];
+      });
+    } finally {
+      setState(() => _isLoadingPending = false);
+    }
+  }
+
+  Future<void> _announceWinner(String auctionId) async {
+    try {
+      // ดึง user ID จาก SharedPreferences (ใช้ admin ID)
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('id') ?? '';
+      
+      if (userId.isEmpty) {
+        _showErrorSnackBar('ไม่พบข้อมูลผู้ใช้');
+        return;
+      }
+
+      // แสดง loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('กำลังประกาศผู้ชนะ...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final result = await WinnerService.triggerAnnounceWinner(auctionId, userId);
+      
+      // ปิด loading dialog
+      Navigator.pop(context);
+
+      if (result['status'] == 'success') {
+        _showSuccessSnackBar('ประกาศผู้ชนะสำเร็จ');
+        // รีเฟรชข้อมูล
+        await _loadWinners();
+        await _loadPendingAuctions();
+      } else {
+        _showErrorSnackBar('ไม่สามารถประกาศผู้ชนะได้: ${result['message'] ?? 'Unknown error'}');
+      }
+    } catch (e) {
+      // ปิด loading dialog ถ้ายังเปิดอยู่
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      _showErrorSnackBar('เกิดข้อผิดพลาด: $e');
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   Future<void> _loadWinners() async {
@@ -99,6 +210,26 @@ class _WinnerManagementPageState extends State<WinnerManagementPage> {
         
         return description.contains(query) ||
                winnerName.contains(query) ||
+               auctionId.contains(query);
+      }).toList();
+    }
+
+    return filtered;
+  }
+
+  List<Map<String, dynamic>> get _filteredPendingAuctions {
+    var filtered = _pendingAuctions;
+
+    // กรองตามคำค้นหา
+    if (_pendingSearchQuery.isNotEmpty) {
+      final query = _pendingSearchQuery.toLowerCase();
+      filtered = filtered.where((auction) {
+        final description = auction['description']?.toString().toLowerCase() ?? 
+                           auction['title']?.toString().toLowerCase() ?? '';
+        final auctionId = auction['id']?.toString().toLowerCase() ?? 
+                         auction['quotation_sequence']?.toString().toLowerCase() ?? '';
+        
+        return description.contains(query) ||
                auctionId.contains(query);
       }).toList();
     }
@@ -360,99 +491,214 @@ class _WinnerManagementPageState extends State<WinnerManagementPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: _loadWinners,
+            onPressed: () {
+              _loadWinners();
+              _loadPendingAuctions();
+            },
           ),
         ],
-      ),
-      body: Column(
-        children: [
-          // Search and Filter Bar
-          Container(
-            padding: EdgeInsets.all(16),
-            color: Colors.white,
-            child: Column(
-              children: [
-                // Search Bar
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'ค้นหาด้วยชื่อสินค้า, ชื่อผู้ชนะ, เบอร์โทร, หรือรหัสการประมูล',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                ),
-                SizedBox(height: 12),
-                // Info Text
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'แสดงเฉพาะผู้ชนะที่ประกาศแล้ว (${_winners.length} รายการ)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[700],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(
+              icon: Icon(Icons.emoji_events),
+              text: 'ประกาศแล้ว (${_winners.length})',
             ),
-          ),
-          
-          // Winners List
-          Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : _filteredWinners.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.emoji_events_outlined,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'ไม่พบข้อมูลผู้ชนะ',
+            Tab(
+              icon: Icon(Icons.pending_actions),
+              text: 'รอประกาศ (${_pendingAuctions.length})',
+            ),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Tab 1: ผู้ชนะที่ประกาศแล้ว
+          Column(
+            children: [
+              // Search and Filter Bar
+              Container(
+                padding: EdgeInsets.all(16),
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    // Search Bar
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: 'ค้นหาด้วยชื่อสินค้า, ชื่อผู้ชนะ, เบอร์โทร, หรือรหัสการประมูล',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 12),
+                    // Info Text
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'แสดงเฉพาะผู้ชนะที่ประกาศแล้ว (${_winners.length} รายการ)',
                               style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
+                                fontSize: 12,
+                                color: Colors.blue[700],
                               ),
                             ),
-                          ],
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadWinners,
-                        child: ListView.builder(
-                          padding: EdgeInsets.all(16),
-                          itemCount: _filteredWinners.length,
-                          itemBuilder: (context, index) {
-                            final winner = _filteredWinners[index];
-                            return _buildWinnerCard(winner);
-                          },
-                        ),
+                          ),
+                        ],
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Winners List
+              Expanded(
+                child: _isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : _filteredWinners.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.emoji_events_outlined,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'ไม่พบข้อมูลผู้ชนะ',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _loadWinners,
+                            child: ListView.builder(
+                              padding: EdgeInsets.all(16),
+                              itemCount: _filteredWinners.length,
+                              itemBuilder: (context, index) {
+                                final winner = _filteredWinners[index];
+                                return _buildWinnerCard(winner);
+                              },
+                            ),
+                          ),
+              ),
+            ],
+          ),
+          // Tab 2: Auction ที่รอประกาศผู้ชนะ
+          Column(
+            children: [
+              // Search and Filter Bar
+              Container(
+                padding: EdgeInsets.all(16),
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    // Search Bar
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: 'ค้นหาด้วยชื่อสินค้าหรือรหัสการประมูล',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _pendingSearchQuery = value;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 12),
+                    // Info Text
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber, color: Colors.orange[700], size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'การประมูลที่หมดเวลาแล้วแต่ยังไม่ประกาศผู้ชนะ (${_pendingAuctions.length} รายการ)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange[700],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Pending Auctions List
+              Expanded(
+                child: _isLoadingPending
+                    ? Center(child: CircularProgressIndicator())
+                    : _filteredPendingAuctions.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'ไม่มีการประมูลที่รอประกาศผู้ชนะ',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _loadPendingAuctions,
+                            child: ListView.builder(
+                              padding: EdgeInsets.all(16),
+                              itemCount: _filteredPendingAuctions.length,
+                              itemBuilder: (context, index) {
+                                final auction = _filteredPendingAuctions[index];
+                                return _buildPendingAuctionCard(auction);
+                              },
+                            ),
+                          ),
+              ),
+            ],
           ),
         ],
       ),
@@ -647,6 +893,172 @@ class _WinnerManagementPageState extends State<WinnerManagementPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingAuctionCard(Map<String, dynamic> auction) {
+    final title = auction['title'] ?? 'ไม่ระบุชื่อสินค้า';
+    final auctionId = auction['id'] ?? auction['quotation_sequence'] ?? 'ไม่ระบุ';
+    final endDate = auction['auction_end_date'] ?? auction['auction_end_time'] ?? '';
+    final quantity = auction['quantity'] ?? '1';
+    
+    // ดึงรูปภาพ
+    List<String> images = [];
+    if (auction['images'] != null && auction['images'] is List) {
+      images = List<String>.from(auction['images']);
+    } else if (auction['quotation_image'] != null) {
+      images = _parseQuotationImages(auction['quotation_image']);
+    }
+    
+    // จำกัดไม่เกิน 5 ภาพ
+    if (images.length > 5) {
+      images = images.sublist(0, 5);
+    }
+    
+    return Card(
+      margin: EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.orange, width: 2),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.pending_actions,
+                    color: Colors.orange[700],
+                    size: 24,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'จำนวน: $quantity | รหัส: $auctionId',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'รอประกาศ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            // รูปภาพ (ไม่เกิน 5 ภาพ)
+            if (images.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Container(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: images.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: EdgeInsets.only(right: 8),
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: AuctionImageWidget(
+                          imagePath: images[index],
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+            
+            Divider(height: 24),
+            
+            // End Date
+            if (endDate.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'หมดเวลาเมื่อ: ${_formatDateTime(endDate)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+            ],
+            
+            // Announce Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _announceWinner(auctionId.toString()),
+                icon: Icon(Icons.emoji_events),
+                label: Text('ประกาศผู้ชนะ'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

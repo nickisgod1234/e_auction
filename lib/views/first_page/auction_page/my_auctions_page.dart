@@ -95,8 +95,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
     _loadUserBidHistory();
     _loadUserWonAuctions();
 
-    // ประกาศผู้ชนะอัตโนมัติเมื่อเข้ามาหน้านี้
-    // _autoTriggerWinnerAnnouncement();
+    // ปิดการ auto check และประกาศผู้ชนะอัตโนมัติ (เพราะสินค้ามีเยอะ)
+    // _checkAndAnnounceAllEndedAuctions();
   }
 
   Future<void> _loadAddressData() async {
@@ -233,8 +233,8 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
             _isLoadingActiveBids = false;
           });
 
-          // เช็คและประกาศผู้ชนะสำหรับ auction ที่หมดเวลาแล้ว
-          await _checkAndAnnounceWinners(uniqueBids, userId);
+          // ปิดการ auto check และประกาศผู้ชนะอัตโนมัติ (เพราะสินค้ามีเยอะ)
+          // await _checkAndAnnounceWinners(uniqueBids, userId);
         } else {
           print('❌ DEBUG: Bid history is empty');
           setState(() {
@@ -287,28 +287,41 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
 
             if (!isAlreadyAnnounced) {
               // เรียกใช้ trigger ประกาศผู้ชนะโดยตรง - ส่งแค่ user_id อย่างเดียว
+              print('📢 MY_AUCTIONS: Attempting to announce winner for auction $auctionId');
               final result =
                   await WinnerService.triggerAnnounceWinner(auctionId, userId);
 
               // ถ้าประกาศสำเร็จ ให้ refresh ข้อมูล
               if (result['status'] == 'success') {
+                print('✅ MY_AUCTIONS: Winner announced successfully for auction $auctionId');
                 // รีเฟรชข้อมูลหลังจากประกาศผู้ชนะสำเร็จ
                 await _loadUserWonAuctions();
               } else {
+                final errorMsg = result['message'] ?? result['error'] ?? 'Unknown error';
+                print('⚠️ MY_AUCTIONS: Failed to announce winner for auction $auctionId: $errorMsg');
                 // ไม่ throw error เพราะอาจเป็นเพราะประกาศไปแล้ว
               }
-            } else {}
+            } else {
+              print('ℹ️ MY_AUCTIONS: Winner already announced for auction $auctionId');
+            }
           } catch (e) {
             // ถ้าเช็คไม่ได้ ให้ลองประกาศเลย
+            print('⚠️ MY_AUCTIONS: Error checking winner status for auction $auctionId: $e');
+            print('📢 MY_AUCTIONS: Attempting to announce winner anyway...');
 
             try {
               final result =
                   await WinnerService.triggerAnnounceWinner(auctionId, userId);
 
               if (result['status'] == 'success') {
+                print('✅ MY_AUCTIONS: Winner announced successfully (fallback) for auction $auctionId');
                 await _loadUserWonAuctions();
-              } else {}
+              } else {
+                final errorMsg = result['message'] ?? result['error'] ?? 'Unknown error';
+                print('⚠️ MY_AUCTIONS: Failed to announce winner (fallback) for auction $auctionId: $errorMsg');
+              }
             } catch (fallbackError) {
+              print('❌ MY_AUCTIONS: Error in fallback announcement for auction $auctionId: $fallbackError');
               // ไม่ throw error ออกไป
             }
           }
@@ -316,6 +329,39 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
       }
     } catch (e) {
       // ไม่แสดง error ให้ user เห็น เพราะเป็น background process
+    }
+  }
+
+  // ฟังก์ชันใหม่: เช็คและประกาศผู้ชนะสำหรับ auction ทั้งหมดที่หมดเวลาแล้ว
+  Future<void> _checkAndAnnounceAllEndedAuctions() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('id') ?? '';
+      
+      if (userId.isEmpty) {
+        print('⚠️ AUTO: User ID is empty, skipping auto winner announcement');
+        return;
+      }
+
+      print('🚀 AUTO: Starting auto winner announcement check for all ended auctions...');
+      
+      // เรียกใช้ฟังก์ชันเช็คและประกาศผู้ชนะสำหรับ auction ทั้งหมดที่หมดเวลาแล้ว
+      // เรียกใช้ใน background เพื่อไม่ให้บล็อก UI
+      // ใช้ delay เพื่อไม่ให้ทำงานทันทีเมื่อเข้ามาหน้านี้ (ให้โหลดข้อมูลก่อน)
+      Future.delayed(Duration(seconds: 2), () {
+        WinnerService.checkAndAnnounceAllEndedAuctions(userId).then((_) {
+          print('✅ AUTO: Auto winner announcement check completed');
+          // รีเฟรชข้อมูลหลังจากเช็คเสร็จ (delay อีกนิดเพื่อให้ API ทำงานเสร็จ)
+          Future.delayed(Duration(seconds: 1), () {
+            _loadUserWonAuctions();
+            _loadUserBidHistory();
+          });
+        }).catchError((e) {
+          print('❌ AUTO: Error in auto winner announcement: $e');
+        });
+      });
+    } catch (e) {
+      print('❌ AUTO: Error setting up auto winner announcement: $e');
     }
   }
 

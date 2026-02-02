@@ -1317,7 +1317,7 @@ class AddAuctionWidgets {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'ตัวอย่าง: ขายเก้าอี้ 20 ตัว ราคาเหมา 1,000 บาท - ผู้ซื้อจะลงชื่อเพื่อจองสินค้า',
+                    'ตัวอย่าง: ขายเก้าอี้ 20 ตัว ราคาเหมา 1,000 บาท - ผู้ซื้อจะลงชื่อเพื่อจองสินค้าจนกว่าสินค้าจะครบจำนวนหรือหมดเวลาก่อน',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.orange[900],
@@ -1372,7 +1372,7 @@ class AddAuctionWidgets {
                   text: const TextSpan(
                     children: [
                       TextSpan(
-                        text: 'ราคาเหมาทั้งชุด (บาท)',
+                        text: 'ราคาเหมาทั้งหมด (บาท)',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,

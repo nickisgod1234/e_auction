@@ -68,7 +68,7 @@ class AddAuctionService {
               customName = 'ประมูลแบบราคาลดลง(ได้ราคาต่ำสุดเป็นผู้ชนะ)';
               break;
             case 'AS03':
-              customName = 'การซื้อสินค้าตามจำนวนที่ต้องการ';
+              customName = 'ประมูลแบบลดตามจำนวนของสินค้า';
               break;
           }
           

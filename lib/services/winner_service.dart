@@ -244,6 +244,9 @@ class WinnerService {
         'user_id': int.tryParse(userId) ?? 0,
       };
 
+      print('📤 ANNOUNCE: Sending request to announce winner for auction $auctionId');
+      print('📤 ANNOUNCE: Request body: ${jsonEncode(requestBody)}');
+
       final client = _getHttpClient();
       final response = await client.post(
         Uri.parse('$baseUrl?id=$auctionId&action=announce_winner'),
@@ -253,15 +256,33 @@ class WinnerService {
         body: jsonEncode(requestBody),
       );
 
+      print('📥 ANNOUNCE: Response status: ${response.statusCode}');
+      print('📥 ANNOUNCE: Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        if (data['status'] == 'success') {}
+        if (data['status'] == 'success') {
+          print('✅ ANNOUNCE: Winner announced successfully for auction $auctionId');
+        } else {
+          print('⚠️ ANNOUNCE: API returned non-success status: ${data['status']}');
+          print('⚠️ ANNOUNCE: Message: ${data['message'] ?? 'No message'}');
+        }
         return data;
       } else {
-        throw Exception('Failed to announce winner: ${response.statusCode}');
+        // พยายาม parse error message จาก response
+        String errorMessage = 'Failed to announce winner: ${response.statusCode}';
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['message'] ?? errorData['error'] ?? errorMessage;
+          print('❌ ANNOUNCE: Error message from API: $errorMessage');
+        } catch (e) {
+          print('❌ ANNOUNCE: Could not parse error response: ${response.body}');
+        }
+        throw Exception(errorMessage);
       }
     } catch (e) {
+      print('❌ ANNOUNCE: Exception occurred: $e');
       throw Exception('Error announcing winner: $e');
     }
   }
@@ -293,6 +314,7 @@ class WinnerService {
           if (endDate != null && endDate.isNotEmpty) {
             // เช็คว่า auction หมดเวลาหรือยัง
             if (_isAuctionEnded(endDate)) {
+              print('✅ TRIGGER: Auction $auctionId has ended, checking for winner...');
               // 2. เช็คว่ามีผู้ชนะแล้วหรือยัง
               final winnerResponse = await client.get(
                 Uri.parse('$baseUrl?id=$auctionId&action=get_winner'),
@@ -304,17 +326,36 @@ class WinnerService {
                 // ถ้ายังไม่มีผู้ชนะ
                 if (winnerData['status'] != 'success' ||
                     winnerData['data'] == null) {
+                  print('📢 TRIGGER: No winner announced yet, announcing now...');
                   final result = await announceWinner(auctionId, userId);
-                } else {}
-              } else {}
-            } else {}
+                  if (result['status'] == 'success') {
+                    print('✅ TRIGGER: Winner announced successfully for auction $auctionId');
+                  } else {
+                    print('⚠️ TRIGGER: Failed to announce winner: ${result['message'] ?? 'Unknown error'}');
+                  }
+                } else {
+                  print('ℹ️ TRIGGER: Winner already announced for auction $auctionId');
+                }
+              } else {
+                print('❌ TRIGGER: Failed to check winner status: ${winnerResponse.statusCode}');
+              }
+            } else {
+              print('ℹ️ TRIGGER: Auction $auctionId has not ended yet');
+            }
           } else {
+            print('⚠️ TRIGGER: No end date found, trying alternative API...');
             // ลองดึงข้อมูลจาก API อื่น
             await _tryAlternativeAuctionDetails(auctionId, userId);
           }
-        } else {}
-      } else {}
-    } catch (e) {}
+        } else {
+          print('❌ TRIGGER: Failed to get auction details: ${auctionData['message'] ?? 'Unknown error'}');
+        }
+      } else {
+        print('❌ TRIGGER: Failed to fetch auction details: ${auctionResponse.statusCode}');
+      }
+    } catch (e) {
+      print('❌ TRIGGER: Error in checkAndAnnounceWinner: $e');
+    }
   }
 
   // ลองดึงข้อมูล auction จาก API อื่น (เรียบง่าย)
@@ -340,6 +381,7 @@ class WinnerService {
 
           if (endDate != null && endDate.isNotEmpty) {
             if (_isAuctionEnded(endDate)) {
+              print('✅ TRIGGER: Auction $auctionId has ended (from alternative API), checking for winner...');
               // เช็คว่ามีผู้ชนะแล้วหรือยัง
               final winnerResponse = await client.get(
                 Uri.parse('$baseUrl?id=$auctionId&action=get_winner'),
@@ -350,14 +392,34 @@ class WinnerService {
 
                 if (winnerData['status'] != 'success' ||
                     winnerData['data'] == null) {
+                  print('📢 TRIGGER: No winner announced yet, announcing now...');
                   final result = await announceWinner(auctionId, userId);
-                } else {}
+                  if (result['status'] == 'success') {
+                    print('✅ TRIGGER: Winner announced successfully for auction $auctionId');
+                  } else {
+                    print('⚠️ TRIGGER: Failed to announce winner: ${result['message'] ?? 'Unknown error'}');
+                  }
+                } else {
+                  print('ℹ️ TRIGGER: Winner already announced for auction $auctionId');
+                }
+              } else {
+                print('❌ TRIGGER: Failed to check winner status: ${winnerResponse.statusCode}');
               }
-            } else {}
-          } else {}
+            } else {
+              print('ℹ️ TRIGGER: Auction $auctionId has not ended yet (from alternative API)');
+            }
+          } else {
+            print('⚠️ TRIGGER: No end date found in alternative API either');
+          }
+        } else {
+          print('❌ TRIGGER: Failed to get quotation details: ${quotationData['message'] ?? 'Unknown error'}');
         }
+      } else {
+        print('❌ TRIGGER: Failed to fetch quotation details: ${quotationResponse.statusCode}');
       }
-    } catch (e) {}
+    } catch (e) {
+      print('❌ TRIGGER: Error in _tryAlternativeAuctionDetails: $e');
+    }
   }
 
   // เช็คว่า auction หมดเวลาหรือยัง (ปรับปรุงให้ถูกต้อง)
@@ -391,23 +453,45 @@ class WinnerService {
         'user_id': int.tryParse(userId) ?? 0,
       };
 
-      final response = await http.post(
+      print('📤 TRIGGER: Sending request to announce winner for auction $auctionId');
+      print('📤 TRIGGER: User ID: $userId');
+      print('📤 TRIGGER: Request body: ${jsonEncode(requestBody)}');
+      print('📤 TRIGGER: URL: $url');
+
+      final client = _getHttpClient();
+      final response = await client.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestBody),
       );
 
+      print('📥 TRIGGER: Response status: ${response.statusCode}');
+      print('📥 TRIGGER: Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
+          print('✅ TRIGGER: Winner announced successfully for auction $auctionId');
           return data;
         } else {
+          print('⚠️ TRIGGER: API returned non-success status: ${data['status']}');
+          print('⚠️ TRIGGER: Message: ${data['message'] ?? data['error'] ?? 'No message'}');
           return data;
         }
       } else {
-        throw Exception('HTTP Error: ${response.statusCode}');
+        // พยายาม parse error message จาก response
+        String errorMessage = 'HTTP Error: ${response.statusCode}';
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['message'] ?? errorData['error'] ?? errorMessage;
+          print('❌ TRIGGER: Error message from API: $errorMessage');
+        } catch (e) {
+          print('❌ TRIGGER: Could not parse error response: ${response.body}');
+        }
+        throw Exception(errorMessage);
       }
     } catch (e) {
+      print('❌ TRIGGER: Exception occurred: $e');
       throw Exception('Error announcing winner: $e');
     }
   }
@@ -768,5 +852,351 @@ class WinnerService {
       'postal_code': postalCode,
       'country': country,
     };
+  }
+
+  // ฟังก์ชันใหม่: ดึงข้อมูล auction ที่หมดเวลาแล้วแต่ยังไม่ประกาศผู้ชนะ (เฉพาะที่มี bid)
+  static Future<List<Map<String, dynamic>>> getEndedAuctionsWithoutWinner() async {
+    try {
+      print('🔍 ADMIN: Fetching ended auctions without winner (with bids only)...');
+      
+      final client = _getHttpClient();
+      final response = await client.get(
+        Uri.parse('$baseUrl?action=get_all_auctions'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<dynamic> auctions = [];
+        
+        // จัดการ response format ที่แตกต่างกัน
+        if (data is List) {
+          auctions = data;
+        } else if (data is Map<String, dynamic> && data['data'] != null) {
+          if (data['data'] is List) {
+            auctions = data['data'];
+          }
+        }
+
+        if (auctions.isEmpty) {
+          return [];
+        }
+
+        List<Map<String, dynamic>> endedAuctions = [];
+
+        // กรองเฉพาะ auction ที่หมดเวลาแล้ว
+        for (final auction in auctions) {
+          try {
+            final auctionId = auction['quotation_more_information_id']?.toString() ?? 
+                             auction['quotation_sequence']?.toString() ?? 
+                             auction['id']?.toString() ?? '';
+            
+            if (auctionId.isEmpty) {
+              continue;
+            }
+
+            final endDateStr = auction['auction_end_date']?.toString() ?? 
+                              auction['auction_end_time']?.toString() ?? '';
+            
+            if (endDateStr.isEmpty) {
+              continue;
+            }
+
+            // เช็คว่า auction หมดเวลาหรือยัง
+            if (!_isAuctionEnded(endDateStr)) {
+              continue;
+            }
+
+            // เช็คว่ามีผู้ชนะแล้วหรือยัง
+            final isAlreadyAnnounced = await isWinnerAnnounced(auctionId);
+            
+            if (isAlreadyAnnounced) {
+              continue;
+            }
+
+            // เช็คว่า auction มี bid หรือไม่ (ใช้ข้อมูลจาก auction object ก่อน)
+            // เช็คจาก field ที่มีใน auction object
+            final totalBids = auction['total_bids'] ?? auction['number_bids'] ?? 0;
+            final numberBidders = auction['number_bidders'] ?? auction['total_bidders'] ?? 0;
+            final hasBidFromData = (totalBids is num && totalBids > 0) || 
+                                  (numberBidders is num && numberBidders > 0);
+
+            // ถ้าไม่มี bid จากข้อมูล ให้เช็คจาก API
+            bool hasBid = hasBidFromData;
+            if (!hasBidFromData) {
+              hasBid = await hasBids(auctionId);
+            }
+
+            // ถ้าไม่มี bid ให้ skip
+            if (!hasBid) {
+          
+              continue;
+            }
+
+            // แปลงข้อมูลเป็นรูปแบบที่ใช้ในแอป
+            final auctionData = {
+              'id': auctionId,
+              'quotation_more_information_id': auctionId,
+              'quotation_sequence': auction['quotation_sequence'] ?? auctionId,
+              'quotation_id': auction['quotation_id']?.toString() ?? '',
+              'short_text': auction['short_text'] ?? '',
+              'quotation_description': auction['quotation_description'] ?? '',
+              'auction_end_date': endDateStr,
+              'auction_end_time': endDateStr,
+              'quotation_image': auction['quotation_image'],
+              'quantity': auction['quantity'] ?? '1',
+              'item_number': auction['item_number'] ?? '',
+              'total_bids': totalBids,
+              'number_bidders': numberBidders,
+            };
+            
+            endedAuctions.add(auctionData);
+          } catch (e) {
+            print('❌ ADMIN: Error processing auction: $e');
+            continue;
+          }
+        }
+
+        print('✅ ADMIN: Found ${endedAuctions.length} ended auctions without winner (with bids)');
+        return endedAuctions;
+      } else {
+        print('❌ ADMIN: Failed to fetch auctions: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('❌ ADMIN: Error in getEndedAuctionsWithoutWinner: $e');
+      return [];
+    }
+  }
+
+  // ฟังก์ชันใหม่: เช็คว่า auction มี bid หรือไม่
+  static Future<bool> hasBids(String auctionId) async {
+    try {
+      final client = _getHttpClient();
+      final response = await client.get(
+        Uri.parse('$baseUrl?id=$auctionId&action=get_bids'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          final bids = data['data'] ?? data['bids'] ?? [];
+          return bids is List && bids.isNotEmpty;
+        } else if (data is List) {
+          return data.isNotEmpty;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('⚠️ ADMIN: Could not check bids for auction $auctionId: $e');
+      // สำหรับ admin page ถ้าเช็คไม่ได้ให้ return false (ไม่แสดง)
+      return false;
+    }
+  }
+
+  // ฟังก์ชันใหม่: เช็คและประกาศผู้ชนะสำหรับ auction ทั้งหมดที่หมดเวลาแล้ว
+  static Future<void> checkAndAnnounceAllEndedAuctions(String userId) async {
+    try {
+      print('🔍 AUTO: Starting to check all ended auctions for winner announcement...');
+      
+      // ดึงข้อมูล auction ทั้งหมด
+      final client = _getHttpClient();
+      final response = await client.get(
+        Uri.parse('$baseUrl?action=get_all_auctions'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<dynamic> auctions = [];
+        
+        // จัดการ response format ที่แตกต่างกัน
+        if (data is List) {
+          auctions = data;
+        } else if (data is Map<String, dynamic> && data['data'] != null) {
+          if (data['data'] is List) {
+            auctions = data['data'];
+          }
+        }
+
+        if (auctions.isEmpty) {
+          print('ℹ️ AUTO: No auctions found');
+          return;
+        }
+
+        print('📋 AUTO: Found ${auctions.length} auctions to check');
+
+        int checkedCount = 0;
+        int announcedCount = 0;
+        int skippedCount = 0;
+        int errorCount = 0;
+
+        // กรองเฉพาะ auction ที่หมดเวลาแล้ว
+        for (final auction in auctions) {
+          try {
+            final auctionId = auction['quotation_more_information_id']?.toString() ?? 
+                             auction['quotation_sequence']?.toString() ?? 
+                             auction['id']?.toString() ?? '';
+            
+            if (auctionId.isEmpty) {
+              continue;
+            }
+
+            final endDateStr = auction['auction_end_date']?.toString() ?? 
+                              auction['auction_end_time']?.toString() ?? '';
+            
+            if (endDateStr.isEmpty) {
+              continue;
+            }
+
+            // เช็คว่า auction หมดเวลาหรือยัง
+            if (!_isAuctionEnded(endDateStr)) {
+              continue;
+            }
+
+            checkedCount++;
+            print('🔍 AUTO: Checking auction $auctionId (ended: $endDateStr)');
+
+            // เช็คว่ามีผู้ชนะแล้วหรือยัง
+            final isAlreadyAnnounced = await isWinnerAnnounced(auctionId);
+            
+            if (isAlreadyAnnounced) {
+              print('ℹ️ AUTO: Winner already announced for auction $auctionId');
+              continue;
+            }
+
+            // เช็คว่า auction มี bid หรือไม่ (ถ้าไม่มี bid ก็ไม่สามารถประกาศผู้ชนะได้)
+            final hasBid = await hasBids(auctionId);
+            if (!hasBid) {
+              skippedCount++;
+              print('⏭️ AUTO: Skipping auction $auctionId - no bids found');
+              continue;
+            }
+
+            print('📢 AUTO: No winner announced for auction $auctionId, announcing now...');
+            
+            try {
+              final result = await announceWinner(auctionId, userId);
+              
+              if (result['status'] == 'success') {
+                announcedCount++;
+                print('✅ AUTO: Winner announced successfully for auction $auctionId');
+              } else {
+                errorCount++;
+                final errorMsg = result['message'] ?? result['error'] ?? 'Unknown error';
+                print('⚠️ AUTO: Failed to announce winner for auction $auctionId: $errorMsg');
+                
+                // ถ้า error เป็นเพราะไม่มีผู้ชนะหรือไม่มี bid ให้ skip
+                if (errorMsg.toString().toLowerCase().contains('no bid') || 
+                    errorMsg.toString().toLowerCase().contains('no winner') ||
+                    errorMsg.toString().toLowerCase().contains('no bidder')) {
+                  skippedCount++;
+                  continue;
+                }
+              }
+            } catch (e) {
+              errorCount++;
+              print('❌ AUTO: Error announcing winner for auction $auctionId: $e');
+              
+              // ถ้า error เป็น 500 อาจเป็นเพราะไม่มี bid หรือไม่มีผู้ชนะ
+              if (e.toString().contains('500')) {
+                skippedCount++;
+                print('⏭️ AUTO: Skipping auction $auctionId due to 500 error (likely no bids/winner)');
+              }
+            }
+            
+            // หน่วงเวลาเพื่อไม่ให้ส่ง request มากเกินไป (เพิ่มเป็น 1 วินาที)
+            await Future.delayed(Duration(seconds: 1));
+          } catch (e) {
+            errorCount++;
+            print('❌ AUTO: Error processing auction: $e');
+            continue;
+          }
+        }
+
+        print('✅ AUTO: Summary - Checked: $checkedCount, Announced: $announcedCount, Skipped: $skippedCount, Errors: $errorCount');
+      } else {
+        print('❌ AUTO: Failed to fetch auctions: ${response.statusCode}');
+        
+        // ลองใช้ API อื่น
+        await _tryGetAuctionsFromAlternativeApi(userId);
+      }
+    } catch (e) {
+      print('❌ AUTO: Error in checkAndAnnounceAllEndedAuctions: $e');
+    }
+  }
+
+  // ฟังก์ชันช่วย: ลองดึงข้อมูล auction จาก API อื่น
+  static Future<void> _tryGetAuctionsFromAlternativeApi(String userId) async {
+    try {
+      print('🔄 AUTO: Trying alternative API to get auctions...');
+      
+      final client = _getHttpClient();
+      // ลองใช้ API ที่ดึงข้อมูล quotation ทั้งหมด
+      final response = await client.get(
+        Uri.parse('$baseUrl?action=get_all_quotations'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<dynamic> quotations = [];
+        
+        if (data is List) {
+          quotations = data;
+        } else if (data is Map<String, dynamic> && data['data'] != null) {
+          if (data['data'] is List) {
+            quotations = data['data'];
+          }
+        }
+
+        // กรองเฉพาะ auction ที่หมดเวลาแล้ว
+        int checkedCount = 0;
+        int announcedCount = 0;
+
+        for (final quotation in quotations) {
+          try {
+            final quotationId = quotation['quotation_more_information_id']?.toString() ?? 
+                               quotation['quotation_sequence']?.toString() ?? '';
+            
+            if (quotationId.isEmpty) {
+              continue;
+            }
+
+            final endDateStr = quotation['auction_end_date']?.toString() ?? 
+                              quotation['auction_end_time']?.toString() ?? '';
+            
+            if (endDateStr.isEmpty) {
+              continue;
+            }
+
+            if (!_isAuctionEnded(endDateStr)) {
+              continue;
+            }
+
+            checkedCount++;
+            
+            final isAlreadyAnnounced = await isWinnerAnnounced(quotationId);
+            
+            if (!isAlreadyAnnounced) {
+              try {
+                final result = await announceWinner(quotationId, userId);
+                
+                if (result['status'] == 'success') {
+                  announcedCount++;
+                }
+              } catch (e) {
+                // Continue to next auction
+              }
+              
+              await Future.delayed(Duration(milliseconds: 500));
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+
+        print('✅ AUTO: Checked $checkedCount ended auctions from alternative API, announced $announcedCount winners');
+      }
+    } catch (e) {
+      print('❌ AUTO: Error in _tryGetAuctionsFromAlternativeApi: $e');
+    }
   }
 }
