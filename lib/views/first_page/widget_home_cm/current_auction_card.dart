@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
 import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auction_detail_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/time_calculator.dart';
@@ -402,29 +403,32 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
   }
 }
 
-// เพิ่มฟังก์ชัน helper สำหรับแสดงรูป
+// เพิ่มฟังก์ชัน helper สำหรับแสดงรูป (ใช้ cache เพื่อโหลดเร็ว)
 Widget _buildAuctionImage(String? imagePath) {
   if (imagePath == null || imagePath.isEmpty) {
-    return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
+    return _imagePlaceholder();
   }
-  
-  // Check if the image path is a network URL
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return Image.network(
-      imagePath,
+    return CachedNetworkImage(
+      imageUrl: imagePath,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
-      },
-    );
-  } else {
-    // Treat as local asset
-    return Image.asset(
-      imagePath,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Image.asset('assets/images/noimage.jpg', fit: BoxFit.cover);
-      },
+      placeholder: (context, url) => _imagePlaceholder(),
+      errorWidget: (context, url, error) => _imagePlaceholder(),
+      fadeInDuration: const Duration(milliseconds: 200),
     );
   }
+  return Image.asset(
+    imagePath,
+    fit: BoxFit.cover,
+    errorBuilder: (context, error, stackTrace) => _imagePlaceholder(),
+  );
+}
+
+Widget _imagePlaceholder() {
+  return Container(
+    color: Colors.grey[200],
+    child: Center(
+      child: Icon(Icons.image_not_supported, color: Colors.grey[400], size: 32),
+    ),
+  );
 } 

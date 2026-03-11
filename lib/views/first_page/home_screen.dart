@@ -30,6 +30,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/utils/time_calculator.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 // TODO: Import สำหรับระบบคูปอง - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้า
 // import 'package:e_auction/views/first_page/coupon_page/my_coupons_page.dart';
 // import 'package:e_auction/services/coupon_service.dart';
@@ -549,48 +550,51 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return Image.network(
-      imagePath,
+    // รูปจาก asset ในโปรเจกต์ (เช่น noimage)
+    final isNetworkUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    if (!isNetworkUrl) {
+      return Image.asset(
+        imagePath,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildImageErrorPlaceholder(),
+      );
+    }
+
+    // รูปจากเน็ต ใช้ cache เพื่อโหลดเร็วขึ้นครั้งถัดไป
+    return CachedNetworkImage(
+      imageUrl: imagePath,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          color: Colors.grey[200],
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.broken_image,
-                  size: 32,
-                  color: Colors.grey[400],
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'ไม่สามารถโหลดรูปภาพ',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
+      placeholder: (context, url) => Container(
+        color: Colors.grey[200],
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
-        );
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          color: Colors.grey[200],
-          child: Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
+        ),
+      ),
+      errorWidget: (context, url, error) => _buildImageErrorPlaceholder(),
+      fadeInDuration: const Duration(milliseconds: 200),
+    );
+  }
+
+  Widget _buildImageErrorPlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image, size: 32, color: Colors.grey[400]),
+            SizedBox(height: 4),
+            Text(
+              'ไม่สามารถโหลดรูปภาพ',
+              style: TextStyle(color: Colors.grey[600], fontSize: 10),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 
