@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/services/user_bid_history_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
@@ -400,74 +401,38 @@ class _QuantityReductionAuctionsPageState extends State<QuantityReductionAuction
   }
 
   Widget _buildAuctionImage(String? imagePath) {
-    if (imagePath == null || imagePath.isEmpty) {
-      return Container(
-        color: Colors.grey[200],
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.image_not_supported,
-                size: 48,
-                color: Colors.grey[400],
-              ),
-              SizedBox(height: 8),
-              Text(
-                'ไม่มีรูปภาพ',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Image.network(
-      imagePath,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
+    Widget placeholder() => Container(
           color: Colors.grey[200],
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.broken_image,
-                  size: 48,
-                  color: Colors.grey[400],
-                ),
+                Icon(Icons.image_not_supported, size: 48, color: Colors.grey[400]),
                 SizedBox(height: 8),
-                Text(
-                  'ไม่สามารถโหลดรูปภาพ',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
+                Text('ไม่มีรูปภาพ', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
               ],
             ),
           ),
         );
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          color: Colors.grey[200],
-          child: Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
-            ),
+    if (imagePath == null || imagePath.isEmpty) return placeholder();
+    return CachedNetworkImage(
+      imageUrl: imagePath,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => placeholder(),
+      errorWidget: (context, url, error) => Container(
+        color: Colors.grey[200],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.broken_image, size: 48, color: Colors.grey[400]),
+              SizedBox(height: 8),
+              Text('ไม่สามารถโหลดรูปภาพ', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+            ],
           ),
-        );
-      },
+        ),
+      ),
+      fadeInDuration: const Duration(milliseconds: 200),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,51 +15,36 @@ import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
 import 'package:e_auction/views/first_page/detail_page/detail_completed.dart';
 import 'package:e_auction/services/winner_service.dart';
 
-// Helper method to build auction image
+// Helper method to build auction image (ใช้ cache เพื่อโหลดเร็ว)
 Widget _buildAuctionImage(String? imagePath,
     {double? width, double? height, BoxFit fit = BoxFit.cover}) {
+  Widget placeholder() => Container(
+        width: width,
+        height: height,
+        color: Colors.grey[300],
+        child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+      );
   if (imagePath == null || imagePath.isEmpty) {
-    return Container(
-      width: width,
-      height: height,
-      color: Colors.grey[300],
-      child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-    );
+    return placeholder();
   }
-
-  // Check if the image path is a network URL
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return Image.network(
-      imagePath,
+    return CachedNetworkImage(
+      imageUrl: imagePath,
       width: width,
       height: height,
       fit: fit,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          width: width,
-          height: height,
-          color: Colors.grey[300],
-          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-        );
-      },
-    );
-  } else {
-    // Treat as local asset
-    return Image.asset(
-      imagePath,
-      width: width,
-      height: height,
-      fit: fit,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          width: width,
-          height: height,
-          color: Colors.grey[300],
-          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-        );
-      },
+      placeholder: (context, url) => placeholder(),
+      errorWidget: (context, url, error) => placeholder(),
+      fadeInDuration: const Duration(milliseconds: 200),
     );
   }
+  return Image.asset(
+    imagePath,
+    width: width,
+    height: height,
+    fit: fit,
+    errorBuilder: (context, error, stackTrace) => placeholder(),
+  );
 }
 
 // ฟังก์ชันเลือกภาพที่ถูกต้องแบบ async (ใช้ ProductService.convertToAppFormat เหมือนหน้า home)

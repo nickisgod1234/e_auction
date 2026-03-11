@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'widget_add/add_auction_widgets.dart';
 import 'widget_add/add_auction_methods.dart';
 import 'widget_add/add_auction_state.dart';
@@ -140,23 +141,18 @@ class _RelistAuctionDialog extends StatelessWidget {
                                     child: displayImageUrl != null && displayImageUrl.isNotEmpty
                                         ? ClipRRect(
                                             borderRadius: BorderRadius.circular(8),
-                                            child: Image.network(
-                                              displayImageUrl,
+                                            child: CachedNetworkImage(
+                                              imageUrl: displayImageUrl,
                                               fit: BoxFit.cover,
-                                              loadingBuilder: (context, child, loadingProgress) {
-                                                if (loadingProgress == null) return child;
-                                                return Center(
-                                                  child: CircularProgressIndicator(
-                                                    value: loadingProgress.expectedTotalBytes != null
-                                                        ? loadingProgress.cumulativeBytesLoaded /
-                                                            loadingProgress.expectedTotalBytes!
-                                                        : null,
-                                                  ),
-                                                );
-                                              },
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Icon(Icons.image, color: Colors.grey[400]);
-                                              },
+                                              placeholder: (context, url) => Center(
+                                                child: SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                ),
+                                              ),
+                                              errorWidget: (context, url, error) => Icon(Icons.image, color: Colors.grey[400]),
+                                              fadeInDuration: const Duration(milliseconds: 200),
                                             ),
                                           )
                                         : Icon(Icons.image, color: Colors.grey[400]),

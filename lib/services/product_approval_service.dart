@@ -61,23 +61,23 @@ class ProductApprovalService {
               '${_getBaseUrl()}/modules/sales/controllers/flutter_quotation_approval_controller.php')
           .replace(queryParameters: queryParams);
 
-      print('ProductApprovalService.getPendingProducts URL: $uri');
+      // print('ProductApprovalService.getPendingProducts URL: $uri');
 
       final response = await _client.get(uri, headers: _headers);
 
-      print(
-          'ProductApprovalService.getPendingProducts Response: ${response.statusCode}');
-      print('ProductApprovalService.getPendingProducts Body: ${response.body}');
+      // print(
+      //     'ProductApprovalService.getPendingProducts Response: ${response.statusCode}');
+      // print('ProductApprovalService.getPendingProducts Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('ProductApprovalService.getPendingProducts Raw Data: $data');
+        // print('ProductApprovalService.getPendingProducts Raw Data: $data');
         return ProductApprovalResponse.fromJson(data);
       } else {
-        print(
-            'ProductApprovalService.getPendingProducts Error Status: ${response.statusCode}');
-        print(
-            'ProductApprovalService.getPendingProducts Error Body: ${response.body}');
+        // print(
+        //     'ProductApprovalService.getPendingProducts Error Status: ${response.statusCode}');
+        // print(
+        //     'ProductApprovalService.getPendingProducts Error Body: ${response.body}');
         return ProductApprovalResponse(
           status: 'error',
           message: 'เกิดข้อผิดพลาดในการดึงข้อมูล',

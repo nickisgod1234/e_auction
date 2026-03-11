@@ -1,46 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/views/first_page/widgets/auction_dialogs.dart';
 import 'dart:async';
 
-// Helper function to build auction image widget
+// Helper function to build auction image widget (ใช้ cache เพื่อโหลดเร็ว)
 Widget _buildAuctionImage(String imagePath,
     {double? width, double? height, BoxFit fit = BoxFit.cover}) {
-  // Check if the image path is a network URL
+  Widget placeholder() => Container(
+        width: width,
+        height: height,
+        color: Colors.grey[300],
+        child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+      );
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return Image.network(
-      imagePath,
+    return CachedNetworkImage(
+      imageUrl: imagePath,
       width: width,
       height: height,
       fit: fit,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          width: width,
-          height: height,
-          color: Colors.grey[300],
-          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-        );
-      },
-    );
-  } else {
-    // Treat as local asset
-    return Image.asset(
-      imagePath,
-      width: width,
-      height: height,
-      fit: fit,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          width: width,
-          height: height,
-          color: Colors.grey[300],
-          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
-        );
-      },
+      placeholder: (context, url) => placeholder(),
+      errorWidget: (context, url, error) => placeholder(),
+      fadeInDuration: const Duration(milliseconds: 200),
     );
   }
+  return Image.asset(
+    imagePath,
+    width: width,
+    height: height,
+    fit: fit,
+    errorBuilder: (context, error, stackTrace) => placeholder(),
+  );
 }
 
 // Auction Card Widgets

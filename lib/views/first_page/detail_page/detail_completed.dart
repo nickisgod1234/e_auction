@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:e_auction/utils/format.dart';
 
@@ -32,20 +33,31 @@ class DetailCompleted extends StatelessWidget {
     return 0; // default value
   }
 
-  // Helper method to build auction image (URL or asset)
+  // Helper method to build auction image (ใช้ cache เพื่อโหลดเร็ว)
   Widget _buildAuctionImage(String? imagePath) {
     if (imagePath == null || imagePath.isEmpty) {
-      return Image.asset('assets/images/morket_banner.png', fit: BoxFit.cover);
+      return _imagePlaceholder();
     }
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return Image.network(
-        imagePath,
+      return CachedNetworkImage(
+        imageUrl: imagePath,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            Image.asset('assets/images/morket_banner.png', fit: BoxFit.cover),
+        placeholder: (context, url) => _imagePlaceholder(),
+        errorWidget: (context, url, error) => _imagePlaceholder(),
+        fadeInDuration: const Duration(milliseconds: 200),
       );
     }
-    return Image.asset(imagePath, fit: BoxFit.cover);
+    return Image.asset(imagePath, fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _imagePlaceholder());
+  }
+
+  Widget _imagePlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(Icons.image_not_supported, color: Colors.grey[600], size: 48),
+      ),
+    );
   }
 
   @override

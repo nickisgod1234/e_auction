@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AuctionImageWidget extends StatelessWidget {
   final String? imagePath;
@@ -22,19 +23,18 @@ class AuctionImageWidget extends StatelessWidget {
       return _buildPlaceholder();
     }
 
-    // ตรวจสอบว่าเป็น URL หรือไม่
     final isUrl = imagePath!.startsWith('http://') || imagePath!.startsWith('https://');
 
     Widget imageWidget;
     if (isUrl) {
-      imageWidget = Image.network(
-        imagePath!,
+      imageWidget = CachedNetworkImage(
+        imageUrl: imagePath!,
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildPlaceholder();
-        },
+        placeholder: (context, url) => _buildPlaceholder(),
+        errorWidget: (context, url, error) => _buildPlaceholder(),
+        fadeInDuration: const Duration(milliseconds: 200),
       );
     } else {
       imageWidget = Image.asset(
@@ -48,7 +48,6 @@ class AuctionImageWidget extends StatelessWidget {
       );
     }
 
-    // ถ้ามี borderRadius ให้ใช้ ClipRRect
     if (borderRadius != null) {
       return ClipRRect(
         borderRadius: borderRadius!,

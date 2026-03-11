@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:e_auction/services/product_approval_service.dart';
 
 class ProductDetailModal extends StatelessWidget {
@@ -201,38 +202,27 @@ class ProductDetailModal extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print('ProductDetailModal Image load error: $error');
-                            return Container(
-                              color: Colors.grey[200],
-                              child: Icon(
-                                Icons.image_not_supported,
-                                color: Colors.grey[400],
-                              ),
-                            );
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
+                          child: CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
                               color: Colors.grey[200],
                               child: Center(
                                 child: SizedBox(
                                   width: 30,
                                   height: 30,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
+                                  child: CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                            errorWidget: (context, url, error) {
+                              return Container(
+                                color: Colors.grey[200],
+                                child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                              );
+                            },
+                            fadeInDuration: const Duration(milliseconds: 200),
+                          ),
                         ),
                       ),
                     );
@@ -272,62 +262,38 @@ class ProductDetailModal extends StatelessWidget {
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 3.0,
-                child: Image.network(
-                  imageUrl,
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 300,
-                      height: 300,
-                      color: Colors.grey[800],
+                  placeholder: (context, url) => Container(
+                    width: 300,
+                    height: 300,
+                    color: Colors.grey[800],
+                    child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[400],
-                            size: 64,
-                          ),
+                          CircularProgressIndicator(color: Colors.grey[400]),
                           SizedBox(height: 16),
-                          Text(
-                            'ไม่สามารถโหลดรูปภาพได้',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 16,
-                            ),
-                          ),
+                          Text('กำลังโหลดรูปภาพ...', style: TextStyle(color: Colors.white, fontSize: 16)),
                         ],
                       ),
-                    );
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      width: 300,
-                      height: 300,
-                      color: Colors.grey[800],
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'กำลังโหลดรูปภาพ...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    width: 300,
+                    height: 300,
+                    color: Colors.grey[800],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image_not_supported, color: Colors.grey[400], size: 64),
+                        SizedBox(height: 16),
+                        Text('ไม่สามารถโหลดรูปภาพได้', style: TextStyle(color: Colors.grey[400], fontSize: 16)),
+                      ],
+                    ),
+                  ),
+                  fadeInDuration: const Duration(milliseconds: 200),
                 ),
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:e_auction/theme/app_theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/utils/format.dart';
@@ -395,41 +396,44 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // Helper method to build auction image
+  // Helper method to build auction image (ใช้ cache เพื่อโหลดเร็ว)
   Widget _buildAuctionImage(String? imagePath,
       {double? width, double? height}) {
     if (imagePath == null || imagePath.isEmpty) {
-      return Image.asset('assets/images/noimage.jpg',
-          width: width, height: height, fit: BoxFit.cover);
+      return _imagePlaceholder(width: width, height: height);
     }
 
-    // ตรวจสอบว่าเป็น URL หรือไม่
     final isUrl =
         imagePath.startsWith('http://') || imagePath.startsWith('https://');
 
     if (isUrl) {
-      return Image.network(
-        imagePath,
+      return CachedNetworkImage(
+        imageUrl: imagePath,
         width: width,
         height: height,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg',
-              width: width, height: height, fit: BoxFit.cover);
-        },
-      );
-    } else {
-      return Image.asset(
-        imagePath,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/noimage.jpg',
-              width: width, height: height, fit: BoxFit.cover);
-        },
+        placeholder: (context, url) => _imagePlaceholder(width: width, height: height),
+        errorWidget: (context, url, error) => _imagePlaceholder(width: width, height: height),
+        fadeInDuration: const Duration(milliseconds: 200),
       );
     }
+    return Image.asset(
+      imagePath,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          _imagePlaceholder(width: width, height: height),
+    );
+  }
+
+  Widget _imagePlaceholder({double? width, double? height}) {
+    return Container(
+      width: width,
+      height: height,
+      color: Colors.grey[200],
+      child: Icon(Icons.image_not_supported, color: Colors.grey[600], size: 48),
+    );
   }
 
   @override
