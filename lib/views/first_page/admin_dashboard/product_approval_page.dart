@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:e_auction/services/product_approval_service.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/product_detail_modal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductApprovalPage extends StatefulWidget {
   const ProductApprovalPage({super.key});
@@ -215,13 +216,26 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
   String _selectedStatus = '';
   String _selectedType = '';
   String? _selectedDate;
+  int _adminUserId = 1;
   late ProductApprovalService _productApprovalService;
 
   @override
   void initState() {
     super.initState();
     _productApprovalService = ProductApprovalService.defaultInstance();
+    _loadAdminUserId();
     _loadProducts();
+  }
+
+  Future<void> _loadAdminUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final idString = prefs.getString('id') ?? '';
+    final parsedId = int.tryParse(idString);
+    if (parsedId != null && parsedId > 0 && mounted) {
+      setState(() {
+        _adminUserId = parsedId;
+      });
+    }
   }
 
   Future<void> _loadProducts() async {
@@ -248,7 +262,12 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     }
   }
 
-  Future<void> _approveProduct(ProductQuotation product, String status) async {
+  Future<void> _approveProduct(
+    ProductQuotation product,
+    String status, {
+    bool sendToErp = false,
+    Map<String, dynamic>? erpItemPayload,
+  }) async {
     try {
       final response = await _productApprovalService.approveProduct(
         quotationId: product.quotationId,
@@ -257,9 +276,22 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
       );
       
       if (response.status == 'success') {
-        _showSuccessSnackBar(
-          status == 'approved' ? 'อนุมัติสินค้าสำเร็จ' : 'ปฏิเสธสินค้าสำเร็จ'
-        );
+        if (status == 'approved' && sendToErp && erpItemPayload != null) {
+          final erpResult = await _productApprovalService.submitItemsToErp(
+            items: [erpItemPayload],
+          );
+          if (erpResult.success) {
+            _showSuccessSnackBar('อนุมัติสินค้าและส่งเข้า ERP สำเร็จ');
+          } else {
+            _showErrorSnackBar(
+              'อนุมัติสินค้าแล้ว แต่ส่งเข้า ERP ไม่สำเร็จ: ${erpResult.message}',
+            );
+          }
+        } else {
+          _showSuccessSnackBar(
+            status == 'approved' ? 'อนุมัติสินค้าสำเร็จ' : 'ปฏิเสธสินค้าสำเร็จ',
+          );
+        }
         _loadProducts();
       } else {
         _showErrorSnackBar(response.message);
@@ -269,43 +301,297 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     }
   }
 
+  Future<void> _submitToErpOnly(Map<String, dynamic> erpItemPayload) async {
+    try {
+      final result = await _productApprovalService.submitItemsToErp(
+        items: [erpItemPayload],
+      );
+      if (result.success) {
+        _showSuccessSnackBar('ส่งเข้า ERP สำเร็จ (ยังไม่อนุมัติในระบบนี้)');
+      } else {
+        _showErrorSnackBar('ส่งเข้า ERP ไม่สำเร็จ: ${result.message}');
+      }
+    } catch (e) {
+      _showErrorSnackBar('เกิดข้อผิดพลาดในการส่งเข้า ERP: $e');
+    }
+  }
+
   void _showApprovalDialog(ProductQuotation product) {
+    final materialCodeController = TextEditingController(
+      text: product.sequence?.trim().isNotEmpty == true
+          ? product.sequence!.trim()
+          : 'MAT-${product.quotationId}',
+    );
+    final materialNameController = TextEditingController(
+      text: product.description ?? '',
+    );
+    final matTypeIdController = TextEditingController();
+    final countUnitIdController = TextEditingController();
+    final indTypeIdController = TextEditingController();
+    final warehouseIdController = TextEditingController();
+    final sectorTypeIdController = TextEditingController();
+    bool sendToErp = false;
+    String materialType = 'material';
+
+    Map<String, dynamic> buildErpItemPayload() {
+      int? parseIntController(TextEditingController c) =>
+          int.tryParse(c.text.trim());
+
+      final payload = <String, dynamic>{
+        'material_code': materialCodeController.text.trim(),
+        'material_name': materialNameController.text.trim(),
+        'material_type': materialType,
+        'created_by': _adminUserId,
+        'updated_by': _adminUserId,
+        'mat_type_id': parseIntController(matTypeIdController),
+        'count_unit_id': parseIntController(countUnitIdController),
+        'ind_type_id': parseIntController(indTypeIdController),
+        'warehouse_id': parseIntController(warehouseIdController),
+        'sector_type_id': parseIntController(sectorTypeIdController),
+        'image_urls': product.imageUrls,
+      };
+
+      payload.removeWhere((key, value) {
+        if (value == null) return true;
+        if (value is String && value.isEmpty) return true;
+        if (value is List && value.isEmpty) return true;
+        return false;
+      });
+
+      return payload;
+    }
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('อนุมัติสินค้า'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ชื่อสินค้า: ${product.description ?? '-'}'),
-            SizedBox(height: 8),
-            Text('เบอร์โทร: ${product.formattedPhone}'),
-            SizedBox(height: 8),
-            Text('ราคาเริ่มต้น: ${product.formattedPrice}'),
-          ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocalState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 700),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'อนุมัติสินค้า',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('ชื่อสินค้า: ${product.description ?? '-'}'),
+                        const SizedBox(height: 6),
+                        Text('เบอร์โทร: ${product.formattedPhone}'),
+                        const SizedBox(height: 6),
+                        Text('ราคาเริ่มต้น: ${product.formattedPrice}'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade100),
+                    ),
+                    child: SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      title: const Text('ส่งเข้า ERP ด้วย'),
+                      subtitle: const Text('ส่งเข้ารายการรออนุมัติใน ERP'),
+                      value: sendToErp,
+                      onChanged: (value) {
+                        setLocalState(() {
+                          sendToErp = value;
+                        });
+                      },
+                    ),
+                  ),
+                  if (sendToErp) ...[
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            TextField(
+                              controller: materialCodeController,
+                              decoration: const InputDecoration(
+                                labelText: 'material_code *',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: materialNameController,
+                              decoration: const InputDecoration(
+                                labelText: 'material_name *',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            DropdownButtonFormField<String>(
+                              value: materialType,
+                              decoration: const InputDecoration(
+                                labelText: 'material_type',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: 'material', child: Text('material')),
+                                DropdownMenuItem(value: 'service', child: Text('service')),
+                              ],
+                              onChanged: (value) {
+                                setLocalState(() {
+                                  materialType = value ?? 'material';
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: matTypeIdController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'mat_type_id',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: countUnitIdController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'count_unit_id',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: indTypeIdController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'ind_type_id',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: warehouseIdController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'warehouse_id',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: sectorTypeIdController,
+                              decoration: const InputDecoration(
+                                labelText: 'sector_type_id',
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('ยกเลิก'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _approveProduct(product, 'rejected');
+                          },
+                          style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                          child: const Text('ปฏิเสธ'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: sendToErp
+                          ? () {
+                              final payload = buildErpItemPayload();
+                              if ((payload['material_code']?.toString().trim().isEmpty ?? true) ||
+                                  (payload['material_name']?.toString().trim().isEmpty ?? true)) {
+                                _showErrorSnackBar('กรุณากรอก material_code และ material_name');
+                                return;
+                              }
+                              Navigator.pop(context);
+                              _submitToErpOnly(payload);
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade600,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('ส่ง ERP อย่างเดียว'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _approveProduct(
+                          product,
+                          'approved',
+                          sendToErp: sendToErp,
+                          erpItemPayload: sendToErp ? buildErpItemPayload() : null,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('อนุมัติ'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _approveProduct(product, 'rejected');
-            },
-            child: Text('ปฏิเสธ', style: TextStyle(color: Colors.red)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _approveProduct(product, 'approved');
-            },
-            child: Text('อนุมัติ'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-          ),
-        ],
       ),
     );
   }

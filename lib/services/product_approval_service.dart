@@ -170,6 +170,116 @@ class ProductApprovalService {
       );
     }
   }
+
+  // ส่งสินค้าเข้า ERP (รายการรออนุมัติใน ERP)
+  Future<SimpleApiResponse> submitItemsToErp({
+    required List<Map<String, dynamic>> items,
+  }) async {
+    try {
+      final cleanedItems = items
+          .map(_removeEmptyValues)
+          .where((item) => item.isNotEmpty)
+          .toList();
+
+      if (cleanedItems.isEmpty) {
+        return SimpleApiResponse(
+          success: false,
+          message: 'ไม่มีข้อมูลสินค้าที่ส่งเข้า ERP',
+        );
+      }
+
+      final candidates = _getErpSubmitUris();
+      final body = jsonEncode({'items': cleanedItems});
+
+      String lastError = '';
+      for (final uri in candidates) {
+        final response = await _client.post(
+          uri,
+          headers: _headers,
+          body: body,
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final status = data['status']?.toString().toLowerCase();
+          final message = data['message']?.toString() ?? '';
+          final normalizedMessage = message.toLowerCase();
+          final success = status == 'success' ||
+              status == 'ok' ||
+              normalizedMessage.contains('completed') ||
+              normalizedMessage.contains('sync completed') ||
+              normalizedMessage.contains('success');
+          return SimpleApiResponse(
+            success: success,
+            message: message.isNotEmpty
+                ? message
+                : data['message']?.toString() ??
+                (success
+                    ? 'ส่งข้อมูลเข้า ERP สำเร็จ'
+                    : 'ส่งข้อมูลเข้า ERP ไม่สำเร็จ (URL: $uri)'),
+          );
+        }
+
+        final shortBody = response.body.length > 240
+            ? '${response.body.substring(0, 240)}...'
+            : response.body;
+        lastError =
+            'HTTP ${response.statusCode} | URL: $uri | BODY: $shortBody';
+      }
+
+      return SimpleApiResponse(
+        success: false,
+        message: 'ส่งข้อมูลเข้า ERP ไม่สำเร็จ: $lastError',
+      );
+    } catch (e) {
+      return SimpleApiResponse(
+        success: false,
+        message: 'เกิดข้อผิดพลาดในการส่งเข้า ERP: $e',
+      );
+    }
+  }
+
+  Map<String, dynamic> _removeEmptyValues(Map<String, dynamic> input) {
+    final result = <String, dynamic>{};
+    input.forEach((key, value) {
+      if (value == null) return;
+      if (value is String && value.trim().isEmpty) return;
+      if (value is List && value.isEmpty) return;
+      result[key] = value;
+    });
+    return result;
+  }
+
+  List<Uri> _getErpSubmitUris() {
+    final base = _getBaseUrl(); // server base
+
+    final alternateHost =
+        Config.apiUrlAuction.contains('www.')
+            ? Config.apiUrlAuction.replaceFirst('www.', '')
+            : Config.apiUrlAuction.replaceFirst('://', '://www.');
+    final altBase = Platform.isAndroid
+        ? alternateHost.replaceFirst('https://', 'http://')
+        : alternateHost;
+
+    // ลองหลาย path เพราะ server บางชุดตั้ง route ไม่เหมือนกัน
+    const candidatePaths = [
+      '/modules/procurements/controllers/material_master_controller.php',
+      '/modules/procurement/controllers/material_master_controller.php',
+      '/modules/procurements/material_master_controller.php',
+      '/modules/procurement/material_master_controller.php',
+    ];
+
+    // เรียก local ก่อน (ยังไม่อัปไฟล์ขึ้น server)
+    final localBase = 'http://localhost/ERP-Cloudmate';
+
+    final uris = <Uri>[];
+    for (final path in candidatePaths) {
+      uris.add(Uri.parse('$localBase$path'));
+      uris.add(Uri.parse('$base$path'));
+      uris.add(Uri.parse('$altBase/ERP-Cloudmate$path'));
+    }
+    return uris.toSet().toList();
+  }
 }
 
 class ProductApprovalResponse {
@@ -439,4 +549,14 @@ class QuotationMessage {
       quotationMessage: json['quotation_message'],
     );
   }
+}
+
+class SimpleApiResponse {
+  final bool success;
+  final String message;
+
+  SimpleApiResponse({
+    required this.success,
+    required this.message,
+  });
 }
