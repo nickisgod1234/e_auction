@@ -330,6 +330,9 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     final indTypeIdController = TextEditingController();
     final warehouseIdController = TextEditingController();
     final sectorTypeIdController = TextEditingController();
+    final vendorIdController = TextEditingController();
+    final vendorSequenceController = TextEditingController();
+    final vendorNameController = TextEditingController();
     bool sendToErp = false;
     String materialType = 'material';
 
@@ -348,6 +351,9 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
         'ind_type_id': parseIntController(indTypeIdController),
         'warehouse_id': parseIntController(warehouseIdController),
         'sector_type_id': parseIntController(sectorTypeIdController),
+        'vendor_id': vendorIdController.text.trim(),
+        'vendor_sequence': vendorSequenceController.text.trim(),
+        'vendor_name': vendorNameController.text.trim(),
         'image_urls': product.imageUrls,
       };
 
@@ -436,6 +442,30 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                               controller: materialNameController,
                               decoration: const InputDecoration(
                                 labelText: 'material_name *',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: vendorIdController,
+                              decoration: const InputDecoration(
+                                labelText: 'vendor_id',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: vendorSequenceController,
+                              decoration: const InputDecoration(
+                                labelText: 'vendor_sequence',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: vendorNameController,
+                              decoration: const InputDecoration(
+                                labelText: 'vendor_name',
                                 border: OutlineInputBorder(),
                               ),
                             ),
