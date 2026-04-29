@@ -317,11 +317,12 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
   }
 
   void _showApprovalDialog(ProductQuotation product) {
-    final materialCodeController = TextEditingController(
-      text: product.sequence?.trim().isNotEmpty == true
-          ? product.sequence!.trim()
-          : 'MAT-${product.quotationId}',
-    );
+    String generateMaterialCode(String type) {
+      final prefix = type == 'service' ? 'SVC' : 'MAT';
+      return '$prefix-${product.quotationId.toString().padLeft(5, '0')}';
+    }
+
+    final materialCodeController = TextEditingController();
     final materialNameController = TextEditingController(
       text: product.description ?? '',
     );
@@ -333,12 +334,20 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     final vendorIdController = TextEditingController();
     final vendorSequenceController = TextEditingController();
     final vendorNameController = TextEditingController();
+    final unitPriceController = TextEditingController(
+      text: product.starPrice?.toString() ?? '',
+    );
+    final currencyCodeController = TextEditingController(text: 'THB');
+    final qtyPerUnitController = TextEditingController(text: '1');
     bool sendToErp = false;
     String materialType = 'material';
+    materialCodeController.text = generateMaterialCode(materialType);
 
     Map<String, dynamic> buildErpItemPayload() {
       int? parseIntController(TextEditingController c) =>
           int.tryParse(c.text.trim());
+      double? parseDoubleController(TextEditingController c) =>
+          double.tryParse(c.text.trim());
 
       final payload = <String, dynamic>{
         'material_code': materialCodeController.text.trim(),
@@ -354,6 +363,9 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
         'vendor_id': vendorIdController.text.trim(),
         'vendor_sequence': vendorSequenceController.text.trim(),
         'vendor_name': vendorNameController.text.trim(),
+        'unit_price': parseDoubleController(unitPriceController),
+        'currency_code': currencyCodeController.text.trim(),
+        'qty_per_unit': parseIntController(qtyPerUnitController) ?? 1,
         'image_urls': product.imageUrls,
       };
 
@@ -430,11 +442,49 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
-                            TextField(
-                              controller: materialCodeController,
-                              decoration: const InputDecoration(
-                                labelText: 'material_code *',
-                                border: OutlineInputBorder(),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade100),
+                    ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'material_code (สร้างอัตโนมัติ)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.orange.shade800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.auto_awesome,
+                                        size: 18,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          materialCodeController.text,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                           
+                                ],
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -470,6 +520,40 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                               ),
                             ),
                             const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: unitPriceController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'unit_price *',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: currencyCodeController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'currency_code',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: qtyPerUnitController,
+                              decoration: const InputDecoration(
+                                labelText: 'qty_per_unit',
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                            const SizedBox(height: 10),
                             DropdownButtonFormField<String>(
                               value: materialType,
                               decoration: const InputDecoration(
@@ -483,6 +567,8 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                               onChanged: (value) {
                                 setLocalState(() {
                                   materialType = value ?? 'material';
+                                  materialCodeController.text =
+                                      generateMaterialCode(materialType);
                                 });
                               },
                             ),
@@ -582,8 +668,13 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                           ? () {
                               final payload = buildErpItemPayload();
                               if ((payload['material_code']?.toString().trim().isEmpty ?? true) ||
-                                  (payload['material_name']?.toString().trim().isEmpty ?? true)) {
-                                _showErrorSnackBar('กรุณากรอก material_code และ material_name');
+                                  (payload['material_name']?.toString().trim().isEmpty ?? true) ||
+                                  (payload['vendor_id']?.toString().trim().isEmpty ?? true) ||
+                                  (payload['vendor_name']?.toString().trim().isEmpty ?? true) ||
+                                  payload['unit_price'] == null) {
+                                _showErrorSnackBar(
+                                  'กรุณากรอก material_code, material_name, vendor_id, vendor_name และ unit_price',
+                                );
                                 return;
                               }
                               Navigator.pop(context);
@@ -602,6 +693,19 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
+                        if (sendToErp) {
+                          final payload = buildErpItemPayload();
+                          if ((payload['material_code']?.toString().trim().isEmpty ?? true) ||
+                              (payload['material_name']?.toString().trim().isEmpty ?? true) ||
+                              (payload['vendor_id']?.toString().trim().isEmpty ?? true) ||
+                              (payload['vendor_name']?.toString().trim().isEmpty ?? true) ||
+                              payload['unit_price'] == null) {
+                            _showErrorSnackBar(
+                              'กรุณากรอก material_code, material_name, vendor_id, vendor_name และ unit_price',
+                            );
+                            return;
+                          }
+                        }
                         Navigator.pop(context);
                         _approveProduct(
                           product,
