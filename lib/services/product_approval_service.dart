@@ -269,12 +269,12 @@ class ProductApprovalService {
       '/modules/procurement/material_master_controller.php',
     ];
 
-    // เรียก local ก่อน (ยังไม่อัปไฟล์ขึ้น server)
-    final localBase = 'http://localhost/ERP-Cloudmate';
+    // ใช้สำหรับ dev บนเครื่อง local เท่านั้น
+    // final localBase = 'http://localhost/ERP-Cloudmate';
 
     final uris = <Uri>[];
     for (final path in candidatePaths) {
-      uris.add(Uri.parse('$localBase$path'));
+      // uris.add(Uri.parse('$localBase$path'));
       uris.add(Uri.parse('$base$path'));
       uris.add(Uri.parse('$altBase/ERP-Cloudmate$path'));
     }

@@ -216,6 +216,7 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
   String _selectedStatus = '';
   String _selectedType = '';
   String? _selectedDate;
+  // ignore: unused_field
   int _adminUserId = 1;
   late ProductApprovalService _productApprovalService;
 
@@ -281,7 +282,11 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
             items: [erpItemPayload],
           );
           if (erpResult.success) {
-            _showSuccessSnackBar('อนุมัติสินค้าและส่งเข้า ERP สำเร็จ');
+            _showErpResultDialog(
+              erpItemPayload,
+              erpResult.message,
+              title: 'อนุมัติสินค้าและส่งเข้า ERP สำเร็จ',
+            );
           } else {
             _showErrorSnackBar(
               'อนุมัติสินค้าแล้ว แต่ส่งเข้า ERP ไม่สำเร็จ: ${erpResult.message}',
@@ -307,7 +312,11 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
         items: [erpItemPayload],
       );
       if (result.success) {
-        _showSuccessSnackBar('ส่งเข้า ERP สำเร็จ (ยังไม่อนุมัติในระบบนี้)');
+        _showErpResultDialog(
+          erpItemPayload,
+          result.message,
+          title: 'ส่งเข้า ERP สำเร็จ',
+        );
       } else {
         _showErrorSnackBar('ส่งเข้า ERP ไม่สำเร็จ: ${result.message}');
       }
@@ -316,57 +325,149 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     }
   }
 
+  void _showErpResultDialog(
+    Map<String, dynamic> erpItemPayload,
+    String message, {
+    required String title,
+  }) {
+    if (!mounted) return;
+
+    Widget detailRow(String label, String value) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 120,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value.isEmpty ? '-' : value,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green.shade600),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (message.isNotEmpty) ...[
+              Text(message),
+              const SizedBox(height: 16),
+            ],
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  detailRow(
+                    'material_code',
+                    erpItemPayload['material_code']?.toString() ?? '',
+                  ),
+                  detailRow(
+                    'vendor_id',
+                    erpItemPayload['vendor_id']?.toString() ?? '',
+                  ),
+                  detailRow(
+                    'vendor_sequence',
+                    erpItemPayload['vendor_sequence']?.toString() ?? '',
+                  ),
+                  detailRow(
+                    'vendor_name',
+                    erpItemPayload['vendor_name']?.toString() ?? '',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ปิด'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showApprovalDialog(ProductQuotation product) {
-    String generateMaterialCode(String type) {
-      final prefix = type == 'service' ? 'SVC' : 'MAT';
+    String generateMaterialCode() {
+      const prefix = 'MAT';
       return '$prefix-${product.quotationId.toString().padLeft(5, '0')}';
     }
 
-    final materialCodeController = TextEditingController();
-    final materialNameController = TextEditingController(
-      text: product.description ?? '',
-    );
-    final matTypeIdController = TextEditingController();
-    final countUnitIdController = TextEditingController();
-    final indTypeIdController = TextEditingController();
-    final warehouseIdController = TextEditingController();
-    final sectorTypeIdController = TextEditingController();
+    final materialCode = generateMaterialCode();
+    // ยังไม่ใช้ตอนนี้ เก็บไว้เปิดใช้รอบถัดไป
+    // final matTypeIdController = TextEditingController();
+    // final countUnitIdController = TextEditingController();
+    // final indTypeIdController = TextEditingController();
+    // final warehouseIdController = TextEditingController();
+    // final sectorTypeIdController = TextEditingController();
     final vendorIdController = TextEditingController();
     final vendorSequenceController = TextEditingController();
     final vendorNameController = TextEditingController();
-    final unitPriceController = TextEditingController(
-      text: product.starPrice?.toString() ?? '',
-    );
-    final currencyCodeController = TextEditingController(text: 'THB');
-    final qtyPerUnitController = TextEditingController(text: '1');
+    // final unitPriceController = TextEditingController(
+    //   text: product.starPrice?.toString() ?? '',
+    // );
+    // final currencyCodeController = TextEditingController(text: 'THB');
+    // final qtyPerUnitController = TextEditingController(text: '1');
     bool sendToErp = false;
-    String materialType = 'material';
-    materialCodeController.text = generateMaterialCode(materialType);
 
     Map<String, dynamic> buildErpItemPayload() {
-      int? parseIntController(TextEditingController c) =>
-          int.tryParse(c.text.trim());
-      double? parseDoubleController(TextEditingController c) =>
-          double.tryParse(c.text.trim());
+      // int? parseIntController(TextEditingController c) =>
+      //     int.tryParse(c.text.trim());
+      // double? parseDoubleController(TextEditingController c) =>
+      //     double.tryParse(c.text.trim());
 
       final payload = <String, dynamic>{
-        'material_code': materialCodeController.text.trim(),
-        'material_name': materialNameController.text.trim(),
-        'material_type': materialType,
-        'created_by': _adminUserId,
-        'updated_by': _adminUserId,
-        'mat_type_id': parseIntController(matTypeIdController),
-        'count_unit_id': parseIntController(countUnitIdController),
-        'ind_type_id': parseIntController(indTypeIdController),
-        'warehouse_id': parseIntController(warehouseIdController),
-        'sector_type_id': parseIntController(sectorTypeIdController),
+        'material_code': materialCode,
         'vendor_id': vendorIdController.text.trim(),
         'vendor_sequence': vendorSequenceController.text.trim(),
         'vendor_name': vendorNameController.text.trim(),
-        'unit_price': parseDoubleController(unitPriceController),
-        'currency_code': currencyCodeController.text.trim(),
-        'qty_per_unit': parseIntController(qtyPerUnitController) ?? 1,
-        'image_urls': product.imageUrls,
+        // ยังไม่ใช้ตอนนี้ เก็บไว้เปิดใช้รอบถัดไป
+        // 'material_name': product.description ?? '',
+        // 'material_type': 'material',
+        // 'created_by': _adminUserId,
+        // 'updated_by': _adminUserId,
+        // 'unit_price': product.starPrice,
+        // 'currency_code': 'THB',
+        // 'qty_per_unit': 1,
+        // 'mat_type_id': parseIntController(matTypeIdController),
+        // 'count_unit_id': parseIntController(countUnitIdController),
+        // 'ind_type_id': parseIntController(indTypeIdController),
+        // 'warehouse_id': parseIntController(warehouseIdController),
+        // 'sector_type_id': parseIntController(sectorTypeIdController),
+        // 'image_urls': product.imageUrls,
       };
 
       payload.removeWhere((key, value) {
@@ -446,60 +547,37 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade100),
-                    ),
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue.shade100),
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'material_code (สร้างอัตโนมัติ)',
+                                    'ข้อมูล Vendor',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.orange.shade800,
+                                      color: Colors.blue.shade800,
                                     ),
                                   ),
                                   const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.auto_awesome,
-                                        size: 18,
-                                        color: Colors.orange.shade700,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          materialCodeController.text,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    'material_code จะถูกสร้างอัตโนมัติและแสดงหลังบันทึกสำเร็จ',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
                                   ),
-                                  const SizedBox(height: 4),
-                           
                                 ],
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            TextField(
-                              controller: materialNameController,
-                              decoration: const InputDecoration(
-                                labelText: 'material_name *',
-                                border: OutlineInputBorder(),
                               ),
                             ),
                             const SizedBox(height: 10),
                             TextField(
                               controller: vendorIdController,
                               decoration: const InputDecoration(
-                                labelText: 'vendor_id',
+                                labelText: 'vendor_id *',
                                 border: OutlineInputBorder(),
                               ),
                             ),
@@ -515,123 +593,9 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                             TextField(
                               controller: vendorNameController,
                               decoration: const InputDecoration(
-                                labelText: 'vendor_name',
+                                labelText: 'vendor_name *',
                                 border: OutlineInputBorder(),
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: unitPriceController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'unit_price *',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    controller: currencyCodeController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'currency_code',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            TextField(
-                              controller: qtyPerUnitController,
-                              decoration: const InputDecoration(
-                                labelText: 'qty_per_unit',
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
-                            ),
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<String>(
-                              value: materialType,
-                              decoration: const InputDecoration(
-                                labelText: 'material_type',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: const [
-                                DropdownMenuItem(value: 'material', child: Text('material')),
-                                DropdownMenuItem(value: 'service', child: Text('service')),
-                              ],
-                              onChanged: (value) {
-                                setLocalState(() {
-                                  materialType = value ?? 'material';
-                                  materialCodeController.text =
-                                      generateMaterialCode(materialType);
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: matTypeIdController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'mat_type_id',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    controller: countUnitIdController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'count_unit_id',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: indTypeIdController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'ind_type_id',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    controller: warehouseIdController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'warehouse_id',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            TextField(
-                              controller: sectorTypeIdController,
-                              decoration: const InputDecoration(
-                                labelText: 'sector_type_id',
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
                             ),
                           ],
                         ),
@@ -667,13 +631,10 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                       onPressed: sendToErp
                           ? () {
                               final payload = buildErpItemPayload();
-                              if ((payload['material_code']?.toString().trim().isEmpty ?? true) ||
-                                  (payload['material_name']?.toString().trim().isEmpty ?? true) ||
-                                  (payload['vendor_id']?.toString().trim().isEmpty ?? true) ||
-                                  (payload['vendor_name']?.toString().trim().isEmpty ?? true) ||
-                                  payload['unit_price'] == null) {
+                              if ((payload['vendor_id']?.toString().trim().isEmpty ?? true) ||
+                                  (payload['vendor_name']?.toString().trim().isEmpty ?? true)) {
                                 _showErrorSnackBar(
-                                  'กรุณากรอก material_code, material_name, vendor_id, vendor_name และ unit_price',
+                                  'กรุณากรอก vendor_id และ vendor_name',
                                 );
                                 return;
                               }
@@ -695,13 +656,10 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                       onPressed: () {
                         if (sendToErp) {
                           final payload = buildErpItemPayload();
-                          if ((payload['material_code']?.toString().trim().isEmpty ?? true) ||
-                              (payload['material_name']?.toString().trim().isEmpty ?? true) ||
-                              (payload['vendor_id']?.toString().trim().isEmpty ?? true) ||
-                              (payload['vendor_name']?.toString().trim().isEmpty ?? true) ||
-                              payload['unit_price'] == null) {
+                          if ((payload['vendor_id']?.toString().trim().isEmpty ?? true) ||
+                              (payload['vendor_name']?.toString().trim().isEmpty ?? true)) {
                             _showErrorSnackBar(
-                              'กรุณากรอก material_code, material_name, vendor_id, vendor_name และ unit_price',
+                              'กรุณากรอก vendor_id และ vendor_name',
                             );
                             return;
                           }
