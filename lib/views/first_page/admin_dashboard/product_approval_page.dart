@@ -451,11 +451,11 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
 
       final payload = <String, dynamic>{
         'material_code': materialCode,
+        'material_name': product.description ?? '',
         'vendor_id': vendorIdController.text.trim(),
         'vendor_sequence': vendorSequenceController.text.trim(),
         'vendor_name': vendorNameController.text.trim(),
         // ยังไม่ใช้ตอนนี้ เก็บไว้เปิดใช้รอบถัดไป
-        // 'material_name': product.description ?? '',
         // 'material_type': 'material',
         // 'created_by': _adminUserId,
         // 'updated_by': _adminUserId,

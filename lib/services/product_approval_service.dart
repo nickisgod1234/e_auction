@@ -203,12 +203,13 @@ class ProductApprovalService {
           final data = jsonDecode(response.body);
           final status = data['status']?.toString().toLowerCase();
           final message = data['message']?.toString() ?? '';
+          final errorCount = int.tryParse(data['error_count']?.toString() ?? '0') ?? 0;
           final normalizedMessage = message.toLowerCase();
-          final success = status == 'success' ||
-              status == 'ok' ||
-              normalizedMessage.contains('completed') ||
+          final hasSuccessMessage = normalizedMessage.contains('completed') ||
               normalizedMessage.contains('sync completed') ||
               normalizedMessage.contains('success');
+          final success = errorCount == 0 &&
+              (status == 'success' || status == 'ok' || hasSuccessMessage);
           return SimpleApiResponse(
             success: success,
             message: message.isNotEmpty
