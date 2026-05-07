@@ -455,19 +455,19 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
         'vendor_id': vendorIdController.text.trim(),
         'vendor_sequence': vendorSequenceController.text.trim(),
         'vendor_name': vendorNameController.text.trim(),
+        'unit_price': product.starPrice,
+        'currency_code': 'THB',
+        'image_urls': product.imageUrls,
+        'material_type': 'material',
+        'created_by': _adminUserId,
+        'updated_by': _adminUserId,
+        'qty_per_unit': 1,
         // ยังไม่ใช้ตอนนี้ เก็บไว้เปิดใช้รอบถัดไป
-        // 'material_type': 'material',
-        // 'created_by': _adminUserId,
-        // 'updated_by': _adminUserId,
-        // 'unit_price': product.starPrice,
-        // 'currency_code': 'THB',
-        // 'qty_per_unit': 1,
         // 'mat_type_id': parseIntController(matTypeIdController),
         // 'count_unit_id': parseIntController(countUnitIdController),
         // 'ind_type_id': parseIntController(indTypeIdController),
         // 'warehouse_id': parseIntController(warehouseIdController),
         // 'sector_type_id': parseIntController(sectorTypeIdController),
-        // 'image_urls': product.imageUrls,
       };
 
       payload.removeWhere((key, value) {
