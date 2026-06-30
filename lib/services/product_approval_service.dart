@@ -5,7 +5,7 @@ import 'package:http/io_client.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 
 class ProductApprovalService {
-  static String get baseUrl => '${Config.apiUrlAuction}/ERP-Cloudmate';
+  static String get baseUrl => Config.erpBaseUrl;
   late http.Client _client;
 
   ProductApprovalService() {
@@ -271,13 +271,13 @@ class ProductApprovalService {
     ];
 
     // ใช้สำหรับ dev บนเครื่อง local เท่านั้น
-    // final localBase = 'http://localhost/ERP-Cloudmate';
+    // final localBase = 'http://localhost/${Config.erpCloudmate}';
 
     final uris = <Uri>[];
     for (final path in candidatePaths) {
       // uris.add(Uri.parse('$localBase$path'));
       uris.add(Uri.parse('$base$path'));
-      uris.add(Uri.parse('$altBase/ERP-Cloudmate$path'));
+      uris.add(Uri.parse('$altBase/${Config.erpCloudmate}$path'));
     }
     return uris.toSet().toList();
   }
@@ -509,7 +509,7 @@ class ProductQuotation {
         final urls = (imageData as List).map((img) {
           // ใช้ baseUrl จาก Config
           String baseUrl =
-              '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
+              '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/uploads/quotation/$img';
           return baseUrl;
         }).toList();
 
@@ -521,7 +521,7 @@ class ProductQuotation {
           if (parsed is List) {
             final urls = parsed.map((img) {
               String baseUrl =
-                  '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/uploads/quotation/$img';
+                  '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/uploads/quotation/$img';
               return baseUrl;
             }).toList();
 

@@ -7,6 +7,7 @@ import 'package:e_auction/services/add_auction_service/add_auction_service.dart'
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:e_auction/views/config/config_prod.dart';
 
 class AddAuctionMethods {
   // Image Picker Methods
@@ -382,7 +383,7 @@ class AddAuctionMethods {
     }
 
     // Build full URL
-    String baseUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$imageName';
+    String baseUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/$imageName';
     
     // Convert to HTTP for Android
     if (Platform.isAndroid) {

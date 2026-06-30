@@ -174,7 +174,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
     }
     
     // Build full URL
-    String baseUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$imageName';
+    String baseUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/$imageName';
     
     // Convert to HTTP for Android
     if (Platform.isAndroid) {
@@ -225,7 +225,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
 
   Future<List<dynamic>?> _loadBidHistory(String quotationId) async {
     try {
-      final url = '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId&action=bid_history';
+      final url = '${_getBaseUrl()}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId&action=bid_history';
       
       print('DEBUG: Calling bid history API: $url');
       final response = await _getHttpClient().get(Uri.parse(url));
@@ -289,7 +289,7 @@ class _QuantityReductionAuctionDetailPageState extends State<QuantityReductionAu
         final baseUrl = _getBaseUrl();
         final currentPrice = _latestAuctionData?['current_price'] ?? widget.auctionData['currentPrice'] ?? 500;
         
-        final apiUrl = '$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId&action=place_bid';
+        final apiUrl = '$baseUrl/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId&action=place_bid';
         
         print('DEBUG: Sending booking request to: $apiUrl');
         print('DEBUG: User ID: $userId');

@@ -203,7 +203,7 @@ Future<void> announceWinnersAtScheduledTime(FlutterLocalNotificationsPlugin plug
     print('🔔 SCHEDULED: Starting scheduled winner announcement...');
     
     // ส่ง API call ไปตรงๆ โดยไม่ต้องส่ง body
-    final url = Uri.parse('${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=8&action=announce_winner');
+    final url = Uri.parse('${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=8&action=announce_winner');
     
     print('🔔 SCHEDULED: Sending API call to: $url');
     
@@ -230,7 +230,7 @@ Future<void> triggerWinnerAnnouncementInBackground() async {
     print('🔄 BACKGROUND: Starting background winner announcement...');
     
     // ส่ง API call ไปตรงๆ โดยไม่ต้องส่ง body
-    final url = Uri.parse('${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?&action=announce_all_winners');
+    final url = Uri.parse('${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?&action=announce_all_winners');
     
     print('🔄 BACKGROUND: Sending API call to: $url');
     
@@ -390,7 +390,7 @@ Future<void> setupBackgroundWinnerAnnouncement() async {
 }
 
 Future<void> checkAndNotifyExpiredAuctions(FlutterLocalNotificationsPlugin plugin) async {
-  final url = Uri.parse('${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/auction_expiry_controller.php?action=expired');
+  final url = Uri.parse('${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers/auction_expiry_controller.php?action=expired');
   print('[Workmanager] เริ่มตรวจสอบสินค้าหมดเวลา...');
   try {
     final response = await http.get(url);

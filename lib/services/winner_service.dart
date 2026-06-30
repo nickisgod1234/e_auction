@@ -6,7 +6,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 
 class WinnerService {
   static String get baseUrl {
-    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+    final url = '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
     if (Platform.isAndroid) {
       return url.replaceFirst('https://', 'http://');
     }
@@ -14,7 +14,7 @@ class WinnerService {
   }
   
   static String get logsBaseUrl {
-    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/auction_announcement_logs_controller.php';
+    final url = '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers/auction_announcement_logs_controller.php';
     if (Platform.isAndroid) {
       return url.replaceFirst('https://', 'http://');
     }

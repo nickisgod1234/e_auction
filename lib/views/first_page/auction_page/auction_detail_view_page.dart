@@ -173,7 +173,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
     }
     
     // Build full URL
-    String baseUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$imageName';
+    String baseUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/$imageName';
     
     // Convert to HTTP for Android
     if (Platform.isAndroid) {
@@ -578,7 +578,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 
     try {
       final url =
-          '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
+          '${_getBaseUrl()}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
 
       final client = _getHttpClient();
       final response = await client.get(Uri.parse(url));
@@ -645,7 +645,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
 
     try {
       final url =
-          '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
+          '${_getBaseUrl()}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId';
 
       final client = _getHttpClient();
       final response = await client.get(Uri.parse(url));
@@ -900,7 +900,7 @@ class _AuctionDetailViewPageState extends State<AuctionDetailViewPage> {
           // ดึงข้อมูลล่าสุดและอัปเดต real-time
           try {
             final latestUrl =
-                '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${_pendingBid!['quotationId']}';
+                '${_getBaseUrl()}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${_pendingBid!['quotationId']}';
             final client = _getHttpClient();
             final latestResponse = await client.get(Uri.parse(latestUrl));
 
@@ -1970,7 +1970,7 @@ class _RealtimeAuctionPriceWidgetState
       final baseUrl = RealtimeAuctionPriceWidget._getBaseUrl(widget.baseUrl);
       final response = await client.get(
         Uri.parse(
-            '$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${widget.quotationId}'),
+            '$baseUrl/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=${widget.quotationId}'),
       );
 
       if (response.statusCode == 200) {

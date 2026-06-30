@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:e_auction/noti_ios/noti_ios.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:e_auction/views/config/config_prod.dart';
 
 class ProductService {
   final String baseUrl;
@@ -66,7 +67,7 @@ class ProductService {
   // เรียกรายการ quotation ทั้งหมด
   Future<List<Map<String, dynamic>>?> getAllQuotations() async {
     final url = Uri.parse(
-        '${_getBaseUrl()}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
+        '${_getBaseUrl()}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
    try {
       final response = await http.get(
         url,
@@ -140,7 +141,7 @@ class ProductService {
   Future<Map<String, dynamic>?> getAuctionProductById(
       String quotationId) async {
     final url = Uri.parse(
-        '$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
+        '$baseUrl/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
     try {
       final response = await http.get(
         url,
@@ -622,7 +623,7 @@ class ProductService {
     }
     
   
-    final imageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$cleanImageName';
+    final imageUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/$cleanImageName';
     
     // แปลง HTTPS เป็น HTTP สำหรับ Android
     if (Platform.isAndroid) {
@@ -871,7 +872,7 @@ class ProductService {
     required String bidderName,
   }) async {
     final url = Uri.parse(
-        '$baseUrl/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
+        '$baseUrl/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$quotationId');
     final body = {
       'minimum_increase': minimumIncrease,
       'bid_amount': bidAmount,

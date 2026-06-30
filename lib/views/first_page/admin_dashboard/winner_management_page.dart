@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:e_auction/views/config/config_prod.dart';
 
 class WinnerManagementPage extends StatefulWidget {
   const WinnerManagementPage({super.key});
@@ -344,7 +345,7 @@ class _WinnerManagementPageState extends State<WinnerManagementPage> with Single
     }
     
     // สร้าง URL
-    String baseUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/$imageName';
+    String baseUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/$imageName';
     
     // แปลงเป็น HTTP สำหรับ Android
     if (Platform.isAndroid) {

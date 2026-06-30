@@ -6,7 +6,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 
 class UserBidHistoryService {
   static String get baseUrl {
-    final url = '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
+    final url = '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php';
     if (Platform.isAndroid) {
       return url.replaceFirst('https://', 'http://');
     }
@@ -104,7 +104,7 @@ class UserBidHistoryService {
   static Future<List<dynamic>> getUserBidRanking(String auctionId) async {
     try {
       final url =
-          '${Config.apiUrlAuction}/ERP-Cloudmate/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$auctionId&action=user_bid_ranking';
+          '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php?id=$auctionId&action=user_bid_ranking';
 
       final client = _getHttpClient();
       final response = await client.get(Uri.parse(url));
@@ -146,7 +146,7 @@ class UserBidHistoryService {
             images = imageData.cast<String>();
             if (images.isNotEmpty && images.first.isNotEmpty) {
               // สร้าง URL รูปภาพ
-              final baseImageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/${images.first}';
+              final baseImageUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/${images.first}';
               if (Platform.isAndroid) {
                 imageUrl = baseImageUrl.replaceFirst('https://', 'http://');
               } else {
@@ -162,7 +162,7 @@ class UserBidHistoryService {
           // ใช้ quotation_id ไปดึงข้อมูลจาก API หลัก (เหมือนที่หน้า home ใช้)
           // แต่เนื่องจากเป็น static method จึงไม่สามารถใช้ async ได้
           // ให้ใช้ quotation_id เป็น fallback
-          final fallbackImageUrl = 'https://cm-mecustomers.com/ERP-Cloudmate/modules/sales/uploads/quotation/img_6867a407860455.12296295.jpg';
+          final fallbackImageUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/img_6867a407860455.12296295.jpg';
           if (Platform.isAndroid) {
             imageUrl = fallbackImageUrl.replaceFirst('https://', 'http://');
           } else {
