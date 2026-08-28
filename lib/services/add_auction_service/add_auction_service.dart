@@ -8,9 +8,7 @@ import 'package:e_auction/views/config/config_prod.dart';
 class AddAuctionService {
   // Base URL for API - using config
   static String get baseUrl {
-    final url = '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers';
-
-    return url;
+    return '${Config.erpWriteBaseUrl}/modules/sales/controllers';
   }
 
   // Create HTTP client with SSL certificate bypass for Android
@@ -482,7 +480,7 @@ class AddAuctionService {
       // Use ProductService to get all quotations
       // Note: We'll filter by customer_id on the client side since API might not support it
       final url = Uri.parse(
-          '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
+          '${Config.erpWriteBaseUrl}/modules/sales/controllers/list_quotation_type_auction_price_controller.php');
       
       client = _createHttpClient();
       

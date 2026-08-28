@@ -383,7 +383,7 @@ class AddAuctionMethods {
     }
 
     // Build full URL
-    String baseUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/$imageName';
+    String baseUrl = 'https://cm-mecustomers.com/${Config.erpPrd}/modules/sales/uploads/quotation/$imageName';
     
     // Convert to HTTP for Android
     if (Platform.isAndroid) {

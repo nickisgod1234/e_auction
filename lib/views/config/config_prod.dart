@@ -3,7 +3,11 @@ class Config {
   static const String apiUrllocal = 'http://192.168.1.39';
   static const String apiUrlAuction = 'http://www.cm-mecustomers.com';
   static const String erpCloudmate = 'erp-cloudmate';
+  static const String erpPrd = 'cm-erp-prd';
   static String get erpBaseUrl => '$apiUrlAuction/$erpCloudmate';
+  static String get erpPrdBaseUrl => '$apiUrlAuction/$erpPrd';
+  // สร้าง/อนุมัติสินค้า → cm-erp-prd (API dual-write ไป erp-cloudmate)
+  static String get erpWriteBaseUrl => erpPrdBaseUrl;
   static const String apiUrl = 'https://www.cm-mejobs.com';
   // static const String apiUrl = 'http://5327j4215.totddns.com:55700';
   // static const String apiUrlcheckjob = 'http://www.cm-mejobs.com';

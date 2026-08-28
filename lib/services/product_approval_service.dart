@@ -5,7 +5,7 @@ import 'package:http/io_client.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 
 class ProductApprovalService {
-  static String get baseUrl => Config.erpBaseUrl;
+  static String get baseUrl => Config.erpWriteBaseUrl;
   late http.Client _client;
 
   ProductApprovalService() {
@@ -277,7 +277,7 @@ class ProductApprovalService {
     for (final path in candidatePaths) {
       // uris.add(Uri.parse('$localBase$path'));
       uris.add(Uri.parse('$base$path'));
-      uris.add(Uri.parse('$altBase/${Config.erpCloudmate}$path'));
+      uris.add(Uri.parse('$altBase/${Config.erpPrd}$path'));
     }
     return uris.toSet().toList();
   }
@@ -509,7 +509,7 @@ class ProductQuotation {
         final urls = (imageData as List).map((img) {
           // ใช้ baseUrl จาก Config
           String baseUrl =
-              '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/uploads/quotation/$img';
+              '${Config.apiUrlAuction}/${Config.erpPrd}/modules/sales/uploads/quotation/$img';
           return baseUrl;
         }).toList();
 
@@ -521,7 +521,7 @@ class ProductQuotation {
           if (parsed is List) {
             final urls = parsed.map((img) {
               String baseUrl =
-                  '${Config.apiUrlAuction}/${Config.erpCloudmate}/modules/sales/uploads/quotation/$img';
+                  '${Config.apiUrlAuction}/${Config.erpPrd}/modules/sales/uploads/quotation/$img';
               return baseUrl;
             }).toList();
 
