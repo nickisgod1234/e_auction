@@ -8,7 +8,12 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'dart:async';
 import 'package:e_auction/services/product_service.dart';
+import 'package:e_auction/services/product_status_notifier.dart';
 import 'package:e_auction/views/config/config_prod.dart';
+import 'package:e_auction/views/first_page/my_products_page/my_products_page.dart';
+
+/// ใช้เปิดหน้าจากการแตะ notification ที่ไม่มี BuildContext ให้ใช้
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +63,11 @@ Future<void> _setupNotifications() async {
         print('🔔 MAIN: Calling announceWinnersAtScheduledTime...');
         // เรียกใช้ฟังก์ชันประกาศผู้ชนะ
         announceWinnersAtScheduledTime(flutterLocalNotificationsPlugin);
+      } else if (response.payload?.startsWith('product_approval_') ?? false) {
+        // แจ้งผลอนุมัติสินค้า พาไปดูสถานะสินค้าที่ผู้ใช้ลงไว้
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (context) => const MyProductsPage()),
+        );
       } else {
         print(
             '🔔 MAIN: Not a winner announcement notification, payload: ${response.payload}');
@@ -74,6 +84,37 @@ Future<void> _setupNotifications() async {
 
   // ตั้งค่า timer สำหรับตรวจสอบการประมูลที่ใกล้หมดเวลา (สำหรับ iOS)
   _setupNearExpiryNotificationTimer(flutterLocalNotificationsPlugin);
+
+  // ตั้งค่า timer สำหรับตรวจสอบผลอนุมัติสินค้าที่ผู้ใช้ลงไว้
+  _setupProductApprovalNotificationTimer(flutterLocalNotificationsPlugin);
+}
+
+// Timer สำหรับตรวจสอบผลอนุมัติสินค้าของผู้ใช้
+Timer? _productApprovalNotificationTimer;
+
+void _setupProductApprovalNotificationTimer(
+  FlutterLocalNotificationsPlugin plugin,
+) {
+  _productApprovalNotificationTimer?.cancel();
+
+  Future<void> runCheck() async {
+    // ถ้ายังไม่ล็อกอินทั้งสองฟังก์ชันจะออกก่อนยิง request
+    await ProductStatusNotifier.discoverPendingProducts();
+    await ProductStatusNotifier.checkPendingProducts(plugin);
+  }
+
+  runCheck();
+
+  // ทุก 2 นาที รอบที่ไม่มีสินค้ารออนุมัติจะไม่ยิง request เลย
+  _productApprovalNotificationTimer = Timer.periodic(
+    Duration(minutes: 2),
+    (timer) async {
+      print('📦 MAIN: ตรวจสอบผลอนุมัติสินค้าที่ลงไว้...');
+      await runCheck();
+    },
+  );
+
+  print('✅ MAIN: ตั้งค่า timer สำหรับตรวจสอบผลอนุมัติสินค้าแล้ว (ทุก 2 นาที)');
 }
 
 // Timer สำหรับตรวจสอบการประมูลที่ใกล้หมดเวลา
@@ -112,6 +153,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: AppTheme.getAppTitle(AppTheme.currentClient),
       theme: AppTheme.getThemeForClient(AppTheme.currentClient),
       home: RequestOtpLoginPage(),

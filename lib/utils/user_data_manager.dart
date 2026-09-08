@@ -208,6 +208,16 @@ class UserDataManager {
     await prefs.remove(_addressKey);
     await prefs.remove(_statusKey);
     
+    // session แชทผูกกับ customer id เดิม ต้องลบไม่ให้ผู้ใช้คนถัดไปใช้ต่อ
+    await prefs.remove('chat_session_id');
+    
+    // สถานะสินค้าที่เฝ้าดูไว้เป็นของผู้ใช้คนเดิม ต้องลบทั้งหมด
+    for (final key in prefs.getKeys().toList()) {
+      if (key.startsWith('product_status_')) {
+        await prefs.remove(key);
+      }
+    }
+    
     // ลบข้อมูลเก่าที่อาจเหลืออยู่
     await prefs.remove('created_at');
     await prefs.remove('updated_at');

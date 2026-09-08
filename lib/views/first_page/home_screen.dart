@@ -15,6 +15,7 @@ import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/views/first_page/auction_page/all_current_auctions_page.dart';
 import 'package:e_auction/views/first_page/auction_page/all_upcoming_auctions_page.dart';
 import 'package:e_auction/views/first_page/auction_page/my_auctions_page.dart';
+import 'package:e_auction/views/first_page/my_products_page/my_products_page.dart';
 import 'package:e_auction/views/first_page/auction_page/all_winner_announcements_page.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/winner_announcement_card.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_result_page.dart';
@@ -1153,6 +1154,86 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: 15),
 
 
+
+              // My Products Section (สถานะการอนุมัติสินค้าที่ผู้ใช้ลงเอง)
+              Padding(
+                padding: const EdgeInsets.all(5),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'สินค้าของฉัน',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      _navigateToPage(context, const MyProductsPage());
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.inventory_2,
+                              color: Colors.orange,
+                              size: 32,
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'ดูสถานะสินค้าที่ลงประมูล',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'รออนุมัติ • อนุมัติแล้ว • ปฏิเสธ',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.grey[400],
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 15),
 
               // My Auctions Section
               Padding(

@@ -5,6 +5,7 @@ import 'widget_add/add_auction_methods.dart';
 import 'widget_add/add_auction_state.dart';
 import 'promotion_policy_page.dart';
 import 'package:intl/intl.dart';
+import 'package:e_auction/services/product_status_notifier.dart';
 import 'package:e_auction/utils/format.dart';
 
 class AddAuctionPage extends StatefulWidget {
@@ -885,6 +886,9 @@ class _AddAuctionPageState extends State<AddAuctionPage> {
       );
 
       if (result['status'] == 'success') {
+        // ให้ตัวเฝ้าดูรู้จักสินค้าใหม่ทันที จะได้แจ้งเตือนเมื่อ admin พิจารณาเสร็จ
+        await ProductStatusNotifier.discoverPendingProducts(force: true);
+
         AddAuctionMethods.showSuccessDialog(context);
         _state.resetForm();
       } else {

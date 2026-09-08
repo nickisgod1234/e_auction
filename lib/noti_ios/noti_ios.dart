@@ -173,6 +173,51 @@ Future<void> sendOutbidNotification(
   );
 }
 
+/// ส่งแจ้งเตือนผลการอนุมัติสินค้าที่ผู้ใช้ลงประมูลไว้
+///
+/// [isApproved] true = อนุมัติแล้ว, false = ไม่ผ่านการอนุมัติ
+Future<void> sendProductApprovalNotification(
+  FlutterLocalNotificationsPlugin plugin,
+  int quotationId,
+  String productTitle,
+  bool isApproved,
+) async {
+  final androidPlatformChannelSpecifics = AndroidNotificationDetails(
+    'product_approval_channel',
+    'Product Approval Notifications',
+    channelDescription: 'Notifications for product approval results',
+    importance: Importance.max,
+    priority: Priority.high,
+    showWhen: true,
+    color: isApproved ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+  );
+
+  const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+      DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+    sound: 'default',
+    interruptionLevel: InterruptionLevel.active,
+  );
+
+  final platformChannelSpecifics = NotificationDetails(
+    android: androidPlatformChannelSpecifics,
+    iOS: iOSPlatformChannelSpecifics,
+  );
+
+  await plugin.show(
+    // 3000+ กันชนกับ near_expiry ที่ใช้ช่วง 2000+
+    3000 + quotationId % 1000,
+    isApproved ? '✅ สินค้าได้รับการอนุมัติ' : '❌ สินค้าไม่ผ่านการอนุมัติ',
+    isApproved
+        ? 'สินค้า "$productTitle" ผ่านการอนุมัติแล้ว พร้อมเข้าร่วมประมูลตามวันที่กำหนด'
+        : 'สินค้า "$productTitle" ไม่ผ่านการอนุมัติ แตะเพื่อดูรายละเอียดจากเจ้าหน้าที่',
+    platformChannelSpecifics,
+    payload: 'product_approval_$quotationId',
+  );
+}
+
 /// ลบแจ้งเตือนทั้งหมด
 Future<void> cancelAllNotifications(FlutterLocalNotificationsPlugin plugin) async {
   await plugin.cancelAll();
