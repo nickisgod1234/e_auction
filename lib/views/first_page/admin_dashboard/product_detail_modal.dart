@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:e_auction/services/product_approval_service.dart';
+import 'package:e_auction/services/seller_phone_resolver.dart';
 
 class ProductDetailModal extends StatelessWidget {
   final ProductQuotation product;
 
-  const ProductDetailModal({super.key, required this.product});
+  /// เบอร์ที่หน้าอนุมัติเติมมาให้ ใช้เมื่อ ERP ไม่ส่ง phone มา
+  final String? resolvedPhone;
+
+  const ProductDetailModal({
+    super.key,
+    required this.product,
+    this.resolvedPhone,
+  });
+
+  String get _phone => SellerPhoneResolver.display(
+        product,
+        resolvedPhone == null ? {} : {product.quotationId: resolvedPhone!},
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +63,7 @@ class ProductDetailModal extends StatelessWidget {
                       _buildInfoRow('รายละเอียด', product.additionalNotes ?? '-'),
                       _buildInfoRow('หมายเหตุ', _getNotes()),
                       _buildInfoRow('ประเภท', product.typeDescription ?? 'ไม่ระบุ'),
-                      _buildInfoRow('เบอร์โทร', product.formattedPhone),
+                      _buildInfoRow('เบอร์โทร', _phone),
                       _buildInfoRow('สถานะ', product.statusText),
                     ],
                   ),
@@ -333,7 +346,7 @@ class ProductDetailModal extends StatelessWidget {
           children: [
             Text('ชื่อสินค้า: ${product.description ?? '-'}'),
             SizedBox(height: 8),
-            Text('เบอร์โทร: ${product.formattedPhone}'),
+            Text('เบอร์โทร: $_phone'),
             SizedBox(height: 8),
             Text('ราคาเริ่มต้น: ${product.formattedPrice}'),
           ],

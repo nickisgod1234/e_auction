@@ -104,7 +104,28 @@ class ProductApprovalService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return ProductApprovalResponse.fromJson(data);
+        final parsed = ProductApprovalResponse.fromJson(data);
+        if (parsed.status != 'success') return parsed;
+
+        // ถ้าเซิร์ฟเวอร์เพิกเฉย ?id= แล้วคืนรายการทั้งหมด ผู้เรียกที่หยิบ
+        // ตัวแรกจะได้ใบของคนอื่นไปใช้เงียบๆ จึงต้องยืนยันว่าได้ใบที่ขอจริง
+        final matched = parsed.data
+            .where((item) => item.quotationId == quotationId)
+            .toList();
+
+        if (matched.isEmpty) {
+          return ProductApprovalResponse(
+            status: 'error',
+            message: 'ไม่พบข้อมูลสินค้ารหัส $quotationId',
+            data: [],
+          );
+        }
+
+        return ProductApprovalResponse(
+          status: parsed.status,
+          message: parsed.message,
+          data: matched,
+        );
       } else {
         return ProductApprovalResponse(
           status: 'error',
@@ -327,6 +348,8 @@ class ProductApprovalResponse {
 
 class ProductQuotation {
   final int quotationId;
+  // มีเฉพาะตอนดึงรายละเอียด (?id=) รายการรวมยังไม่ส่ง customer_id มา
+  final int? customerId;
   final String? sequence;
   final String? description;
   final String? additionalNotes;
@@ -340,10 +363,13 @@ class ProductQuotation {
   final int? status;
   final String? createdAt;
   final String? quotationImage;
+  /// ความเห็นที่ admin กรอกตอนอนุมัติ/ปฏิเสธ เป็น null ถ้ายังไม่เคยพิจารณา
+  final String? approvalComment;
   final List<QuotationMessage>? messages;
 
   ProductQuotation({
     required this.quotationId,
+    this.customerId,
     this.sequence,
     this.description,
     this.additionalNotes,
@@ -357,6 +383,7 @@ class ProductQuotation {
     this.status,
     this.createdAt,
     this.quotationImage,
+    this.approvalComment,
     this.messages,
   });
 
@@ -410,8 +437,24 @@ class ProductQuotation {
       }
     }
 
+    // API รุ่นก่อนยังไม่ส่งฟิลด์นี้ และใบที่ยังไม่เคยพิจารณาจะเป็น null
+    // ตัดค่าว่างให้เป็น null ด้วย เพื่อให้ฝั่ง UI เช็คแค่ null อย่างเดียว
+    final rawComment = json['approval_comment']?.toString().trim();
+    final approvalComment =
+        (rawComment == null || rawComment.isEmpty) ? null : rawComment;
+
+    int? customerId;
+    if (json['customer_id'] != null) {
+      if (json['customer_id'] is int) {
+        customerId = json['customer_id'];
+      } else {
+        customerId = int.tryParse(json['customer_id'].toString());
+      }
+    }
+
     return ProductQuotation(
       quotationId: quotationId,
+      customerId: customerId,
       sequence: json['sequence']?.toString(),
       description: json['description']?.toString(),
       additionalNotes: json['additional_notes']?.toString(),
@@ -425,6 +468,7 @@ class ProductQuotation {
       status: status,
       createdAt: json['created_at']?.toString(),
       quotationImage: json['quotation_image']?.toString(),
+      approvalComment: approvalComment,
       messages: messages,
     );
   }
@@ -459,6 +503,22 @@ class ProductQuotation {
   }
 
   bool get canApprove => status == 0 || status == null;
+
+  /// ข้อความที่แอปส่งไปเองเมื่อ admin กดอนุมัติ/ปฏิเสธโดยไม่กรอกเหตุผล
+  ///
+  /// ในฐานข้อมูลจริงส่วนใหญ่เป็นแบบนี้ (อนุมัติ 136 จาก 137, ปฏิเสธ 6 จาก 9)
+  /// จึงต้องแยกออกจากเหตุผลจริง ไม่งั้นจะพาผู้ใช้ไปอ่านข้อความที่ไม่มีเนื้อหา
+  static const Set<String> _boilerplateComments = {
+    'อนุมัติโดย admin',
+    'ปฏิเสธโดย admin',
+  };
+
+  /// ความเห็นที่มีเนื้อหาจริง คืน null ถ้าเป็นข้อความสำเร็จรูป
+  String? get meaningfulApprovalComment {
+    final comment = approvalComment;
+    if (comment == null) return null;
+    return _boilerplateComments.contains(comment) ? null : comment;
+  }
 
   String get formattedPhone {
     if (phone == null || phone!.trim().isEmpty) return '-';

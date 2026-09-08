@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:e_auction/services/approval_chat_notifier.dart';
 import 'package:e_auction/services/product_approval_service.dart';
+import 'package:e_auction/services/seller_phone_resolver.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/product_detail_modal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -218,12 +220,22 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
   String? _selectedDate;
   // ignore: unused_field
   int _adminUserId = 1;
+  // เบอร์ที่เติมจากฐานข้อมูลแอป สำหรับรายการที่ ERP ไม่ส่งเบอร์มา
+  Map<int, String> _resolvedPhones = {};
   late ProductApprovalService _productApprovalService;
+  late ApprovalChatNotifier _approvalChatNotifier;
+  late SellerPhoneResolver _sellerPhoneResolver;
 
   @override
   void initState() {
     super.initState();
     _productApprovalService = ProductApprovalService.defaultInstance();
+    _approvalChatNotifier = ApprovalChatNotifier(
+      approvalService: _productApprovalService,
+    );
+    _sellerPhoneResolver = SellerPhoneResolver(
+      approvalService: _productApprovalService,
+    );
     _loadAdminUserId();
     _loadProducts();
   }
@@ -253,6 +265,7 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
         setState(() {
           _products = response.data;
         });
+        _fillMissingPhones(response.data);
       } else {
         _showErrorSnackBar(response.message);
       }
@@ -263,20 +276,45 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     }
   }
 
+  /// เติมเบอร์ทีหลังแบบไม่บล็อกการแสดงรายการ เพราะต้องยิงเพิ่มหลาย request
+  Future<void> _fillMissingPhones(List<ProductQuotation> products) async {
+    final resolved = await _sellerPhoneResolver.resolveMissing(products);
+    if (!mounted || resolved.isEmpty) return;
+
+    setState(() {
+      _resolvedPhones = {..._resolvedPhones, ...resolved};
+    });
+  }
+
   Future<void> _approveProduct(
     ProductQuotation product,
     String status, {
     bool sendToErp = false,
     Map<String, dynamic>? erpItemPayload,
+    String? comment,
   }) async {
     try {
+      final trimmedComment = comment?.trim() ?? '';
       final response = await _productApprovalService.approveProduct(
         quotationId: product.quotationId,
         status: status,
-        comment: status == 'approved' ? 'อนุมัติโดย admin' : 'ปฏิเสธโดย admin',
+        comment: trimmedComment.isNotEmpty
+            ? trimmedComment
+            : (status == 'approved' ? 'อนุมัติโดย admin' : 'ปฏิเสธโดย admin'),
       );
-      
+
       if (response.status == 'success') {
+        final baseMessage =
+            status == 'approved' ? 'อนุมัติสินค้าสำเร็จ' : 'ปฏิเสธสินค้าสำเร็จ';
+
+        // แจ้งผลเข้าแชทของผู้ลงสินค้า ถ้าล้มเหลวก็ไม่ย้อนผลการอนุมัติ
+        final chatResult = await _approvalChatNotifier.notifyOwner(
+          product: product,
+          status: status,
+          adminUserId: _adminUserId,
+          comment: trimmedComment.isEmpty ? null : trimmedComment,
+        );
+
         if (status == 'approved' && sendToErp && erpItemPayload != null) {
           final erpResult = await _productApprovalService.submitItemsToErp(
             items: [erpItemPayload],
@@ -284,7 +322,9 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
           if (erpResult.success) {
             _showErpResultDialog(
               erpItemPayload,
-              erpResult.message,
+              chatResult.success
+                  ? '${erpResult.message}\n\nแจ้งผู้ลงสินค้าทางแชทแล้ว'
+                  : '${erpResult.message}\n\nแจ้งทางแชทไม่สำเร็จ: ${chatResult.message}',
               title: 'อนุมัติสินค้าและส่งเข้า ERP สำเร็จ',
             );
           } else {
@@ -292,9 +332,11 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
               'อนุมัติสินค้าแล้ว แต่ส่งเข้า ERP ไม่สำเร็จ: ${erpResult.message}',
             );
           }
+        } else if (chatResult.success) {
+          _showSuccessSnackBar('$baseMessage และแจ้งผู้ลงสินค้าทางแชทแล้ว');
         } else {
-          _showSuccessSnackBar(
-            status == 'approved' ? 'อนุมัติสินค้าสำเร็จ' : 'ปฏิเสธสินค้าสำเร็จ',
+          _showErrorSnackBar(
+            '$baseMessage แต่แจ้งทางแชทไม่สำเร็จ: ${chatResult.message}',
           );
         }
         _loadProducts();
@@ -436,6 +478,7 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
     final vendorIdController = TextEditingController();
     final vendorSequenceController = TextEditingController();
     final vendorNameController = TextEditingController();
+    final commentController = TextEditingController();
     // final unitPriceController = TextEditingController(
     //   text: product.starPrice?.toString() ?? '',
     // );
@@ -511,10 +554,22 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                       children: [
                         Text('ชื่อสินค้า: ${product.description ?? '-'}'),
                         const SizedBox(height: 6),
-                        Text('เบอร์โทร: ${product.formattedPhone}'),
+                        Text(
+                            'เบอร์โทร: ${SellerPhoneResolver.display(product, _resolvedPhones)}'),
                         const SizedBox(height: 6),
                         Text('ราคาเริ่มต้น: ${product.formattedPrice}'),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: commentController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'ข้อความถึงผู้ลงสินค้า (ไม่บังคับ)',
+                      helperText: 'เว้นว่างไว้ระบบจะส่งข้อความแจ้งผลมาตรฐานให้',
+                      helperMaxLines: 2,
+                      border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -615,8 +670,13 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () {
+                            final comment = commentController.text;
                             Navigator.pop(context);
-                            _approveProduct(product, 'rejected');
+                            _approveProduct(
+                              product,
+                              'rejected',
+                              comment: comment,
+                            );
                           },
                           style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
                           child: const Text('ปฏิเสธ'),
@@ -664,12 +724,16 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                             return;
                           }
                         }
+                        final payload =
+                            sendToErp ? buildErpItemPayload() : null;
+                        final comment = commentController.text;
                         Navigator.pop(context);
                         _approveProduct(
                           product,
                           'approved',
                           sendToErp: sendToErp,
-                          erpItemPayload: sendToErp ? buildErpItemPayload() : null,
+                          erpItemPayload: payload,
+                          comment: comment,
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -695,7 +759,10 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          builder: (context) => ProductDetailModal(product: response.data.first),
+          builder: (context) => ProductDetailModal(
+            product: response.data.first,
+            resolvedPhone: _resolvedPhones[product.quotationId],
+          ),
         );
       } else {
         _showErrorSnackBar('ไม่สามารถโหลดรายละเอียดสินค้าได้');
@@ -1020,7 +1087,8 @@ class _ProductApprovalPageState extends State<ProductApprovalPage> {
                                                 SizedBox(width: 4),
                                                 Expanded(
                                                   child: Text(
-                                                    product.formattedPhone,
+                                                    SellerPhoneResolver.display(
+                                                        product, _resolvedPhones),
                                                     style: TextStyle(fontSize: 12),
                                                   ),
                                                 ),
