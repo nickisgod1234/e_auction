@@ -155,20 +155,9 @@ class UserBidHistoryService {
             }
           }
         }
-        
-        // ถ้าไม่มีรูปภาพจาก quotation_image ให้ลองใช้ quotation_id ไปดึงข้อมูลจาก API หลัก
-        if (imageUrl == 'assets/images/noimage.jpg' &&
-            bid['quotation_id'] != null) {
-          // ใช้ quotation_id ไปดึงข้อมูลจาก API หลัก (เหมือนที่หน้า home ใช้)
-          // แต่เนื่องจากเป็น static method จึงไม่สามารถใช้ async ได้
-          // ให้ใช้ quotation_id เป็น fallback
-          final fallbackImageUrl = 'https://cm-mecustomers.com/${Config.erpCloudmate}/modules/sales/uploads/quotation/img_6867a407860455.12296295.jpg';
-          if (Platform.isAndroid) {
-            imageUrl = fallbackImageUrl.replaceFirst('https://', 'http://');
-          } else {
-            imageUrl = fallbackImageUrl;
-          }
-        }
+        // ถ้า quotation_image ว่างหรือพาร์สไม่ผ่าน ปล่อยให้ imageUrl เป็น
+        // assets/images/noimage.jpg ตามค่าเริ่มต้น แล้วให้หน้าจอไปเรียก
+        // getAuctionImageWithFallback() ดึงรูปจริงจาก quotation_id เอง
       } catch (e) {
         images = [];
       }

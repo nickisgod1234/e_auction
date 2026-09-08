@@ -415,6 +415,13 @@ class _QuantityReductionAuctionsPageState extends State<QuantityReductionAuction
           ),
         );
     if (imagePath == null || imagePath.isEmpty) return placeholder();
+    if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+      return Image.asset(
+        imagePath,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => placeholder(),
+      );
+    }
     return CachedNetworkImage(
       imageUrl: imagePath,
       fit: BoxFit.cover,
