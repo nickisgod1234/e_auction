@@ -31,6 +31,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/utils/time_calculator.dart';
+import 'package:e_auction/widgets/app_version_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 // TODO: Import สำหรับระบบคูปอง - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้า
 // import 'package:e_auction/views/first_page/coupon_page/my_coupons_page.dart';
@@ -1314,6 +1315,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+
+              SizedBox(height: 16),
+              const Center(child: AppVersionText()),
 
               // Bottom spacing
               SizedBox(height: 20),
