@@ -1,2 +1,4 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+// Xcode 27 lipo fails `-verify_arch arm64 x86_64` (multiple archs), which breaks Flutter 3.27's debug_unpack_ios.
+EXCLUDED_ARCHS[sdk=iphonesimulator*]=i386 x86_64
