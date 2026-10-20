@@ -9,7 +9,8 @@ class Config {
   // สร้าง/อนุมัติสินค้า → cm-erp-prd (API dual-write ไป erp-cloudmate)
   static String get erpWriteBaseUrl => erpPrdBaseUrl;
 
-  /// ERP-Cloudmate บนเครื่องที่เปิด XAMPP อยู่ แอปเรียก API ช่างจากที่นี่
+  /// ช่วงที่ยังไม่ deploy แอป เรียก ERP-Cloudmate บนเครื่องนี้
+  /// ตอนขึ้นเซิร์ฟเวอร์ให้เปลี่ยนเป็น '$erpBaseUrl/modules/sales/controllers/flutter_technician_controller.php'
   static const String technicianErpHost = 'http://192.168.1.111/ERP-Cloudmate';
   static String get technicianApiUrl =>
       '$technicianErpHost/modules/sales/controllers/flutter_technician_controller.php';
