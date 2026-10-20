@@ -11,6 +11,7 @@ import 'package:e_auction/services/auth_service/auth_service.dart';
 import 'package:e_auction/views/first_page/home_screen.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
+import 'package:e_auction/widgets/app_version_text.dart';
 // TODO: Import สำหรับ email login - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้าหรือระบบคูปอง
 // import 'package:e_auction/views/first_page/request_otp_page/email_login.dart';
 
@@ -1109,6 +1110,8 @@ class _RequestOtpLoginPageState extends State<RequestOtpLoginPage> {
                                 fontSize: 12,
                               ),
                             ),
+                            const SizedBox(height: 8),
+                            const AppVersionText(includeBuild: false),
                             SizedBox(height: 40),
                           ],
                         ),

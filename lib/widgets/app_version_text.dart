@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class AppVersionText extends StatelessWidget {
-  const AppVersionText({Key? key}) : super(key: key);
+  const AppVersionText({Key? key, this.includeBuild = true}) : super(key: key);
+
+  final bool includeBuild;
 
   // Cached so rebuilds of the home screen don't re-query the platform.
   static final Future<PackageInfo> _info = PackageInfo.fromPlatform();
@@ -15,7 +17,9 @@ class AppVersionText extends StatelessWidget {
         final info = snapshot.data;
         if (info == null) return const SizedBox.shrink();
         return Text(
-          'เวอร์ชัน ${info.version} (${info.buildNumber})',
+          includeBuild
+              ? 'เวอร์ชัน ${info.version} (${info.buildNumber})'
+              : 'เวอร์ชัน ${info.version}',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12, color: Colors.grey[500]),
         );

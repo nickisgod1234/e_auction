@@ -4,6 +4,9 @@ import 'package:e_auction/views/first_page/request_otp_page/request_otp_login.da
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:e_auction/noti_ios/noti_ios.dart';
+import 'package:e_auction/services/push_notification_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'dart:async';
@@ -18,10 +21,23 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (error) {
+    debugPrint('Firebase init skipped: $error');
+  }
+
   // ตั้งค่าแจ้งเตือน
   await _setupNotifications();
 
   runApp(const MyApp());
+
+  try {
+    await PushNotificationService.instance.start();
+  } catch (error) {
+    debugPrint('Push setup skipped: $error');
+  }
 }
 
 Future<void> _setupNotifications() async {
@@ -47,6 +63,8 @@ Future<void> _setupNotifications() async {
     android: initializationSettingsAndroid,
     iOS: initializationSettingsIOS,
   );
+
+  PushNotificationService.instance.bind(flutterLocalNotificationsPlugin);
 
   await flutterLocalNotificationsPlugin.initialize(
     initializationSettings,

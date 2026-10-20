@@ -181,8 +181,6 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
         }
       },
       child: Container(
-        width: 300,
-        margin: EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -195,19 +193,16 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
             ),
           ],
         ),
-        child: Stack(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+          fit: StackFit.expand,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 300,
-                height: 200,
-                child: _buildAuctionImage(widget.auctionData['image']),
-              ),
-            ),
+            _buildAuctionImage(widget.auctionData['image']),
             Positioned(
               top: 8,
               left: 8,
+              right: 96,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -259,12 +254,16 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
                             size: 14,
                           ),
                           SizedBox(width: 4),
-                          Text(
-                            widget.auctionData['quotation_type_description'].toString(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
+                          Flexible(
+                            child: Text(
+                              widget.auctionData['quotation_type_description'].toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -356,7 +355,7 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
                     Text(
                       widget.auctionData['title'] ?? 'Rolex Submariner',
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -364,39 +363,33 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _isAS03Type() ? 'ราคาต่อชิ้น: ${Format.formatCurrency(_getCurrentPriceAsInt())}' : 'ราคา: ${Format.formatCurrency(_getCurrentPriceAsInt())}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${widget.auctionData['bidCount'] ?? 12} รายการ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      _isAS03Type()
+                          ? 'ราคาต่อชิ้น: ${Format.formatCurrency(_getCurrentPriceAsInt())}'
+                          : 'ราคา: ${Format.formatCurrency(_getCurrentPriceAsInt())}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      '${widget.auctionData['bidCount'] ?? 12} รายการ',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           ],
+        ),
         ),
       ),
     );

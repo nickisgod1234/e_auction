@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/views/first_page/add_auction_page/add_auction_page.dart';
+import 'package:e_auction/views/first_page/my_products_page/my_products_page.dart';
 import 'package:e_auction/views/first_page/chat_page/chat_page.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/admin_dashboard.dart';
 import 'package:e_auction/services/chat_unread_service.dart';
@@ -148,13 +149,15 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
       currentIndex: widget.currentIndex,
       onTap: (index) {
         if (index == 1) {
-          // Navigate to add auction page
-          _navigateToAddAuction(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyProductsPage()),
+          );
         } else if (index == 2) {
-          // Navigate to chat page (role-based)
+          _navigateToAddAuction(context);
+        } else if (index == 3) {
           _navigateToChat(context);
         } else {
-          // Handle other tabs (index 0: home, index 3: settings)
           widget.onItemTapped(index);
         }
       },
@@ -162,10 +165,16 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
       backgroundColor: Colors.white,
       selectedItemColor: context.customTheme.primaryColor,
       unselectedItemColor: Colors.grey,
+      selectedFontSize: 11,
+      unselectedFontSize: 10,
       items: [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'หน้าแรก',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.inventory_2),
+          label: 'สินค้าของฉัน',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.add_business),

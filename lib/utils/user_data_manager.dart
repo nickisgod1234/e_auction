@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:e_auction/services/push_notification_service.dart';
 
 class UserDataManager {
   static const String _phoneNumberKey = 'phone_number';
@@ -117,6 +119,15 @@ class UserDataManager {
     print('=== UserDataManager Verification ===');
     print('Saved Role: $savedRole');
     print('Saved Is Admin: $savedIsAdmin');
+
+    final savedId = prefs.getString(_idKey) ?? '';
+    if (savedId.isNotEmpty) {
+      try {
+        await PushNotificationService.instance.subscribeToUser(savedId);
+      } catch (error) {
+        debugPrint('user topic skipped: $error');
+      }
+    }
   }
 
   // ดึงข้อมูลผู้ใช้ทั้งหมด
@@ -194,7 +205,15 @@ class UserDataManager {
   // ลบข้อมูลผู้ใช้ทั้งหมด (สำหรับ logout)
   static Future<void> clearUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+    final previousId = prefs.getString(_idKey) ?? '';
+    if (previousId.isNotEmpty) {
+      try {
+        await PushNotificationService.instance.unsubscribeFromUser(previousId);
+      } catch (error) {
+        debugPrint('user topic unsubscribe skipped: $error');
+      }
+    }
+
     await prefs.remove(_phoneNumberKey);
     await prefs.remove(_tokenKey);
     await prefs.remove(_idKey);

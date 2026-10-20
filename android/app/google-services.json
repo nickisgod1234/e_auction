@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "924078239684",
+    "project_id": "hrcloudmate",
+    "storage_bucket": "hrcloudmate.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:924078239684:android:47d31080a9b7cef0137e91",
+        "android_client_info": {
+          "package_name": "com.cloudmate.th.e_auction"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMs2leUyLkpRAz2Z_6NJzspwNyjj6718I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:924078239684:android:b74b0886e577c01a137e91",
+        "android_client_info": {
+          "package_name": "com.cloudmate.th.morket"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMs2leUyLkpRAz2Z_6NJzspwNyjj6718I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
