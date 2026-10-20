@@ -1,6 +1,7 @@
 import 'package:e_auction/services/my_products_service.dart';
 import 'package:e_auction/services/product_approval_service.dart';
 import 'package:e_auction/services/product_status_notifier.dart';
+import 'package:e_auction/views/first_page/auction_page/my_auctions_page.dart';
 import 'package:e_auction/views/first_page/chat_page/chat_page.dart';
 import 'package:flutter/material.dart';
 
@@ -153,6 +154,18 @@ class _MyProductsPageState extends State<MyProductsPage>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            tooltip: 'ประวัติการประมูล',
+            icon: const Icon(Icons.history, color: Colors.black, size: 22),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MyAuctionsPage(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.black, size: 20),
             onPressed: _loadProducts,

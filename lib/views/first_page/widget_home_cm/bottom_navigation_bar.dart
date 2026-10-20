@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/views/first_page/add_auction_page/add_auction_page.dart';
 import 'package:e_auction/views/first_page/my_products_page/my_products_page.dart';
+import 'package:e_auction/views/first_page/service_page/service_products_page.dart';
 import 'package:e_auction/views/first_page/chat_page/chat_page.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/admin_dashboard.dart';
 import 'package:e_auction/services/chat_unread_service.dart';
@@ -82,18 +83,18 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
     });
   }
 
-  void _navigateToAddAuction(BuildContext context) {
-    Navigator.push(
+  Future<void> _navigateToAddAuction(BuildContext context) {
+    return Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => AddAuctionPage()),
     );
   }
 
   // นำทางไปหน้าแชท (ตรวจสอบ role)
-  void _navigateToChat(BuildContext context) async {
+  Future<void> _navigateToChat(BuildContext context) async {
     if (_isAdmin) {
       // Admin ไปหน้า Dashboard
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => AdminDashboard()),
       );
@@ -108,21 +109,41 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
     await _refreshUnreadCount();
   }
 
+  Future<void> _onBarTap(int index) async {
+    if (index == 1) {
+      await _navigateToAddAuction(context);
+    } else if (index == 2) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ServiceProductsPage()),
+      );
+    } else if (index == 3) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyProductsPage()),
+      );
+    } else if (index == 4) {
+      await _navigateToChat(context);
+    } else {
+      widget.onItemTapped(index);
+    }
+  }
+
   Widget _buildChatIcon() {
     if (_unreadCount <= 0) {
-      return Icon(Icons.chat);
+      return const Icon(Icons.chat);
     }
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Icon(Icons.chat),
+        const Icon(Icons.chat),
         Positioned(
           right: -6,
           top: -4,
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            constraints: BoxConstraints(minWidth: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            constraints: const BoxConstraints(minWidth: 18),
             decoration: BoxDecoration(
               color: Colors.red,
               borderRadius: BorderRadius.circular(9),
@@ -131,7 +152,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
             child: Text(
               _unreadCount > 99 ? '99+' : '$_unreadCount',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
@@ -145,50 +166,56 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: widget.currentIndex,
-      onTap: (index) {
-        if (index == 1) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const MyProductsPage()),
-          );
-        } else if (index == 2) {
-          _navigateToAddAuction(context);
-        } else if (index == 3) {
-          _navigateToChat(context);
-        } else {
-          widget.onItemTapped(index);
-        }
-      },
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: context.customTheme.primaryColor,
-      unselectedItemColor: Colors.grey,
-      selectedFontSize: 11,
-      unselectedFontSize: 10,
-      items: [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'หน้าแรก',
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 0, 12, bottomInset > 0 ? 8 : 12),
+      child: Material(
+        color: Colors.white,
+        elevation: 8,
+        shadowColor: Colors.black26,
+        borderRadius: BorderRadius.circular(16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BottomNavigationBar(
+            currentIndex: widget.currentIndex,
+            onTap: _onBarTap,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            selectedItemColor: context.customTheme.primaryColor,
+            unselectedItemColor: Colors.grey,
+            selectedFontSize: 10,
+            unselectedFontSize: 9,
+            iconSize: 22,
+            elevation: 0,
+            items: [
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'หน้าแรก',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.add_business),
+                label: 'เพิ่มสินค้าประมูล',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.handyman_outlined),
+                label: 'สินค้าบริการ',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.inventory_2),
+                label: 'สินค้าของฉัน',
+              ),
+              BottomNavigationBarItem(
+                icon: _buildChatIcon(),
+                label: _isAdmin ? 'Admin' : 'แชทกับเจ้าหน้าที่',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.settings),
+                label: 'ตั้งค่า',
+              ),
+            ],
+          ),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.inventory_2),
-          label: 'สินค้าของฉัน',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.add_business),
-          label: 'เพิ่มสินค้าประมูล',
-        ),
-        BottomNavigationBarItem(
-          icon: _buildChatIcon(),
-          label: _isAdmin ? 'Admin' : 'แชทกับเจ้าหน้าที่',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'ตั้งค่า',
-        ),
-      ],
+      ),
     );
   }
 }

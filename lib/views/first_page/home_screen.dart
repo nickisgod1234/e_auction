@@ -11,8 +11,6 @@ import 'package:e_auction/views/first_page/setting_page/setting_page.dart';
 import 'package:e_auction/views/first_page/auction_page/current_auction_page.dart';
 import 'package:e_auction/views/first_page/detail_page/detail_page.dart';
 import 'package:e_auction/theme/app_theme.dart';
-import 'package:e_auction/views/first_page/auction_page/all_auctions_page.dart';
-import 'package:e_auction/views/first_page/auction_page/my_auctions_page.dart';
 import 'package:e_auction/views/first_page/auction_page/all_winner_announcements_page.dart';
 import 'package:e_auction/views/first_page/widget_home_cm/winner_announcement_card.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_result_page.dart';
@@ -28,7 +26,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:e_auction/services/product_service.dart';
 import 'package:e_auction/views/config/config_prod.dart';
 import 'package:e_auction/utils/time_calculator.dart';
-import 'package:e_auction/widgets/app_version_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 // TODO: Import สำหรับระบบคูปอง - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้า
 // import 'package:e_auction/views/first_page/coupon_page/my_coupons_page.dart';
@@ -55,6 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _currentAuctions = [];
   List<Map<String, dynamic>> _upcomingAuctions = [];
   bool _isLoadingCurrent = true;
+  bool _isLoadingUpcoming = true;
+  int _feedIndex = 0;
   String? _errorMessage;
   
   // TODO: Coupon data - ซ่อนไว้สำหรับใช้ในเวอร์ชันหน้า
@@ -135,6 +134,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadUpcomingAuctions() async {
     try {
+      if (mounted) {
+        setState(() {
+          _isLoadingUpcoming = true;
+        });
+      }
       final upcomingAuctions = await _productService.getUpcomingAuctions();
       if (!mounted) return;
 
@@ -145,16 +149,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
         setState(() {
           _upcomingAuctions = formattedAuctions;
+          _isLoadingUpcoming = false;
         });
       } else {
         setState(() {
           _upcomingAuctions = [];
+          _isLoadingUpcoming = false;
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _upcomingAuctions = [];
+        _isLoadingUpcoming = false;
       });
     }
   }
@@ -342,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _searchController.clear();
         _isSearching = false;
       });
-    } else if (index == 4) {
+    } else if (index == 5) {
       // Settings tab
       await _navigateToPage(context, SettingPage());
       setState(() => _selectedIndex = 0); // Reset index after returning
@@ -798,6 +805,47 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildFeedTab(int index, String label) {
+    final selected = _feedIndex == index;
+    final color = context.customTheme.primaryColor;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _feedIndex = index),
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? color : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              color: selected ? color : Colors.grey[600],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _feedLoading() {
+    return _feedIndex == 0 ? _isLoadingCurrent : _isLoadingUpcoming;
+  }
+
+  List<Map<String, dynamic>> _feedItems(
+    List<Map<String, dynamic>> current,
+    List<Map<String, dynamic>> upcoming,
+  ) {
+    return _feedIndex == 0 ? current : upcoming;
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredCurrentAuctions = _getFilteredAuctions(_currentAuctions);
@@ -933,6 +981,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      extendBody: true,
       body: RefreshIndicator(
         onRefresh: _refreshData,
         child: SingleChildScrollView(
@@ -984,155 +1033,55 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-              // Current Auctions Section
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'กำลังประมูล',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        _navigateToPage(
-                          context,
-                          AllAuctionsPage(
-                            currentAuctions: filteredCurrentAuctions,
-                            upcomingAuctions: filteredUpcomingAuctions,
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'ดูทั้งหมด',
-                        style: TextStyle(
-                          color: context.customTheme.primaryColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
+                    _buildFeedTab(0, 'กำลังประมูล'),
+                    _buildFeedTab(1, 'กำลังจะมาถึง'),
                   ],
                 ),
               ),
-              _isLoadingCurrent
+              _feedLoading()
                   ? const Padding(
                       padding: EdgeInsets.symmetric(vertical: 48),
                       child: Center(child: CircularProgressIndicator()),
                     )
-                  : _errorMessage != null
+                  : _feedIndex == 0 && _errorMessage != null
                       ? _buildErrorCard(_errorMessage!)
-                      : filteredCurrentAuctions.isEmpty
-                          ? _buildEmptyCard('ไม่มีรายการประมูลปัจจุบัน')
+                      : _feedItems(filteredCurrentAuctions, filteredUpcomingAuctions)
+                              .isEmpty
+                          ? _buildEmptyCard(
+                              _feedIndex == 0
+                                  ? 'ไม่มีรายการประมูลปัจจุบัน'
+                                  : 'ไม่มีรายการประมูลที่กำลังจะมาถึง',
+                            )
                           : GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 0.72,
+                                mainAxisSpacing: 8,
+                                crossAxisSpacing: 8,
+                                childAspectRatio: 0.62,
                               ),
-                              itemCount: filteredCurrentAuctions.length,
+                              itemCount: _feedItems(
+                                filteredCurrentAuctions,
+                                filteredUpcomingAuctions,
+                              ).length,
                               itemBuilder: (context, index) {
+                                final items = _feedItems(
+                                  filteredCurrentAuctions,
+                                  filteredUpcomingAuctions,
+                                );
                                 return CurrentAuctionCard(
-                                  auctionData: filteredCurrentAuctions[index],
+                                  auctionData: items[index],
                                 );
                               },
                             ),
-              const SizedBox(height: 15),
-
-              // My Auctions Section
-              Padding(
-                padding: const EdgeInsets.all(5),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'ประวัติการประมูลของฉัน',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // My Auctions Preview Card
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                child: Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      _navigateToPage(context, MyAuctionsPage());
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.history,
-                              color: Colors.blue,
-                              size: 32,
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'ดูประวัติการประมูลทั้งหมด',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'กำลังประมูล • ชนะ',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.grey[400],
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 16),
-              const Center(child: AppVersionText()),
-
-              // Bottom spacing
-              SizedBox(height: 20),
+              const SizedBox(height: 96),
             ],
           ),
         ),

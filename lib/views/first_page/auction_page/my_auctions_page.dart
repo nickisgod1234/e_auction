@@ -19,7 +19,10 @@ import 'package:e_auction/views/first_page/auction_page/quantity_reduction_aucti
 import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auctions_page.dart';
 
 class MyAuctionsPage extends StatefulWidget {
-  const MyAuctionsPage({super.key});
+  /// ฝังในแท็บสินค้าของฉัน จึงไม่ต้องมีแถบด้านบนและปุ่มย้อนกลับซ้ำ
+  final bool embedded;
+
+  const MyAuctionsPage({super.key, this.embedded = false});
 
   @override
   State<MyAuctionsPage> createState() => _MyAuctionsPageState();
@@ -769,36 +772,7 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
       return isAuctionEnded(endDate, endTime);
     }).toList();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text(
-          'รายการประมูลของฉัน',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          // ปุ่มรีเฟรช
-          IconButton(
-            icon: Icon(Icons.refresh, color: Colors.black, size: 20),
-            onPressed: () {
-              _loadUserBidHistory();
-              _loadUserWonAuctions();
-            },
-          ),
-        ],
-      ),
-      body: Column(
+    final body = Column(
         children: [
           // Modern Tab Bar
           Container(
@@ -814,7 +788,10 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                 ),
               ],
             ),
-            child: TabBar(
+            child: Row(
+              children: [
+                Expanded(
+                  child: TabBar(
               controller: _tabController,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.grey[600],
@@ -847,6 +824,17 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
                     ),
                   ),
                 ),
+              ],
+                  ),
+                ),
+                if (widget.embedded)
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 20),
+                    onPressed: () {
+                      _loadUserBidHistory();
+                      _loadUserWonAuctions();
+                    },
+                  ),
               ],
             ),
           ),
@@ -1203,7 +1191,41 @@ class _MyAuctionsPageState extends State<MyAuctionsPage>
             ),
           ),
         ],
+      );
+
+    if (widget.embedded) {
+      return body;
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text(
+          'รายการประมูลของฉัน',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.black, size: 20),
+            onPressed: () {
+              _loadUserBidHistory();
+              _loadUserWonAuctions();
+            },
+          ),
+        ],
       ),
+      body: body,
     );
   }
 

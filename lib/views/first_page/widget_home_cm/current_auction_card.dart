@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/views/first_page/auction_page/auction_detail_view_page.dart';
 import 'package:e_auction/views/first_page/auction_page/quantity_reduction_auction_detail_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:intl/intl.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/time_calculator.dart';
 import 'dart:async';
@@ -91,15 +90,21 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
     }
   }
 
-  // Helper method to get current price as int
-  int _getCurrentPriceAsInt() {
-    final currentPriceRaw = widget.auctionData['currentPrice'];
-    if (currentPriceRaw is double) {
-      return currentPriceRaw.round();
-    } else if (currentPriceRaw is int) {
-      return currentPriceRaw;
+  int _readPrice(dynamic raw) {
+    if (raw is double) return raw.round();
+    if (raw is int) return raw;
+    if (raw is String) return int.tryParse(raw) ?? 0;
+    return 0;
+  }
+
+  int _displayPrice() {
+    final status = widget.auctionData['status'] ?? '';
+    if (status == 'upcoming') {
+      return _readPrice(widget.auctionData['startingPrice']);
     }
-    return 850000; // default value
+    final current = _readPrice(widget.auctionData['currentPrice']);
+    if (current > 0) return current;
+    return _readPrice(widget.auctionData['startingPrice']);
   }
 
   // Helper method to check if this is AS03 type
@@ -139,11 +144,8 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
   @override
   Widget build(BuildContext context) {
     final status = widget.auctionData['status'] ?? 'unknown';
-    
-
-    
-    // ใช้ _timeRemaining ที่อัปเดตจาก Timer
     final timeRemaining = _timeRemaining.isNotEmpty ? _timeRemaining : 'กำลังโหลด...';
+    final priceLabel = status == 'upcoming' ? 'ราคาเริ่มต้น' : 'ราคาปัจจุบัน';
     
 
     
@@ -183,218 +185,99 @@ class _CurrentAuctionCardState extends State<CurrentAuctionCard> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE8E8E8)),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-          fit: StackFit.expand,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildAuctionImage(widget.auctionData['image']),
-            Positioned(
-              top: 8,
-              left: 8,
-              right: 96,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  // ป้ายสถานะ
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(status),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.timer_outlined,
+                  _buildAuctionImage(widget.auctionData['image']),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(status),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _getStatusText(status),
+                        style: const TextStyle(
                           color: Colors.white,
-                          size: 16,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
                         ),
-                        SizedBox(width: 4),
-                        Text(
-                          _getStatusText(status),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  SizedBox(height: 4),
-                  // ป้ายประเภทสินค้า
-                  if (widget.auctionData['quotation_type_description'] != null &&
-                      widget.auctionData['quotation_type_description'].toString().isNotEmpty)
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _isAS03Type() 
-                            ? Colors.purple.withOpacity(0.8) 
-                            : Colors.blue.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.category,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                          SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              widget.auctionData['quotation_type_description'].toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 11,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                  Positioned(
+                    left: 8,
+                    right: 8,
+                    bottom: 8,
+                    child: Text(
+                      timeRemaining,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
                       ),
                     ),
-                  // ป้ายเพิ่มเติมสำหรับ AS03 (ประมูลแบบลดตามจำนวน)
-                  // if (widget.auctionData['quotation_type_code'] == 'AS03')
-                  //   Container(
-                  //     margin: EdgeInsets.only(top: 4),
-                  //     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  //     decoration: BoxDecoration(
-                  //       color: Colors.orange.withOpacity(0.8),
-                  //       borderRadius: BorderRadius.circular(12),
-                  //     ),
-                  //     child: Row(
-                  //       mainAxisSize: MainAxisSize.min,
-                  //       children: [
-                  //         Icon(
-                  //           Icons.trending_down,
-                  //           color: Colors.white,
-                  //           size: 14,
-                  //         ),
-                  //         SizedBox(width: 4),
-                  //         Text(
-                  //           'ลดตามจำนวน: ${widget.auctionData['quantity'] ?? 0} ชิ้น',
-                  //           style: TextStyle(
-                  //             color: Colors.white,
-                  //             fontWeight: FontWeight.w600,
-                  //             fontSize: 11,
-                  //           ),
-                  //         ),
-                  //       ],
-                  //     ),
-                  //   ),
+                  ),
                 ],
               ),
             ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      color: Colors.white,
-                      size: 14,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.auctionData['title']?.toString() ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.25,
+                      color: Color(0xFF222222),
                     ),
-                    SizedBox(width: 4),
-                    Text(
-                      timeRemaining,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.8),
-                      Colors.transparent,
-                    ],
                   ),
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(12),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$priceLabel ${Format.formatCurrency(_displayPrice())}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFEE4D2D),
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.auctionData['title'] ?? 'Rolex Submariner',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      _isAS03Type()
-                          ? 'ราคาต่อชิ้น: ${Format.formatCurrency(_getCurrentPriceAsInt())}'
-                          : 'ราคา: ${Format.formatCurrency(_getCurrentPriceAsInt())}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      '${widget.auctionData['bidCount'] ?? 12} รายการ',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${widget.auctionData['bidCount'] ?? 0} รายการเสนอราคา',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
         ),
       ),
     );
   }
 }
+
 
 // เพิ่มฟังก์ชัน helper สำหรับแสดงรูป (ใช้ cache เพื่อโหลดเร็ว)
 Widget _buildAuctionImage(String? imagePath) {
