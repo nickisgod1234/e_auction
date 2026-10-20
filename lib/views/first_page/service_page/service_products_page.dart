@@ -7,6 +7,7 @@ import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
+import 'package:e_auction/views/first_page/service_page/service_jobs_tab.dart';
 import 'package:e_auction/views/first_page/service_page/technician_detail_page.dart';
 import 'package:e_auction/views/first_page/service_page/technician_register_page.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,7 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
   Map<String, List<TechnicianReview>> _reviews = {};
   TechnicianProfile? _mine;
   String? _skill;
+  int _section = 0;
   bool _isLoading = true;
 
   @override
@@ -127,33 +129,46 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  height: 52,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: const Text('ทั้งหมด'),
-                          selected: _skill == null,
-                          onSelected: (_) => setState(() => _skill = null),
-                        ),
-                      ),
-                      for (final skill in TechnicianProfile.skillOptions)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(skill),
-                            selected: _skill == skill,
-                            onSelected: (_) => setState(() => _skill = skill),
-                          ),
-                        ),
+                      _sectionChip('หาช่าง', 0),
+                      const SizedBox(width: 8),
+                      _sectionChip('ประกาศจ้าง', 1),
                     ],
                   ),
                 ),
-                Expanded(child: _buildList()),
+                if (_section == 0) ...[
+                  SizedBox(
+                    height: 52,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: const Text('ทั้งหมด'),
+                            selected: _skill == null,
+                            onSelected: (_) => setState(() => _skill = null),
+                          ),
+                        ),
+                        for (final skill in TechnicianProfile.skillOptions)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(skill),
+                              selected: _skill == skill,
+                              onSelected: (_) => setState(() => _skill = skill),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Expanded(child: _buildList()),
+                ] else
+                  Expanded(child: ServiceJobsTab(mine: _mine)),
               ],
             ),
       bottomNavigationBar: SafeArea(
@@ -178,6 +193,15 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
                 ),
         ),
       ),
+    );
+  }
+
+  Widget _sectionChip(String label, int section) {
+    final selected = _section == section;
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => setState(() => _section = section),
     );
   }
 
