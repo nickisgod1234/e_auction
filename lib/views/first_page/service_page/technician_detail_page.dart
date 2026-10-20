@@ -1,9 +1,13 @@
 import 'dart:io';
 
+import 'package:e_auction/models/technician_contact.dart';
 import 'package:e_auction/models/technician_profile.dart';
+import 'package:e_auction/services/technician_contact_store.dart';
 import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/format.dart';
+import 'package:e_auction/utils/user_data_manager.dart';
+import 'package:e_auction/views/first_page/service_page/technician_chat_page.dart';
 import 'package:e_auction/views/first_page/service_page/technician_register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -25,11 +29,32 @@ class TechnicianDetailPage extends StatefulWidget {
 
 class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
   late TechnicianProfile _profile;
+  String? _viewerId;
+  String _viewerName = '';
+  List<TechnicianReview> _reviews = [];
+  List<TechnicianThread> _threads = [];
 
   @override
   void initState() {
     super.initState();
     _profile = widget.profile;
+    _loadContact();
+  }
+
+  Future<void> _loadContact() async {
+    final viewerId = await UserDataManager.getID();
+    final viewerName = await UserDataManager.getName();
+    final reviews = await TechnicianContactStore.reviewsFor(_profile.ownerId);
+    final threads = widget.forOwner
+        ? await TechnicianContactStore.threadsForTechnician(_profile.ownerId)
+        : <TechnicianThread>[];
+    if (!mounted) return;
+    setState(() {
+      _viewerId = viewerId;
+      _viewerName = viewerName?.trim() ?? '';
+      _reviews = reviews;
+      _threads = threads;
+    });
   }
 
   Future<void> _edit() async {
@@ -43,6 +68,50 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
     final latest = await TechnicianProfileStore.loadByOwner(_profile.ownerId);
     if (!mounted || latest == null) return;
     setState(() => _profile = latest);
+  }
+
+  Future<void> _openChat() async {
+    final viewerId = _viewerId;
+    if (viewerId == null || viewerId.isEmpty) {
+      _showMessage('เข้าสู่ระบบก่อนแชทกับช่าง');
+      return;
+    }
+    if (viewerId == _profile.ownerId) {
+      _showMessage('นี่คือโปรไฟล์ของคุณ');
+      return;
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TechnicianChatPage(
+          customerId: viewerId,
+          customerName: _viewerName.isEmpty ? 'ผู้ใช้' : _viewerName,
+          technicianOwnerId: _profile.ownerId,
+          technicianName: _profile.displayName,
+        ),
+      ),
+    );
+    _loadContact();
+  }
+
+  Future<void> _openThread(TechnicianThread thread) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TechnicianChatPage(
+          customerId: thread.customerId,
+          customerName: thread.customerName,
+          technicianOwnerId: thread.technicianOwnerId,
+          technicianName: _profile.displayName,
+          asTechnician: true,
+        ),
+      ),
+    );
+    _loadContact();
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _call() async {
@@ -90,6 +159,10 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (_reviews.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(_ratingLabel(_reviews)),
+          ],
           if (widget.forOwner && comment != null && comment.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text('ความเห็นเจ้าหน้าที่: $comment'),
@@ -124,27 +197,83 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
                 ),
               ),
             ),
+          if (_reviews.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text('รีวิว', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            for (final review in _reviews)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  child: ListTile(
+                    title: Text('${review.customerName} · ${review.stars} ดาว'),
+                    subtitle: review.comment.isEmpty ? null : Text(review.comment),
+                  ),
+                ),
+              ),
+          ],
+          if (widget.forOwner && _threads.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text('ข้อความจากผู้ใช้', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            for (final thread in _threads)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  child: ListTile(
+                    title: Text(
+                      thread.customerName.isEmpty ? 'ผู้ใช้' : thread.customerName,
+                    ),
+                    subtitle: Text(thread.lastMessage?.text ?? ''),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _openThread(thread),
+                  ),
+                ),
+              ),
+          ],
           const SizedBox(height: 8),
           if (widget.forOwner)
             OutlinedButton(
               onPressed: _edit,
               child: const Text('แก้ไขประวัติ'),
             )
-          else if (_profile.ownerPhone.isNotEmpty)
+          else ...[
             FilledButton.icon(
-              onPressed: _call,
+              onPressed: _openChat,
               style: FilledButton.styleFrom(
                 backgroundColor: context.customTheme.primaryColor,
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(48),
               ),
-              icon: const Icon(Icons.phone_outlined),
-              label: Text('โทร ${_profile.ownerPhone}'),
+              icon: const Icon(Icons.chat_outlined),
+              label: const Text('แชทกับช่าง'),
             ),
+            if (_profile.ownerPhone.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _call,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                icon: const Icon(Icons.phone_outlined),
+                label: Text('โทร ${_profile.ownerPhone}'),
+              ),
+            ],
+          ],
         ],
       ),
     );
   }
+}
+
+String _ratingLabel(List<TechnicianReview> reviews) {
+  final total = reviews.fold<int>(0, (sum, review) => sum + review.stars);
+  final average = total / reviews.length;
+  return '${average.toStringAsFixed(1)} ดาว · ${reviews.length} รีวิว';
 }
 
 class _OwnerStatus extends StatelessWidget {

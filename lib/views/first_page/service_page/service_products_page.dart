@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:e_auction/models/technician_contact.dart';
 import 'package:e_auction/models/technician_profile.dart';
+import 'package:e_auction/services/technician_contact_store.dart';
 import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/format.dart';
@@ -20,6 +22,7 @@ class ServiceProductsPage extends StatefulWidget {
 
 class _ServiceProductsPageState extends State<ServiceProductsPage> {
   List<TechnicianProfile> _approved = [];
+  Map<String, List<TechnicianReview>> _reviews = {};
   TechnicianProfile? _mine;
   String? _skill;
   bool _isLoading = true;
@@ -34,9 +37,15 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
     setState(() => _isLoading = true);
     final ownerId = await UserDataManager.getID();
     final profiles = await TechnicianProfileStore.loadAll();
+    final reviews = await TechnicianContactStore.loadReviews();
     if (!mounted) return;
+    final grouped = <String, List<TechnicianReview>>{};
+    for (final review in reviews) {
+      grouped.putIfAbsent(review.technicianOwnerId, () => []).add(review);
+    }
     setState(() {
       _approved = profiles.where((profile) => profile.status == 1).toList();
+      _reviews = grouped;
       _mine = ownerId == null || ownerId.isEmpty
           ? null
           : profiles.cast<TechnicianProfile?>().firstWhere(
@@ -45,6 +54,14 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
               );
       _isLoading = false;
     });
+  }
+
+  String _ratingSuffix(String ownerId) {
+    final reviews = _reviews[ownerId];
+    if (reviews == null || reviews.isEmpty) return '';
+    final total = reviews.fold<int>(0, (sum, review) => sum + review.stars);
+    final average = total / reviews.length;
+    return ' · ${average.toStringAsFixed(1)} ดาว';
   }
 
   List<TechnicianProfile> get _visible {
@@ -222,7 +239,8 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
             ),
             title: Text(profile.displayName),
             subtitle: Text(
-              '${profile.skills.join(' · ')}\n${profile.serviceArea} · เริ่ม ${Format.formatCurrency(profile.startingPrice)}',
+              '${profile.skills.join(' · ')}\n${profile.serviceArea} · เริ่ม ${Format.formatCurrency(profile.startingPrice)}'
+              '${_ratingSuffix(profile.ownerId)}',
             ),
             isThreeLine: true,
             onTap: () {
