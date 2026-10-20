@@ -43,9 +43,18 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
     final viewerId = await UserDataManager.getID();
     final viewerName = await UserDataManager.getName();
     final reviews = await TechnicianContactStore.reviewsFor(_profile.ownerId);
-    final threads = widget.forOwner
-        ? await TechnicianContactStore.threadsForTechnician(_profile.ownerId)
-        : <TechnicianThread>[];
+    var threads = <TechnicianThread>[];
+    if (widget.forOwner) {
+      try {
+        threads = await TechnicianContactStore.threadsForTechnician(_profile.ownerId);
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+          );
+        }
+      }
+    }
     if (!mounted) return;
     setState(() {
       _viewerId = viewerId;

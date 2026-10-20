@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:e_auction/models/technician_contact.dart';
 import 'package:e_auction/services/technician_contact_store.dart';
 import 'package:e_auction/theme/app_theme.dart';
@@ -31,6 +33,7 @@ class _TechnicianChatPageState extends State<TechnicianChatPage> {
   TechnicianThread? _thread;
   bool _isLoading = true;
   bool _isSending = false;
+  Timer? _poll;
 
   String get _senderId => widget.asTechnician
       ? widget.technicianOwnerId
@@ -40,26 +43,38 @@ class _TechnicianChatPageState extends State<TechnicianChatPage> {
   void initState() {
     super.initState();
     _load();
+    _poll = Timer.periodic(const Duration(seconds: 4), (_) => _load(silent: true));
   }
 
   @override
   void dispose() {
+    _poll?.cancel();
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    final thread = await TechnicianContactStore.threadFor(
-      customerId: widget.customerId,
-      technicianOwnerId: widget.technicianOwnerId,
-    );
-    if (!mounted) return;
-    setState(() {
-      _thread = thread;
-      _isLoading = false;
-    });
-    _scrollToEnd();
+  Future<void> _load({bool silent = false}) async {
+    if (silent && _isSending) return;
+    try {
+      final thread = await TechnicianContactStore.threadFor(
+        customerId: widget.customerId,
+        technicianOwnerId: widget.technicianOwnerId,
+      );
+      if (!mounted) return;
+      final grew = (thread?.messages.length ?? 0) > (_thread?.messages.length ?? 0);
+      setState(() {
+        _thread = thread;
+        _isLoading = false;
+      });
+      if (!silent || grew) _scrollToEnd();
+    } catch (error) {
+      if (!mounted || silent) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   void _scrollToEnd() {

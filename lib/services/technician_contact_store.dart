@@ -1,16 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:e_auction/models/technician_contact.dart';
+import 'package:e_auction/views/config/config_prod.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// ข้อความและรีวิวระหว่างผู้ใช้กับช่าง เก็บในเครื่องเดียวกับประวัติช่าง
+/// แชทช่างอยู่ที่ ERP-Cloudmate รีวิวยังเก็บบนเครื่อง
 class TechnicianContactStore {
-  static const _threadKey = 'technician_threads_v1';
   static const _reviewKey = 'technician_reviews_v1';
-
-  static Future<List<TechnicianThread>> loadThreads() async {
-    return _readList(_threadKey, TechnicianThread.fromJson);
-  }
+  static const Duration _timeout = Duration(seconds: 30);
 
   static Future<List<TechnicianReview>> loadReviews() async {
     return _readList(_reviewKey, TechnicianReview.fromJson);
@@ -20,27 +20,27 @@ class TechnicianContactStore {
     required String customerId,
     required String technicianOwnerId,
   }) async {
-    final id = TechnicianThread.makeId(customerId, technicianOwnerId);
-    final threads = await loadThreads();
-    for (final thread in threads) {
-      if (thread.id == id) return thread;
-    }
-    return null;
+    final data = await _post({
+      'action': 'thread',
+      'customer_id': customerId,
+      'technician_customer_id': technicianOwnerId,
+    });
+    if (data is! Map) return null;
+    return TechnicianThread.fromJson(Map<String, dynamic>.from(data));
   }
 
   static Future<List<TechnicianThread>> threadsForTechnician(
     String technicianOwnerId,
   ) async {
-    final threads = await loadThreads();
-    final mine = threads
-        .where((thread) => thread.technicianOwnerId == technicianOwnerId)
-        .toList();
-    mine.sort((a, b) {
-      final aTime = a.lastMessage?.sentAt ?? '';
-      final bTime = b.lastMessage?.sentAt ?? '';
-      return bTime.compareTo(aTime);
+    final data = await _post({
+      'action': 'threads',
+      'technician_customer_id': technicianOwnerId,
     });
-    return mine;
+    if (data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map((item) => TechnicianThread.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
   static Future<List<TechnicianReview>> reviewsFor(
@@ -65,43 +65,19 @@ class TechnicianContactStore {
       throw Exception('พิมพ์ข้อความก่อนส่ง');
     }
 
-    final threads = await loadThreads();
-    final id = TechnicianThread.makeId(customerId, technicianOwnerId);
-    final index = threads.indexWhere((thread) => thread.id == id);
-    final existing = index >= 0
-        ? threads[index]
-        : TechnicianThread(
-            id: id,
-            customerId: customerId,
-            customerName: customerName,
-            technicianOwnerId: technicianOwnerId,
-            technicianName: technicianName,
-            messages: const [],
-          );
-    final next = TechnicianThread(
-      id: existing.id,
-      customerId: existing.customerId,
-      customerName: customerName.isEmpty ? existing.customerName : customerName,
-      technicianOwnerId: existing.technicianOwnerId,
-      technicianName: technicianName.isEmpty
-          ? existing.technicianName
-          : technicianName,
-      messages: [
-        ...existing.messages,
-        TechnicianMessage(
-          senderId: senderId,
-          text: trimmed,
-          sentAt: DateTime.now().toIso8601String(),
-        ),
-      ],
-    );
-    if (index >= 0) {
-      threads[index] = next;
-    } else {
-      threads.add(next);
+    final data = await _post({
+      'action': 'send',
+      'customer_id': customerId,
+      'customer_name': customerName,
+      'technician_customer_id': technicianOwnerId,
+      'technician_name': technicianName,
+      'sender_id': senderId,
+      'text': trimmed,
+    });
+    if (data is! Map) {
+      throw Exception('ส่งข้อความไม่สำเร็จ');
     }
-    await _write(_threadKey, threads.map((thread) => thread.toJson()).toList());
-    return next;
+    return TechnicianThread.fromJson(Map<String, dynamic>.from(data));
   }
 
   static Future<TechnicianReview> saveReview({
@@ -155,5 +131,29 @@ class TechnicianContactStore {
   static Future<void> _write(String key, List<Map<String, dynamic>> items) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, jsonEncode(items));
+  }
+
+  static Future<dynamic> _post(Map<String, dynamic> body) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse(Config.technicianApiUrl),
+            headers: {'Content-Type': 'application/json; charset=UTF-8'},
+            body: jsonEncode(body),
+          )
+          .timeout(_timeout);
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        throw Exception('ข้อมูลจาก ERP ไม่ถูกต้อง');
+      }
+      if (response.statusCode >= 400 || decoded['status'] == 'error') {
+        throw Exception(decoded['message']?.toString() ?? 'ERP ตอบกลับไม่สำเร็จ');
+      }
+      return decoded['data'];
+    } on SocketException {
+      throw Exception('เชื่อมต่อ ERP-Cloudmate ไม่ได้');
+    } on TimeoutException {
+      throw Exception('ERP-Cloudmate ตอบช้า ลองใหม่อีกครั้ง');
+    }
   }
 }
