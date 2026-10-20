@@ -1,26 +1,20 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:e_auction/models/technician_profile.dart';
+import 'package:e_auction/views/config/config_prod.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// เก็บประวัติช่างบนเครื่องนี้จนกว่าจะมี API
-///
-/// ข้อมูลไม่ถูกลบตอนออกจากระบบ เพื่อให้เจ้าหน้าที่บนเครื่องเดียวกันตรวจได้
+/// ประวัติช่างอยู่ที่ ERP-Cloudmate เพื่อให้เครื่องอื่นและงานประมูลใช้ชุดเดียวกัน
 class TechnicianProfileStore {
-  static const _storageKey = 'technician_profiles_v1';
+  static const Duration _timeout = Duration(seconds: 30);
 
   static Future<List<TechnicianProfile>> loadAll() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
-    if (raw == null || raw.isEmpty) return [];
-
-    final decoded = jsonDecode(raw);
-    if (decoded is! List) return [];
-
-    return decoded
+    final data = await _get();
+    if (data is! List) return [];
+    return data
         .whereType<Map>()
         .map((item) => TechnicianProfile.fromJson(
               Map<String, dynamic>.from(item),
@@ -29,14 +23,13 @@ class TechnicianProfileStore {
   }
 
   static Future<TechnicianProfile?> loadByOwner(String ownerId) async {
-    final profiles = await loadAll();
-    for (final profile in profiles) {
-      if (profile.ownerId == ownerId) return profile;
-    }
-    return null;
+    final data = await _get({'customer_id': ownerId});
+    if (data is! List || data.isEmpty) return null;
+    final first = data.first;
+    if (first is! Map) return null;
+    return TechnicianProfile.fromJson(Map<String, dynamic>.from(first));
   }
 
-  /// บันทึกแล้วกลับไปสถานะรออนุมัติทุกครั้งที่ช่างแก้ไข
   static Future<TechnicianProfile> submit({
     required String ownerId,
     required String ownerName,
@@ -51,49 +44,38 @@ class TechnicianProfileStore {
     required List<File> newCertificateFiles,
     required List<TechnicianJob> jobs,
   }) async {
-    final savedPaths = <String>[
-      ...keptPortfolioPaths,
-      for (final file in newPortfolioFiles)
-        await _copyIntoAppFolder(ownerId, 'portfolio', file),
+    final portfolioKept = _keptIds(keptPortfolioPaths);
+    final certificateKept = _keptIds(keptCertificatePaths);
+    final portfolioImages = [
+      ...await _encodeLocal(keptPortfolioPaths),
+      ...await _encodeFiles(newPortfolioFiles),
     ];
-    final savedCertificates = <String>[
-      ...keptCertificatePaths,
-      for (final file in newCertificateFiles)
-        await _copyIntoAppFolder(ownerId, 'certificates', file),
+    final certificateImages = [
+      ...await _encodeLocal(keptCertificatePaths),
+      ...await _encodeFiles(newCertificateFiles),
     ];
 
-    final profile = TechnicianProfile(
-      id: ownerId,
-      ownerId: ownerId,
-      ownerName: ownerName,
-      ownerPhone: ownerPhone,
-      displayName: displayName.trim(),
-      skills: skills,
-      serviceArea: serviceArea.trim(),
-      startingPrice: startingPrice,
-      portfolioPaths: savedPaths,
-      certificatePaths: savedCertificates,
-      jobs: jobs
-          .map((job) => TechnicianJob(
-                title: job.title.trim(),
-                detail: job.detail.trim(),
-              ))
-          .where((job) => job.title.isNotEmpty)
+    final data = await _post({
+      'action': 'submit',
+      'customer_id': ownerId,
+      'owner_name': ownerName,
+      'owner_phone': ownerPhone,
+      'display_name': displayName,
+      'skills': skills,
+      'service_area': serviceArea,
+      'starting_price': startingPrice,
+      'jobs': jobs
+          .map((job) => {'title': job.title, 'detail': job.detail})
           .toList(),
-      status: 0,
-      reviewComment: null,
-      updatedAt: DateTime.now().toIso8601String(),
-    );
-
-    final profiles = await loadAll();
-    final index = profiles.indexWhere((item) => item.ownerId == ownerId);
-    if (index >= 0) {
-      profiles[index] = profile;
-    } else {
-      profiles.add(profile);
+      'keep_portfolio_ids': portfolioKept,
+      'keep_certificate_ids': certificateKept,
+      'portfolio_images': portfolioImages,
+      'certificate_images': certificateImages,
+    });
+    if (data is! Map) {
+      throw Exception('บันทึกประวัติไม่สำเร็จ');
     }
-    await _write(profiles);
-    return profile;
+    return TechnicianProfile.fromJson(Map<String, dynamic>.from(data));
   }
 
   static Future<TechnicianProfile> review({
@@ -101,45 +83,96 @@ class TechnicianProfileStore {
     required int status,
     String? comment,
   }) async {
-    final profiles = await loadAll();
-    final index = profiles.indexWhere((item) => item.id == id);
-    if (index < 0) {
-      throw Exception('ไม่พบประวัติช่าง');
+    final data = await _post({
+      'action': 'review',
+      'id': int.tryParse(id) ?? id,
+      'status': status,
+      'comment': comment ?? '',
+    });
+    if (data is! Map) {
+      throw Exception('บันทึกผลการตรวจไม่สำเร็จ');
     }
-
-    final trimmed = comment?.trim();
-    final updated = profiles[index].copyWith(
-      status: status,
-      clearComment: trimmed == null || trimmed.isEmpty,
-      reviewComment: trimmed,
-      updatedAt: DateTime.now().toIso8601String(),
-    );
-    profiles[index] = updated;
-    await _write(profiles);
-    return updated;
+    return TechnicianProfile.fromJson(Map<String, dynamic>.from(data));
   }
 
-  static Future<void> _write(List<TechnicianProfile> profiles) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _storageKey,
-      jsonEncode(profiles.map((profile) => profile.toJson()).toList()),
-    );
+  static List<int> _keptIds(List<String> paths) {
+    final ids = <int>[];
+    for (final item in paths) {
+      if (!item.startsWith('http')) continue;
+      final name = path.basename(Uri.parse(item).path);
+      final match = RegExp(r'^(\d+)_').firstMatch(name);
+      final id = match == null ? null : int.tryParse(match.group(1)!);
+      if (id != null) ids.add(id);
+    }
+    return ids;
   }
 
-  static Future<String> _copyIntoAppFolder(
-    String ownerId,
-    String folderName,
-    File file,
-  ) async {
-    final root = await getApplicationDocumentsDirectory();
-    final folder = Directory(
-      path.join(root.path, 'technician_portfolio', ownerId, folderName),
+  static Future<List<Map<String, String>>> _encodeLocal(List<String> paths) async {
+    final images = <Map<String, String>>[];
+    for (final item in paths) {
+      if (item.startsWith('http')) continue;
+      final file = File(item);
+      if (!await file.exists()) continue;
+      images.add(await _encodeFile(file));
+    }
+    return images;
+  }
+
+  static Future<List<Map<String, String>>> _encodeFiles(List<File> files) async {
+    final images = <Map<String, String>>[];
+    for (final file in files) {
+      images.add(await _encodeFile(file));
+    }
+    return images;
+  }
+
+  static Future<Map<String, String>> _encodeFile(File file) async {
+    final bytes = await file.readAsBytes();
+    return {
+      'name': path.basename(file.path),
+      'data': base64Encode(bytes),
+    };
+  }
+
+  static Future<dynamic> _get([Map<String, String>? query]) async {
+    final uri = Uri.parse(Config.technicianApiUrl).replace(
+      queryParameters: query,
     );
-    await folder.create(recursive: true);
-    final extension = path.extension(file.path);
-    final name = '${DateTime.now().microsecondsSinceEpoch}$extension';
-    final saved = await file.copy(path.join(folder.path, name));
-    return saved.path;
+    try {
+      final response = await http.get(uri).timeout(_timeout);
+      return _decode(response);
+    } on SocketException {
+      throw Exception('เชื่อมต่อ ERP-Cloudmate ไม่ได้');
+    } on TimeoutException {
+      throw Exception('ERP-Cloudmate ตอบช้า ลองใหม่อีกครั้ง');
+    }
+  }
+
+  static Future<dynamic> _post(Map<String, dynamic> body) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse(Config.technicianApiUrl),
+            headers: {'Content-Type': 'application/json; charset=UTF-8'},
+            body: jsonEncode(body),
+          )
+          .timeout(_timeout);
+      return _decode(response);
+    } on SocketException {
+      throw Exception('เชื่อมต่อ ERP-Cloudmate ไม่ได้');
+    } on TimeoutException {
+      throw Exception('ERP-Cloudmate ตอบช้า ลองใหม่อีกครั้ง');
+    }
+  }
+
+  static dynamic _decode(http.Response response) {
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception('ข้อมูลจาก ERP ไม่ถูกต้อง');
+    }
+    if (response.statusCode >= 400 || decoded['status'] == 'error') {
+      throw Exception(decoded['message']?.toString() ?? 'ERP ตอบกลับไม่สำเร็จ');
+    }
+    return decoded['data'];
   }
 }

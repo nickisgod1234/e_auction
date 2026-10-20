@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:e_auction/models/technician_contact.dart';
 import 'package:e_auction/models/technician_profile.dart';
 import 'package:e_auction/services/technician_contact_store.dart';
@@ -7,6 +5,7 @@ import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
+import 'package:e_auction/views/first_page/service_page/technician_image.dart';
 import 'package:e_auction/views/first_page/service_page/service_jobs_tab.dart';
 import 'package:e_auction/views/first_page/service_page/technician_detail_page.dart';
 import 'package:e_auction/views/first_page/service_page/technician_register_page.dart';
@@ -28,6 +27,7 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
   String? _skill;
   int _section = 0;
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -36,9 +36,22 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     final ownerId = await UserDataManager.getID();
-    final profiles = await TechnicianProfileStore.loadAll();
+    late final List<TechnicianProfile> profiles;
+    try {
+      profiles = await TechnicianProfileStore.loadAll();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        _isLoading = false;
+      });
+      return;
+    }
     final reviews = await TechnicianContactStore.loadReviews();
     if (!mounted) return;
     final grouped = <String, List<TechnicianReview>>{};
@@ -126,6 +139,13 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(_errorMessage!, textAlign: TextAlign.center),
+                  ),
+                )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -248,17 +268,10 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
                         color: context.customTheme.primaryColor,
                       ),
                     )
-                  : Image.file(
-                      File(photo),
+                  : technicianImage(
+                      photo,
                       width: 56,
                       height: 56,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 56,
-                        height: 56,
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.broken_image_outlined),
-                      ),
                     ),
             ),
             title: Text(profile.displayName),

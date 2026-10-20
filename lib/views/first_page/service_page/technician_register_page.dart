@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:e_auction/models/technician_profile.dart';
+import 'package:e_auction/views/first_page/service_page/technician_image.dart';
 import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
@@ -327,12 +328,18 @@ class _TechnicianRegisterPageState extends State<TechnicianRegisterPage> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      slots[index].file,
-                      width: 88,
-                      height: 88,
-                      fit: BoxFit.cover,
-                    ),
+                    child: slots[index].newFile != null
+                        ? Image.file(
+                            slots[index].newFile!,
+                            width: 88,
+                            height: 88,
+                            fit: BoxFit.cover,
+                          )
+                        : technicianImage(
+                            slots[index].savedPath ?? '',
+                            width: 88,
+                            height: 88,
+                          ),
                   ),
                   Positioned(
                     right: 2,

@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:e_auction/models/technician_profile.dart';
+import 'package:e_auction/views/first_page/service_page/technician_image.dart';
 import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +16,7 @@ class _TechnicianApprovalPageState extends State<TechnicianApprovalPage>
   late final TabController _tabController;
   List<TechnicianProfile> _profiles = [];
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -31,15 +31,29 @@ class _TechnicianApprovalPageState extends State<TechnicianApprovalPage>
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => _isLoading = true);
-    final profiles = await TechnicianProfileStore.loadAll();
-    profiles.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    if (!mounted) return;
-    setState(() {
-      _profiles = profiles;
-      _isLoading = false;
-    });
+  Future<void> _load({bool showSpinner = true}) async {
+    if (showSpinner && mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+    try {
+      final profiles = await TechnicianProfileStore.loadAll();
+      profiles.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      if (!mounted) return;
+      setState(() {
+        _profiles = profiles;
+        _isLoading = false;
+        _errorMessage = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        _isLoading = false;
+      });
+    }
   }
 
   List<TechnicianProfile> _byStatus(int status) {
@@ -76,7 +90,9 @@ class _TechnicianApprovalPageState extends State<TechnicianApprovalPage>
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
+                : _errorMessage != null
+                    ? Center(child: Text(_errorMessage!))
+                    : TabBarView(
                     controller: _tabController,
                     children: [
                       _list(_byStatus(0)),
@@ -112,13 +128,17 @@ class _TechnicianApprovalPageState extends State<TechnicianApprovalPage>
             isThreeLine: true,
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
-              final changed = await Navigator.push<bool>(
+              final status = await Navigator.push<int>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => _TechnicianDetailPage(profile: profile),
                 ),
               );
-              if (changed == true) _load();
+              if (!mounted || status == null) return;
+              if (status >= 0 && status <= 2) {
+                _tabController.index = status;
+              }
+              await _load(showSpinner: false);
             },
           ),
         );
@@ -147,35 +167,14 @@ class _TechnicianDetailPageState extends State<_TechnicianDetailPage> {
   }
 
   Future<void> _review(int status) async {
-    final commentController = TextEditingController(
-      text: _profile.reviewComment ?? '',
-    );
     final comment = await showDialog<String>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(status == 1 ? 'อนุมัติช่าง' : 'ปฏิเสธช่าง'),
-          content: TextField(
-            controller: commentController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: status == 2 ? 'เหตุผล' : 'ความเห็น (ไม่จำเป็น)',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ยกเลิก'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, commentController.text),
-              child: const Text('ยืนยัน'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => _ReviewCommentDialog(
+        title: status == 1 ? 'อนุมัติช่าง' : 'ปฏิเสธช่าง',
+        label: status == 2 ? 'เหตุผล' : 'ความเห็น (ไม่จำเป็น)',
+        initialText: _profile.reviewComment ?? '',
+      ),
     );
-    commentController.dispose();
     if (comment == null || !mounted) return;
     if (status == 2 && comment.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -185,22 +184,24 @@ class _TechnicianDetailPageState extends State<_TechnicianDetailPage> {
     }
 
     setState(() => _isSaving = true);
+    var leftPage = false;
     try {
-      final updated = await TechnicianProfileStore.review(
+      await TechnicianProfileStore.review(
         id: _profile.id,
         status: status,
         comment: comment,
       );
       if (!mounted) return;
-      setState(() => _profile = updated);
-      Navigator.pop(context, true);
+      leftPage = true;
+      FocusManager.instance.primaryFocus?.unfocus();
+      Navigator.pop(context, status);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted && !leftPage) setState(() => _isSaving = false);
     }
   }
 
@@ -237,16 +238,10 @@ class _TechnicianDetailPageState extends State<_TechnicianDetailPage> {
               itemBuilder: (context, index) {
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(_profile.portfolioPaths[index]),
+                  child: technicianImage(
+                    _profile.portfolioPaths[index],
                     width: 120,
                     height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 120,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.broken_image_outlined),
-                    ),
                   ),
                 );
               },
@@ -266,16 +261,10 @@ class _TechnicianDetailPageState extends State<_TechnicianDetailPage> {
                     itemBuilder: (context, index) {
                       return ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(_profile.certificatePaths[index]),
+                        child: technicianImage(
+                          _profile.certificatePaths[index],
                           width: 120,
                           height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 120,
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.broken_image_outlined),
-                          ),
                         ),
                       );
                     },
@@ -290,26 +279,86 @@ class _TechnicianDetailPageState extends State<_TechnicianDetailPage> {
             ),
           if (_profile.status == 0) ...[
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isSaving ? null : () => _review(2),
-                    child: const Text('ปฏิเสธ'),
+            _isSaving
+                ? const Center(child: CircularProgressIndicator())
+                : Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _review(2),
+                          child: const Text('ปฏิเสธ'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () => _review(1),
+                          child: const Text('อนุมัติ'),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _isSaving ? null : () => _review(1),
-                    child: const Text('อนุมัติ'),
-                  ),
-                ),
-              ],
-            ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _ReviewCommentDialog extends StatefulWidget {
+  final String title;
+  final String label;
+  final String initialText;
+
+  const _ReviewCommentDialog({
+    required this.title,
+    required this.label,
+    required this.initialText,
+  });
+
+  @override
+  State<_ReviewCommentDialog> createState() => _ReviewCommentDialogState();
+}
+
+class _ReviewCommentDialogState extends State<_ReviewCommentDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        maxLines: 3,
+        autofocus: true,
+        decoration: InputDecoration(labelText: widget.label),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('ยกเลิก'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final text = _controller.text;
+            FocusManager.instance.primaryFocus?.unfocus();
+            Navigator.pop(context, text);
+          },
+          child: const Text('ยืนยัน'),
+        ),
+      ],
     );
   }
 }

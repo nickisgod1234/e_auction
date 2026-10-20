@@ -39,9 +39,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // ดึง admin ID จาก SharedPreferences
     _adminId = await UserDataManager.getCustomerID();
     
-    final profiles = await TechnicianProfileStore.loadAll();
-    _pendingTechnicians =
-        profiles.where((profile) => profile.status == 0).length;
+    try {
+      final profiles = await TechnicianProfileStore.loadAll();
+      _pendingTechnicians =
+          profiles.where((profile) => profile.status == 0).length;
+    } catch (_) {
+      _pendingTechnicians = 0;
+    }
 
     if (_adminId != null) {
       await _loadAllSessions();

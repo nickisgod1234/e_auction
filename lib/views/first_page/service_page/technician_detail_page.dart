@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:e_auction/models/technician_contact.dart';
 import 'package:e_auction/models/technician_profile.dart';
 import 'package:e_auction/services/technician_contact_store.dart';
@@ -8,9 +6,9 @@ import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
 import 'package:e_auction/views/first_page/service_page/technician_chat_page.dart';
+import 'package:e_auction/views/first_page/service_page/technician_image.dart';
 import 'package:e_auction/views/first_page/service_page/technician_register_page.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// โปรไฟล์ช่างสำหรับผู้ใช้ทั่วไป หรือสำหรับเจ้าของประวัติ
 class TechnicianDetailPage extends StatefulWidget {
@@ -112,18 +110,6 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _call() async {
-    final phone = _profile.ownerPhone.replaceAll(RegExp(r'[^\d+]'), '');
-    if (phone.isEmpty) return;
-    final uri = Uri.parse('tel:$phone');
-    final opened = await launchUrl(uri);
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เปิดแอปโทรไม่ได้')),
-      );
-    }
   }
 
   @override
@@ -252,17 +238,6 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
               icon: const Icon(Icons.chat_outlined),
               label: const Text('แชทกับช่าง'),
             ),
-            if (_profile.ownerPhone.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _call,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                icon: const Icon(Icons.phone_outlined),
-                label: Text('โทร ${_profile.ownerPhone}'),
-              ),
-            ],
           ],
         ],
       ),
@@ -334,17 +309,10 @@ class _ImageStrip extends StatelessWidget {
         itemBuilder: (context, index) {
           return ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.file(
-              File(paths[index]),
+            child: technicianImage(
+              paths[index],
               width: 88,
               height: 88,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                width: 88,
-                height: 88,
-                color: Colors.grey[200],
-                child: const Icon(Icons.broken_image_outlined),
-              ),
             ),
           );
         },
