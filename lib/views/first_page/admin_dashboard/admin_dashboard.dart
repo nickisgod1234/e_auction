@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:e_auction/services/chat_service.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
 import 'package:e_auction/views/first_page/admin_chat_page/admin_chat_page.dart';
+import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/product_approval_page.dart';
+import 'package:e_auction/views/first_page/admin_dashboard/technician_approval_page.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/chat_management_page.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/user_management_page.dart';
 import 'package:e_auction/views/first_page/admin_dashboard/winner_management_page.dart';
@@ -22,6 +24,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   List<Map<String, dynamic>> _mySessions = [];
   Timer? _pollingTimer;
   bool _isLoading = false;
+  int _pendingTechnicians = 0;
 
   @override
   void initState() {
@@ -36,6 +39,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // ดึง admin ID จาก SharedPreferences
     _adminId = await UserDataManager.getCustomerID();
     
+    final profiles = await TechnicianProfileStore.loadAll();
+    _pendingTechnicians =
+        profiles.where((profile) => profile.status == 0).length;
+
     if (_adminId != null) {
       await _loadAllSessions();
     } else {
@@ -204,6 +211,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  void _openTechnicianApproval() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TechnicianApprovalPage(),
+      ),
+    ).then((_) => _loadData());
+  }
+
   void _openProductApproval() {
     Navigator.push(
       context,
@@ -291,6 +307,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     subtitle: 'จัดการการอนุมัติ',
                     color: Colors.green,
                     onTap: () => _openProductApproval(),
+                  ),
+                  _buildDashboardCard(
+                    icon: Icons.handyman_outlined,
+                    title: 'อนุมัติช่าง',
+                    subtitle: 'รออนุมัติ $_pendingTechnicians',
+                    color: Colors.teal,
+                    onTap: () => _openTechnicianApproval(),
                   ),
                   _buildDashboardCard(
                     icon: Icons.people,
