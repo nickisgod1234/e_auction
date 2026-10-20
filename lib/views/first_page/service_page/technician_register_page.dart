@@ -75,15 +75,6 @@ class _TechnicianRegisterPageState extends State<TechnicianRegisterPage> {
       }
     }
     if (_jobs.isEmpty) _jobs.add(_JobField());
-    if (existing == null) _prefillName();
-  }
-
-  Future<void> _prefillName() async {
-    final name = await UserDataManager.getName();
-    if (!mounted || name == null || name.trim().isEmpty) return;
-    if (_nameController.text.isEmpty) {
-      setState(() => _nameController.text = name.trim());
-    }
   }
 
   @override
@@ -207,7 +198,7 @@ class _TechnicianRegisterPageState extends State<TechnicianRegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
         title: Text(
           widget.existing == null ? 'ลงทะเบียนเป็นช่าง' : 'แก้ไขประวัติช่าง',
@@ -216,157 +207,256 @@ class _TechnicianRegisterPageState extends State<TechnicianRegisterPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: Color(0xFFE5E7EB)),
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      body: Column(
         children: [
-          _field('ชื่อที่แสดง', _nameController, 'เช่น สมชาย ไฟฟ้าและแอร์'),
-          const SizedBox(height: 16),
-          const Text('ทักษะ', style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final skill in TechnicianProfile.skillOptions)
-                FilterChip(
-                  label: Text(skill),
-                  selected: _skills.contains(skill),
-                  onSelected: (selected) {
-                    setState(() {
-                      if (selected) {
-                        _skills.add(skill);
-                      } else {
-                        _skills.remove(skill);
-                      }
-                    });
-                  },
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                _section(
+                  title: 'ข้อมูลทั่วไป',
+                  note: 'ข้อมูลนี้ใช้แสดงในรายการช่างหลังผ่านการตรวจ',
+                  children: [
+                    _field('ชื่อที่แสดง', _nameController, required: true),
+                    const SizedBox(height: 16),
+                    _field(
+                      'พื้นที่ที่รับงาน',
+                      _areaController,
+                      hint: 'เขตหรือจังหวัดที่รับงาน',
+                      required: true,
+                    ),
+                    const SizedBox(height: 16),
+                    _field(
+                      'ราคาเริ่มต้น',
+                      _priceController,
+                      hint: '0',
+                      required: true,
+                      suffix: 'บาท',
+                      keyboard: TextInputType.number,
+                      formats: [FilteringTextInputFormatter.digitsOnly],
+                    ),
+                  ],
                 ),
-            ],
+                _section(
+                  title: 'ทักษะที่รับงาน',
+                  note: 'เลือกได้อย่างน้อย 1 รายการ',
+                  children: [
+                    for (final skill in TechnicianProfile.skillOptions)
+                      CheckboxListTile(
+                        value: _skills.contains(skill),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(skill, style: const TextStyle(fontSize: 15)),
+                        onChanged: (checked) {
+                          setState(() {
+                            if (checked == true) {
+                              _skills.add(skill);
+                            } else {
+                              _skills.remove(skill);
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                ),
+                _section(
+                  title: 'รูปผลงาน',
+                  note: 'อย่างน้อย 1 รูป ไม่เกิน $_maxPhotos รูป',
+                  children: [
+                    _imageGrid(_photos, _maxPhotos),
+                  ],
+                ),
+                _section(
+                  title: 'ใบรับรอง',
+                  note: 'ไม่จำเป็น ใช้ประกอบการตรวจ เช่น ใบรับรองฝีมือหรือใบอบรม ไม่เกิน $_maxCertificates ไฟล์',
+                  children: [
+                    _imageGrid(_certificates, _maxCertificates),
+                  ],
+                ),
+                _section(
+                  title: 'ประวัติงาน',
+                  note: 'ระบุอย่างน้อย 1 รายการ',
+                  children: [
+                    for (var index = 0; index < _jobs.length; index++) ...[
+                      if (index > 0) const SizedBox(height: 12),
+                      _jobCard(index),
+                    ],
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _addJob,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(44),
+                        foregroundColor: Colors.black87,
+                        side: const BorderSide(color: Color(0xFFD1D5DB)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('เพิ่มรายการงาน'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          _field('พื้นที่ที่รับงาน', _areaController, 'เช่น กทม. และนนทบุรี'),
-          const SizedBox(height: 16),
-          _field(
-            'ราคาเริ่มต้น (บาท)',
-            _priceController,
-            '450',
-            keyboard: TextInputType.number,
-            formats: [FilteringTextInputFormatter.digitsOnly],
+          Material(
+            color: Colors.white,
+            elevation: 8,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: FilledButton(
+                  onPressed: _isSaving ? null : _submit,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: context.customTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('ส่งให้เจ้าหน้าที่ตรวจ'),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          const Text('รูปผลงาน', style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          _imageStrip(_photos, _maxPhotos),
-          const SizedBox(height: 16),
-          const Text(
-            'ใบเซอร์ (ไม่จำเป็น)',
-            style: TextStyle(fontWeight: FontWeight.w600),
+        ],
+      ),
+    );
+  }
+
+  Widget _section({
+    required String title,
+    required String note,
+    required List<Widget> children,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 4),
           Text(
-            'เช่น ใบรับรองฝีมือแรงงาน หรือใบอบรม เจ้าหน้าที่ใช้ตอนตรวจ',
-            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+            note,
+            style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFB0B7C3)),
           ),
-          const SizedBox(height: 8),
-          _imageStrip(_certificates, _maxCertificates),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _jobCard(int index) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'งานที่เคยทำ',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  'รายการที่ ${index + 1}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-              TextButton.icon(
-                onPressed: _addJob,
-                icon: const Icon(Icons.add),
-                label: const Text('เพิ่มงาน'),
+              if (_jobs.length > 1)
+                IconButton(
+                  tooltip: 'ลบรายการ',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _removeJob(index),
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                ),
+            ],
+          ),
+          _field('ชื่องาน', _jobs[index].title, hint: 'ระบุชื่องาน', required: true),
+          const SizedBox(height: 12),
+          _field('รายละเอียด', _jobs[index].detail, hint: 'ระบุรายละเอียดงาน'),
+        ],
+      ),
+    );
+  }
+
+  Widget _imageGrid(List<_PortfolioSlot> slots, int maxCount) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (var index = 0; index < slots.length; index++)
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: slots[index].newFile != null
+                    ? Image.file(
+                        slots[index].newFile!,
+                        width: 96,
+                        height: 96,
+                        fit: BoxFit.cover,
+                      )
+                    : technicianImage(
+                        slots[index].savedPath ?? '',
+                        width: 96,
+                        height: 96,
+                      ),
+              ),
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Material(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                  child: InkWell(
+                    onTap: () => setState(() => slots.removeAt(index)),
+                    child: const Padding(
+                      padding: EdgeInsets.all(2),
+                      child: Icon(Icons.close, color: Colors.white, size: 16),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-          for (var index = 0; index < _jobs.length; index++) ...[
-            _field('ชื่องาน', _jobs[index].title, 'เช่น ล้างแอร์ 2 เครื่อง'),
-            const SizedBox(height: 8),
-            _field('รายละเอียด', _jobs[index].detail, 'พื้นที่หรือสิ่งที่ทำให้'),
-            if (_jobs.length > 1)
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => _removeJob(index),
-                  child: const Text('ลบงานนี้'),
-                ),
-              ),
-            const SizedBox(height: 8),
-          ],
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _isSaving ? null : _submit,
-            style: FilledButton.styleFrom(
-              backgroundColor: context.customTheme.primaryColor,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: Text(_isSaving ? 'กำลังส่ง...' : 'ส่งให้เจ้าหน้าที่ตรวจ'),
-          ),
-        ],
-      ),
+        if (slots.length < maxCount) _attachTile(slots, maxCount),
+      ],
     );
   }
 
-  Widget _imageStrip(List<_PortfolioSlot> slots, int maxCount) {
-    return SizedBox(
-      height: 88,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          for (var index = 0; index < slots.length; index++)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: slots[index].newFile != null
-                        ? Image.file(
-                            slots[index].newFile!,
-                            width: 88,
-                            height: 88,
-                            fit: BoxFit.cover,
-                          )
-                        : technicianImage(
-                            slots[index].savedPath ?? '',
-                            width: 88,
-                            height: 88,
-                          ),
-                  ),
-                  Positioned(
-                    right: 2,
-                    top: 2,
-                    child: Material(
-                      color: Colors.black54,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => setState(() => slots.removeAt(index)),
-                        child: const Padding(
-                          padding: EdgeInsets.all(2),
-                          child: Icon(Icons.close, color: Colors.white, size: 16),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          _addPhotoButton(slots, maxCount),
-        ],
-      ),
-    );
-  }
-
-  Widget _addPhotoButton(List<_PortfolioSlot> slots, int maxCount) {
+  Widget _attachTile(List<_PortfolioSlot> slots, int maxCount) {
     return InkWell(
       onTap: () {
         showModalBottomSheet<void>(
@@ -378,7 +468,7 @@ class _TechnicianRegisterPageState extends State<TechnicianRegisterPage> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.photo_library_outlined),
-                    title: const Text('เลือกจากคลัง'),
+                    title: const Text('เลือกจากคลังภาพ'),
                     onTap: () {
                       Navigator.pop(context);
                       _addImage(slots, maxCount, ImageSource.gallery);
@@ -386,7 +476,7 @@ class _TechnicianRegisterPageState extends State<TechnicianRegisterPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.photo_camera_outlined),
-                    title: const Text('ถ่ายรูป'),
+                    title: const Text('ถ่ายภาพ'),
                     onTap: () {
                       Navigator.pop(context);
                       _addImage(slots, maxCount, ImageSource.camera);
@@ -399,37 +489,78 @@ class _TechnicianRegisterPageState extends State<TechnicianRegisterPage> {
         );
       },
       child: Container(
-        width: 88,
-        height: 88,
+        width: 96,
+        height: 96,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFFF9FAFB),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE8E8E8)),
+          border: Border.all(color: const Color(0xFFD1D5DB)),
         ),
-        child: const Icon(Icons.add_a_photo_outlined),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.upload_outlined, color: Color(0xFF4B5563)),
+            SizedBox(height: 4),
+            Text(
+              'แนบรูป',
+              style: TextStyle(fontSize: 12, color: Color(0xFF4B5563)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _field(
     String label,
-    TextEditingController controller,
-    String hint, {
+    TextEditingController controller, {
+    String? hint,
+    bool required = false,
+    String? suffix,
     TextInputType keyboard = TextInputType.text,
     List<TextInputFormatter>? formats,
   }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboard,
-      inputFormatters: formats,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      ),
+    final borderColor = const Color(0xFFD1D5DB);
+    final radius = BorderRadius.circular(8);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            text: label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            children: [
+              if (required)
+                const TextSpan(
+                  text: ' *',
+                  style: TextStyle(color: Colors.red),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboard,
+          inputFormatters: formats,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Color(0xFFB0B7C3)),
+            suffixText: suffix,
+            filled: true,
+            fillColor: Colors.white,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            border: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: borderColor)),
+            enabledBorder: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: borderColor)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: BorderSide(color: context.customTheme.primaryColor, width: 1.4),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

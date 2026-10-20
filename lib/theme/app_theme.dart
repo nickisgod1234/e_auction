@@ -1,3 +1,4 @@
+import 'package:e_auction/utils/tool_utility.dart';
 import 'package:flutter/material.dart';
 
 // Theme configuration - Change this to switch between different clients
@@ -9,6 +10,7 @@ class AppTheme {
     switch (client) {
       case 'morket':
         return ThemeData(
+          fontFamily: FontFamily.promptRegular,
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.green,
             brightness: Brightness.light,
@@ -40,6 +42,7 @@ class AppTheme {
         
       case 'E-Auction':
         return ThemeData(
+          fontFamily: FontFamily.promptRegular,
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.blue,
             brightness: Brightness.light,
@@ -70,6 +73,7 @@ class AppTheme {
         
       case 'client3':
         return ThemeData(
+          fontFamily: FontFamily.promptRegular,
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.orange,
             brightness: Brightness.light,
@@ -100,6 +104,7 @@ class AppTheme {
         
       default:
         return ThemeData(
+          fontFamily: FontFamily.promptRegular,
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.green,
             brightness: Brightness.light,

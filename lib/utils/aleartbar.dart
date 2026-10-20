@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:another_flushbar/flushbar.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:e_auction/utils/tool_utility.dart';
 
 void showAlertBar(
@@ -121,27 +120,18 @@ void confirm_showWarningDialog(
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
-      title: Align(
+      title: const Align(
         alignment: Alignment.center,
-        child: Text(
-          'คำเตือน',
-          style: GoogleFonts.kanit(),
-        ),
+        child: Text('คำเตือน'),
       ),
-      content: Text(
-        msg,
-        style: GoogleFonts.kanit(),
-      ),
+      content: Text(msg),
       actions: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
               onPressed: onPressed,
-              child: Text(
-                'ตกลง',
-                style: GoogleFonts.kanit(),
-              ),
+              child: const Text('ตกลง'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
               ),
