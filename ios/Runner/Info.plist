@@ -19,7 +19,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.21</string>
+	<string>1.1.0</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
@@ -32,7 +32,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>22</string>
+	<string>23</string>
 	<key>FLTEnableImpeller</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>
@@ -58,12 +58,35 @@
 	<string>BidDee needs access to your microphone to enable voice features within the app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>BidDee needs access to your photo library to allow you to choose a photo for your profile picture.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>BidDee needs to send you notifications about auction updates, bidding status, and important events.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -83,7 +106,5 @@
 	</array>
 	<key>com.google.android.geo.API_KEY</key>
 	<string>AIzaSyCA8xOljgqkqVA_DQmjSockld3podZHLrM</string>
-	<key>NSUserNotificationUsageDescription</key>
-	<string>BidDee needs to send you notifications about auction updates, bidding status, and important events.</string>
 </dict>
 </plist>
