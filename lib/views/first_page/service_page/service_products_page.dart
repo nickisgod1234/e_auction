@@ -5,6 +5,7 @@ import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
+import 'package:e_auction/views/first_page/service_page/skill_icon.dart';
 import 'package:e_auction/views/first_page/service_page/technician_image.dart';
 import 'package:e_auction/views/first_page/service_page/service_jobs_tab.dart';
 import 'package:e_auction/views/first_page/service_page/technician_detail_page.dart';
@@ -52,7 +53,17 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
       });
       return;
     }
-    final reviews = await TechnicianContactStore.loadReviews();
+    late final List<TechnicianReview> reviews;
+    try {
+      reviews = await TechnicianContactStore.loadReviews();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        _isLoading = false;
+      });
+      return;
+    }
     if (!mounted) return;
     final grouped = <String, List<TechnicianReview>>{};
     for (final review in reviews) {
@@ -161,7 +172,7 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
                 ),
                 if (_section == 0) ...[
                   SizedBox(
-                    height: 52,
+                    height: 88,
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -177,10 +188,26 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
                         for (final skill in TechnicianProfile.skillOptions)
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(skill),
-                              selected: _skill == skill,
-                              onSelected: (_) => setState(() => _skill = skill),
+                            child: Tooltip(
+                              message: skill,
+                              child: FilterChip(
+                                label: SkillIcon(skill, showLabel: true),
+                                labelPadding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                padding: const EdgeInsets.all(4),
+                                showCheckmark: false,
+                                selected: _skill == skill,
+                                selectedColor: Colors.white,
+                                backgroundColor: Colors.white,
+                                side: BorderSide(
+                                  color: _skill == skill
+                                      ? context.customTheme.primaryColor
+                                      : const Color(0xFFE5E7EB),
+                                  width: _skill == skill ? 2 : 1,
+                                ),
+                                onSelected: (_) =>
+                                    setState(() => _skill = skill),
+                              ),
                             ),
                           ),
                       ],
@@ -275,9 +302,15 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
                     ),
             ),
             title: Text(profile.displayName),
-            subtitle: Text(
-              '${profile.skills.join(' · ')}\n${profile.serviceArea} · เริ่ม ${Format.formatCurrency(profile.startingPrice)}'
-              '${_ratingSuffix(profile.ownerId)}',
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkillIconRow(skills: profile.skills),
+                Text(
+                  '${profile.serviceArea} · เริ่ม ${Format.formatCurrency(profile.startingPrice)}'
+                  '${_ratingSuffix(profile.ownerId)}',
+                ),
+              ],
             ),
             isThreeLine: true,
             onTap: () {

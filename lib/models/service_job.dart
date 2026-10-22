@@ -47,7 +47,7 @@ class ServiceJob {
       };
 
   factory ServiceJob.fromJson(Map<String, dynamic> json) {
-    final budget = json['budget'];
+    final awarded = json['awardedQuoteId']?.toString();
     return ServiceJob(
       id: json['id']?.toString() ?? '',
       ownerId: json['ownerId']?.toString() ?? '',
@@ -56,9 +56,9 @@ class ServiceJob {
       title: json['title']?.toString() ?? '',
       detail: json['detail']?.toString() ?? '',
       area: json['area']?.toString() ?? '',
-      budget: budget is num ? budget.toDouble() : null,
+      budget: _asDouble(json['budget']),
       status: json['status']?.toString() ?? statusOpen,
-      awardedQuoteId: json['awardedQuoteId']?.toString(),
+      awardedQuoteId: awarded == null || awarded.isEmpty ? null : awarded,
       createdAt: json['createdAt']?.toString() ?? '',
     );
   }
@@ -94,15 +94,22 @@ class ServiceQuote {
       };
 
   factory ServiceQuote.fromJson(Map<String, dynamic> json) {
-    final price = json['price'];
     return ServiceQuote(
       id: json['id']?.toString() ?? '',
       jobId: json['jobId']?.toString() ?? '',
       technicianOwnerId: json['technicianOwnerId']?.toString() ?? '',
       technicianName: json['technicianName']?.toString() ?? '',
-      price: price is num ? price.toDouble() : 0,
+      price: _asDouble(json['price']) ?? 0,
       note: json['note']?.toString() ?? '',
       createdAt: json['createdAt']?.toString() ?? '',
     );
   }
+}
+
+double? _asDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  final text = value.toString().trim();
+  if (text.isEmpty) return null;
+  return double.tryParse(text);
 }

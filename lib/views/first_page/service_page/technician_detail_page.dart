@@ -5,6 +5,7 @@ import 'package:e_auction/services/technician_profile_store.dart';
 import 'package:e_auction/theme/app_theme.dart';
 import 'package:e_auction/utils/format.dart';
 import 'package:e_auction/utils/user_data_manager.dart';
+import 'package:e_auction/views/first_page/service_page/skill_icon.dart';
 import 'package:e_auction/views/first_page/service_page/technician_chat_page.dart';
 import 'package:e_auction/views/first_page/service_page/technician_image.dart';
 import 'package:e_auction/views/first_page/service_page/technician_register_page.dart';
@@ -42,7 +43,16 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
   Future<void> _loadContact() async {
     final viewerId = await UserDataManager.getID();
     final viewerName = await UserDataManager.getName();
-    final reviews = await TechnicianContactStore.reviewsFor(_profile.ownerId);
+    var reviews = <TechnicianReview>[];
+    try {
+      reviews = await TechnicianContactStore.reviewsFor(_profile.ownerId);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    }
     var threads = <TechnicianThread>[];
     if (widget.forOwner) {
       try {
@@ -142,8 +152,10 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
             _OwnerStatus(profile: _profile),
             const SizedBox(height: 12),
           ],
+          SkillIconRow(skills: _profile.skills, size: 28),
+          const SizedBox(height: 4),
           Text(
-            '${_profile.skills.join(' · ')} · ${_profile.serviceArea}',
+            _profile.serviceArea,
             style: TextStyle(color: Colors.grey[800]),
           ),
           const SizedBox(height: 4),

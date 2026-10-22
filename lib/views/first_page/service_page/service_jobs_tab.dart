@@ -21,6 +21,7 @@ class _ServiceJobsTabState extends State<ServiceJobsTab> {
   List<ServiceJob> _jobs = [];
   String? _ownerId;
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -29,15 +30,26 @@ class _ServiceJobsTabState extends State<ServiceJobsTab> {
   }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
-    final ownerId = await UserDataManager.getID();
-    final jobs = await ServiceJobStore.loadJobs();
-    if (!mounted) return;
     setState(() {
-      _ownerId = ownerId;
-      _jobs = jobs;
-      _isLoading = false;
+      _isLoading = true;
+      _errorMessage = null;
     });
+    final ownerId = await UserDataManager.getID();
+    try {
+      final jobs = await ServiceJobStore.loadJobs();
+      if (!mounted) return;
+      setState(() {
+        _ownerId = ownerId;
+        _jobs = jobs;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        _isLoading = false;
+      });
+    }
   }
 
   List<ServiceJob> get _mine =>
@@ -74,6 +86,14 @@ class _ServiceJobsTabState extends State<ServiceJobsTab> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(_errorMessage!, textAlign: TextAlign.center),
+        ),
+      );
+    }
     final mineJobs = _mine;
     final openJobs = _openForMe;
     return ListView(

@@ -7,13 +7,19 @@ import 'package:e_auction/views/config/config_prod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// แชทช่างอยู่ที่ ERP-Cloudmate รีวิวยังเก็บบนเครื่อง
+/// แชทช่างและรีวิวอยู่ที่ ERP-Cloudmate
 class TechnicianContactStore {
   static const _reviewKey = 'technician_reviews_v1';
   static const Duration _timeout = Duration(seconds: 30);
 
   static Future<List<TechnicianReview>> loadReviews() async {
-    return _readList(_reviewKey, TechnicianReview.fromJson);
+    await _migrateLocalReviews();
+    final data = await _post({'action': 'reviews'});
+    if (data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map((item) => TechnicianReview.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
   static Future<TechnicianThread?> threadFor({
@@ -46,9 +52,15 @@ class TechnicianContactStore {
   static Future<List<TechnicianReview>> reviewsFor(
     String technicianOwnerId,
   ) async {
-    final reviews = await loadReviews();
-    return reviews
-        .where((review) => review.technicianOwnerId == technicianOwnerId)
+    await _migrateLocalReviews();
+    final data = await _post({
+      'action': 'reviews',
+      'technician_customer_id': technicianOwnerId,
+    });
+    if (data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map((item) => TechnicianReview.fromJson(Map<String, dynamic>.from(item)))
         .toList();
   }
 
@@ -90,47 +102,43 @@ class TechnicianContactStore {
     if (stars < 1 || stars > 5) {
       throw Exception('ให้คะแนน 1 ถึง 5 ดาว');
     }
-    final reviews = await loadReviews();
-    final index = reviews.indexWhere(
-      (review) =>
-          review.customerId == customerId &&
-          review.technicianOwnerId == technicianOwnerId,
-    );
-    final review = TechnicianReview(
-      customerId: customerId,
-      customerName: customerName,
-      technicianOwnerId: technicianOwnerId,
-      stars: stars,
-      comment: comment.trim(),
-      createdAt: DateTime.now().toIso8601String(),
-    );
-    if (index >= 0) {
-      reviews[index] = review;
-    } else {
-      reviews.add(review);
+    await _migrateLocalReviews();
+    final data = await _post({
+      'action': 'save_review',
+      'customer_id': customerId,
+      'customer_name': customerName,
+      'technician_customer_id': technicianOwnerId,
+      'stars': stars,
+      'comment': comment.trim(),
+    });
+    if (data is! Map) {
+      throw Exception('บันทึกรีวิวไม่สำเร็จ');
     }
-    await _write(_reviewKey, reviews.map((item) => item.toJson()).toList());
-    return review;
+    return TechnicianReview.fromJson(Map<String, dynamic>.from(data));
   }
 
-  static Future<List<T>> _readList<T>(
-    String key,
-    T Function(Map<String, dynamic>) decode,
-  ) async {
+  static Future<void> _migrateLocalReviews() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(key);
-    if (raw == null || raw.isEmpty) return [];
+    final raw = prefs.getString(_reviewKey);
+    if (raw == null || raw.isEmpty) return;
     final decoded = jsonDecode(raw);
-    if (decoded is! List) return [];
-    return decoded
-        .whereType<Map>()
-        .map((item) => decode(Map<String, dynamic>.from(item)))
-        .toList();
-  }
-
-  static Future<void> _write(String key, List<Map<String, dynamic>> items) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, jsonEncode(items));
+    if (decoded is! List || decoded.isEmpty) {
+      await prefs.remove(_reviewKey);
+      return;
+    }
+    for (final item in decoded.whereType<Map>()) {
+      final review = TechnicianReview.fromJson(Map<String, dynamic>.from(item));
+      if (review.customerId.isEmpty || review.technicianOwnerId.isEmpty) continue;
+      await _post({
+        'action': 'save_review',
+        'customer_id': review.customerId,
+        'customer_name': review.customerName,
+        'technician_customer_id': review.technicianOwnerId,
+        'stars': review.stars,
+        'comment': review.comment,
+      });
+    }
+    await prefs.remove(_reviewKey);
   }
 
   static Future<dynamic> _post(Map<String, dynamic> body) async {

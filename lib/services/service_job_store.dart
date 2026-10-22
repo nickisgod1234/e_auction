@@ -1,24 +1,42 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:e_auction/models/service_job.dart';
+import 'package:e_auction/views/config/config_prod.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// ประกาศจ้างและราคาที่ช่างเสนอ เก็บในเครื่องเดียวกับประวัติช่าง
+/// ประกาศจ้างและราคาที่ช่างเสนออยู่ที่ ERP-Cloudmate
 class ServiceJobStore {
   static const _jobKey = 'service_jobs_v1';
   static const _quoteKey = 'service_quotes_v1';
+  static const Duration _timeout = Duration(seconds: 30);
 
   static Future<List<ServiceJob>> loadJobs() async {
-    final jobs = await _read(_jobKey, ServiceJob.fromJson);
+    await _migrateLocal();
+    final data = await _post({'action': 'jobs'});
+    if (data is! List) return [];
+    final jobs = data
+        .whereType<Map>()
+        .map((item) => ServiceJob.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
     jobs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return jobs;
   }
 
   static Future<List<ServiceQuote>> quotesFor(String jobId) async {
-    final quotes = await _read(_quoteKey, ServiceQuote.fromJson);
-    final mine = quotes.where((quote) => quote.jobId == jobId).toList();
-    mine.sort((a, b) => a.price.compareTo(b.price));
-    return mine;
+    final data = await _post({
+      'action': 'quotes',
+      'job_id': jobId,
+    });
+    if (data is! List) return [];
+    final quotes = data
+        .whereType<Map>()
+        .map((item) => ServiceQuote.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+    quotes.sort((a, b) => a.price.compareTo(b.price));
+    return quotes;
   }
 
   static Future<ServiceJob> create({
@@ -30,23 +48,20 @@ class ServiceJobStore {
     required String area,
     double? budget,
   }) async {
-    final job = ServiceJob(
-      id: '${ownerId}_${DateTime.now().microsecondsSinceEpoch}',
-      ownerId: ownerId,
-      ownerName: ownerName,
-      skill: skill,
-      title: title.trim(),
-      detail: detail.trim(),
-      area: area.trim(),
-      budget: budget,
-      status: ServiceJob.statusOpen,
-      awardedQuoteId: null,
-      createdAt: DateTime.now().toIso8601String(),
-    );
-    final jobs = await loadJobs();
-    jobs.add(job);
-    await _write(_jobKey, jobs.map((item) => item.toJson()).toList());
-    return job;
+    final data = await _post({
+      'action': 'create_job',
+      'owner_id': ownerId,
+      'owner_name': ownerName,
+      'skill': skill,
+      'title': title.trim(),
+      'detail': detail.trim(),
+      'area': area.trim(),
+      'budget': budget,
+    });
+    if (data is! Map) {
+      throw Exception('บันทึกประกาศไม่สำเร็จ');
+    }
+    return ServiceJob.fromJson(Map<String, dynamic>.from(data));
   }
 
   static Future<ServiceQuote> submitQuote({
@@ -56,38 +71,18 @@ class ServiceJobStore {
     required double price,
     required String note,
   }) async {
-    final jobs = await loadJobs();
-    final jobIndex = jobs.indexWhere((job) => job.id == jobId);
-    if (jobIndex < 0) throw Exception('ไม่พบประกาศ');
-    if (!jobs[jobIndex].isOpen) throw Exception('ประกาศนี้เลือกช่างแล้ว');
-    if (jobs[jobIndex].ownerId == technicianOwnerId) {
-      throw Exception('เสนอราคาในประกาศของตัวเองไม่ได้');
+    final data = await _post({
+      'action': 'submit_quote',
+      'job_id': jobId,
+      'technician_customer_id': technicianOwnerId,
+      'technician_name': technicianName,
+      'price': price,
+      'note': note.trim(),
+    });
+    if (data is! Map) {
+      throw Exception('ส่งราคาไม่สำเร็จ');
     }
-    if (price <= 0) throw Exception('กรอกราคาให้มากกว่า 0');
-
-    final quotes = await _read(_quoteKey, ServiceQuote.fromJson);
-    final index = quotes.indexWhere(
-      (quote) =>
-          quote.jobId == jobId && quote.technicianOwnerId == technicianOwnerId,
-    );
-    final quote = ServiceQuote(
-      id: index >= 0
-          ? quotes[index].id
-          : '${technicianOwnerId}_${DateTime.now().microsecondsSinceEpoch}',
-      jobId: jobId,
-      technicianOwnerId: technicianOwnerId,
-      technicianName: technicianName,
-      price: price,
-      note: note.trim(),
-      createdAt: DateTime.now().toIso8601String(),
-    );
-    if (index >= 0) {
-      quotes[index] = quote;
-    } else {
-      quotes.add(quote);
-    }
-    await _write(_quoteKey, quotes.map((item) => item.toJson()).toList());
-    return quote;
+    return ServiceQuote.fromJson(Map<String, dynamic>.from(data));
   }
 
   static Future<ServiceJob> award({
@@ -95,54 +90,112 @@ class ServiceJobStore {
     required String ownerId,
     required String quoteId,
   }) async {
-    final jobs = await loadJobs();
-    final index = jobs.indexWhere((job) => job.id == jobId);
-    if (index < 0) throw Exception('ไม่พบประกาศ');
-    if (jobs[index].ownerId != ownerId) {
-      throw Exception('เลือกช่างได้เฉพาะเจ้าของประกาศ');
+    final data = await _post({
+      'action': 'award_job',
+      'job_id': jobId,
+      'owner_id': ownerId,
+      'quote_id': quoteId,
+    });
+    if (data is! Map) {
+      throw Exception('เลือกช่างไม่สำเร็จ');
     }
-    final quotes = await quotesFor(jobId);
-    final quote = quotes.cast<ServiceQuote?>().firstWhere(
-          (item) => item?.id == quoteId,
-          orElse: () => null,
-        );
-    if (quote == null) throw Exception('ไม่พบราคาที่เสนอ');
-
-    final updated = ServiceJob(
-      id: jobs[index].id,
-      ownerId: jobs[index].ownerId,
-      ownerName: jobs[index].ownerName,
-      skill: jobs[index].skill,
-      title: jobs[index].title,
-      detail: jobs[index].detail,
-      area: jobs[index].area,
-      budget: jobs[index].budget,
-      status: ServiceJob.statusAwarded,
-      awardedQuoteId: quote.id,
-      createdAt: jobs[index].createdAt,
-    );
-    jobs[index] = updated;
-    await _write(_jobKey, jobs.map((item) => item.toJson()).toList());
-    return updated;
+    return ServiceJob.fromJson(Map<String, dynamic>.from(data));
   }
 
-  static Future<List<T>> _read<T>(
-    String key,
-    T Function(Map<String, dynamic>) decode,
-  ) async {
+  static Future<void> _migrateLocal() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(key);
-    if (raw == null || raw.isEmpty) return [];
-    final decoded = jsonDecode(raw);
-    if (decoded is! List) return [];
-    return decoded
+    final rawJobs = prefs.getString(_jobKey);
+    if (rawJobs == null || rawJobs.isEmpty) return;
+    final decodedJobs = jsonDecode(rawJobs);
+    final decodedQuotes = jsonDecode(prefs.getString(_quoteKey) ?? '[]');
+    if (decodedJobs is! List || decodedJobs.isEmpty) {
+      await prefs.remove(_jobKey);
+      await prefs.remove(_quoteKey);
+      return;
+    }
+
+    final jobs = decodedJobs
         .whereType<Map>()
-        .map((item) => decode(Map<String, dynamic>.from(item)))
+        .map((item) => ServiceJob.fromJson(Map<String, dynamic>.from(item)))
         .toList();
+    final quotes = decodedQuotes is List
+        ? decodedQuotes
+            .whereType<Map>()
+            .map((item) => ServiceQuote.fromJson(Map<String, dynamic>.from(item)))
+            .toList()
+        : <ServiceQuote>[];
+    final savedMap = prefs.getString('service_jobs_id_map_v1');
+    final idMap = <String, String>{};
+    if (savedMap != null && savedMap.isNotEmpty) {
+      final decodedMap = jsonDecode(savedMap);
+      if (decodedMap is Map) {
+        decodedMap.forEach((key, value) {
+          idMap[key.toString()] = value.toString();
+        });
+      }
+    }
+
+    for (final job in jobs) {
+      if (idMap.containsKey(job.id)) continue;
+      final created = await create(
+        ownerId: job.ownerId,
+        ownerName: job.ownerName,
+        skill: job.skill,
+        title: job.title,
+        detail: job.detail,
+        area: job.area,
+        budget: job.budget,
+      );
+      idMap[job.id] = created.id;
+      await prefs.setString('service_jobs_id_map_v1', jsonEncode(idMap));
+    }
+    final quoteIdMap = <String, String>{};
+    for (final quote in quotes) {
+      final jobId = idMap[quote.jobId];
+      if (jobId == null) continue;
+      final created = await submitQuote(
+        jobId: jobId,
+        technicianOwnerId: quote.technicianOwnerId,
+        technicianName: quote.technicianName,
+        price: quote.price,
+        note: quote.note,
+      );
+      quoteIdMap[quote.id] = created.id;
+    }
+    for (final job in jobs) {
+      final quoteId = job.awardedQuoteId;
+      final newJobId = idMap[job.id];
+      final newQuoteId = quoteId == null ? null : quoteIdMap[quoteId];
+      if (!job.isOpen && newJobId != null && newQuoteId != null) {
+        await award(jobId: newJobId, ownerId: job.ownerId, quoteId: newQuoteId);
+      }
+    }
+    await prefs.remove(_jobKey);
+    await prefs.remove(_quoteKey);
+    await prefs.remove('service_jobs_id_map_v1');
   }
 
-  static Future<void> _write(String key, List<Map<String, dynamic>> items) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, jsonEncode(items));
+  static Future<dynamic> _post(Map<String, dynamic> body) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse(Config.technicianApiUrl),
+            headers: {'Content-Type': 'application/json; charset=UTF-8'},
+            body: jsonEncode(body),
+          )
+          .timeout(_timeout);
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        throw Exception('ข้อมูลจาก ERP ไม่ถูกต้อง');
+      }
+      if (response.statusCode >= 400 || decoded['status'] == 'error') {
+        throw Exception(decoded['message']?.toString() ?? 'ERP ตอบกลับไม่สำเร็จ');
+      }
+      return decoded['data'];
+    } on SocketException {
+      throw Exception('เชื่อมต่อ ERP-Cloudmate ไม่ได้');
+    } on TimeoutException {
+      throw Exception('ERP-Cloudmate ตอบช้า ลองใหม่อีกครั้ง');
+    }
   }
 }

@@ -104,14 +104,19 @@ class TechnicianReview {
       };
 
   factory TechnicianReview.fromJson(Map<String, dynamic> json) {
-    final stars = json['stars'];
     return TechnicianReview(
       customerId: json['customerId']?.toString() ?? '',
       customerName: json['customerName']?.toString() ?? '',
       technicianOwnerId: json['technicianOwnerId']?.toString() ?? '',
-      stars: stars is int ? stars : 0,
+      stars: _asInt(json['stars']),
       comment: json['comment']?.toString() ?? '',
       createdAt: json['createdAt']?.toString() ?? '',
     );
   }
+}
+
+int _asInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
 }

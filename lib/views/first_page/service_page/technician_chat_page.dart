@@ -165,13 +165,21 @@ class _TechnicianChatPageState extends State<TechnicianChatPage> {
     commentController.dispose();
     if (saved != true || !mounted) return;
 
-    await TechnicianContactStore.saveReview(
-      customerId: widget.customerId,
-      customerName: widget.customerName,
-      technicianOwnerId: widget.technicianOwnerId,
-      stars: stars,
-      comment: comment,
-    );
+    try {
+      await TechnicianContactStore.saveReview(
+        customerId: widget.customerId,
+        customerName: widget.customerName,
+        technicianOwnerId: widget.technicianOwnerId,
+        stars: stars,
+        comment: comment,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('บันทึกรีวิวแล้ว')),
