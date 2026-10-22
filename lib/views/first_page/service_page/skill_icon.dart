@@ -51,6 +51,47 @@ class SkillIcon extends StatelessWidget {
   }
 }
 
+class SkillSample {
+  final String title;
+  final String asset;
+
+  const SkillSample(this.title, this.asset);
+}
+
+/// รูปตัวอย่างของหัวข้อหลัก สองใบต่อหมวด
+class SkillSamples {
+  static const bySkill = <String, List<SkillSample>>{
+    'แอร์': [
+      SkillSample('ล้างแอร์', 'assets/images/skills/samples/air_clean.jpg'),
+      SkillSample('ซ่อมแอร์', 'assets/images/skills/samples/air_repair.jpg'),
+    ],
+    'ไฟฟ้า': [
+      SkillSample('เดินสายไฟ', 'assets/images/skills/samples/electric_outlet.jpg'),
+      SkillSample('ติดตั้งไฟ', 'assets/images/skills/samples/electric_light.jpg'),
+    ],
+    'ประปา': [
+      SkillSample('ซ่อมท่อน้ำ', 'assets/images/skills/samples/plumbing_sink.jpg'),
+      SkillSample('ซ่อมปั๊มน้ำ', 'assets/images/skills/samples/plumbing_pump.jpg'),
+    ],
+    'สี': [
+      SkillSample('ทาสีผนัง', 'assets/images/skills/samples/paint_wall.jpg'),
+      SkillSample('ทาสีวงกบ', 'assets/images/skills/samples/paint_door.jpg'),
+    ],
+    'ต่อเติม': [
+      SkillSample('ก่อผนัง', 'assets/images/skills/samples/build_wall.jpg'),
+      SkillSample('มุงหลังคา', 'assets/images/skills/samples/build_roof.jpg'),
+    ],
+    'ทำความสะอาด': [
+      SkillSample('ทำความสะอาดบ้าน', 'assets/images/skills/samples/clean_home.jpg'),
+      SkillSample('เช็ดกระจก', 'assets/images/skills/samples/clean_window.jpg'),
+    ],
+    'เครื่องใช้ไฟฟ้า': [
+      SkillSample('ซ่อมเครื่องซักผ้า', 'assets/images/skills/samples/appliance_washer.jpg'),
+      SkillSample('ซ่อมตู้เย็น', 'assets/images/skills/samples/appliance_fridge.jpg'),
+    ],
+  };
+}
+
 class SkillIconRow extends StatelessWidget {
   final List<String> skills;
   final double size;

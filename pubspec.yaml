@@ -98,6 +98,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/skills/
+    - assets/images/skills/samples/
     - assets/fonts/
 
   fonts:

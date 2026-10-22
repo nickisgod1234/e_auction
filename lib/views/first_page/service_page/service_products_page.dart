@@ -13,7 +13,7 @@ import 'package:e_auction/views/first_page/service_page/technician_register_page
 import 'package:flutter/material.dart';
 
 /// รายการช่างที่อนุมัติแล้วสำหรับผู้ใช้ทั่วไป
-/// ทางลงทะเบียนเป็นช่างอยู่ปุ่มล่างแยกจากรายการ
+/// ทางลงทะเบียนเป็นช่างอยู่ข้างปุ่มรีเฟรชด้านบน
 class ServiceProductsPage extends StatefulWidget {
   const ServiceProductsPage({super.key});
 
@@ -29,11 +29,19 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
   int _section = 0;
   bool _isLoading = true;
   String? _errorMessage;
+  final _searchController = TextEditingController();
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -82,18 +90,35 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
     });
   }
 
-  String _ratingSuffix(String ownerId) {
+  _Rating? _ratingOf(String ownerId) {
     final reviews = _reviews[ownerId];
-    if (reviews == null || reviews.isEmpty) return '';
+    if (reviews == null || reviews.isEmpty) return null;
     final total = reviews.fold<int>(0, (sum, review) => sum + review.stars);
-    final average = total / reviews.length;
-    return ' · ${average.toStringAsFixed(1)} ดาว';
+    return _Rating(total / reviews.length, reviews.length);
   }
 
-  List<TechnicianProfile> get _visible {
-    final skill = _skill;
-    if (skill == null) return _approved;
-    return _approved.where((profile) => profile.skills.contains(skill)).toList();
+  bool _matches(TechnicianProfile profile, String skill) {
+    if (!profile.skills.contains(skill)) return false;
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return true;
+    final text = '${profile.displayName} ${profile.serviceArea} ${profile.skills.join(' ')}'
+        .toLowerCase();
+    return text.contains(query);
+  }
+
+  List<TechnicianProfile> _profilesFor(String skill) {
+    return _approved.where((profile) => _matches(profile, skill)).toList();
+  }
+
+  bool _sectionVisible(String skill) {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return true;
+    if (skill.toLowerCase().contains(query)) return true;
+    final samples = SkillSamples.bySkill[skill] ?? const <SkillSample>[];
+    if (samples.any((sample) => sample.title.toLowerCase().contains(query))) {
+      return true;
+    }
+    return _profilesFor(skill).isNotEmpty;
   }
 
   Future<void> _openRegister() async {
@@ -142,6 +167,18 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          if (!_isLoading)
+            TextButton(
+              onPressed: mine == null ? _openRegister : _openMine,
+              child: Text(
+                mine == null ? 'ลงทะเบียนเป็นช่าง' : 'ประวัติช่างของฉัน',
+                style: TextStyle(
+                  color: context.customTheme.primaryColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.black, size: 20),
             onPressed: _load,
@@ -171,75 +208,41 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
                   ),
                 ),
                 if (_section == 0) ...[
-                  SizedBox(
-                    height: 88,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: const Text('ทั้งหมด'),
-                            selected: _skill == null,
-                            onSelected: (_) => setState(() => _skill = null),
-                          ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => _query = value),
+                      decoration: InputDecoration(
+                        hintText: 'พิมพ์ปัญหาที่ให้ช่วยดูแล เช่น แอร์ไม่เย็น',
+                        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                        prefixIcon: Icon(Icons.search, color: context.customTheme.primaryColor),
+                        filled: true,
+                        fillColor: Colors.white,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          borderSide: BorderSide(color: context.customTheme.primaryColor),
                         ),
-                        for (final skill in TechnicianProfile.skillOptions)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Tooltip(
-                              message: skill,
-                              child: FilterChip(
-                                label: SkillIcon(skill, showLabel: true),
-                                labelPadding:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                padding: const EdgeInsets.all(4),
-                                showCheckmark: false,
-                                selected: _skill == skill,
-                                selectedColor: Colors.white,
-                                backgroundColor: Colors.white,
-                                side: BorderSide(
-                                  color: _skill == skill
-                                      ? context.customTheme.primaryColor
-                                      : const Color(0xFFE5E7EB),
-                                  width: _skill == skill ? 2 : 1,
-                                ),
-                                onSelected: (_) =>
-                                    setState(() => _skill = skill),
-                              ),
-                            ),
-                          ),
-                      ],
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          borderSide: BorderSide(color: context.customTheme.primaryColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          borderSide: BorderSide(color: context.customTheme.primaryColor, width: 1.5),
+                        ),
+                      ),
                     ),
                   ),
-                  Expanded(child: _buildList()),
+                  Expanded(
+                    child: _skill == null ? _buildHome() : _buildCategory(_skill!),
+                  ),
                 ] else
                   Expanded(child: ServiceJobsTab(mine: _mine)),
               ],
             ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: mine == null
-              ? FilledButton(
-                  onPressed: _openRegister,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: context.customTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  child: const Text('ลงทะเบียนเป็นช่าง'),
-                )
-              : OutlinedButton(
-                  onPressed: _openMine,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  child: Text('ประวัติช่างของฉัน · ${mine.statusLabel}'),
-                ),
-        ),
-      ),
     );
   }
 
@@ -252,78 +255,242 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
     );
   }
 
-  Widget _buildList() {
-    final profiles = _visible;
-    if (profiles.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Text(
-            _skill == null
-                ? 'ยังไม่มีช่างที่ผ่านการตรวจ'
-                : 'ยังไม่มีช่างประเภท$_skill',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF8A8A8A)),
-          ),
-        ),
+  Widget _buildHome() {
+    final skills = TechnicianProfile.skillOptions.where(_sectionVisible).toList();
+    if (skills.isEmpty) {
+      return const Center(
+        child: Text('ไม่พบช่างที่ตรงกับคำค้น', style: TextStyle(color: Color(0xFF8A8A8A))),
       );
     }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        for (final skill in skills) ...[
+          _sectionHeader(skill),
+          _sampleGrid(skill),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      itemCount: profiles.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+  Widget _buildCategory(String skill) {
+    final profiles = _profilesFor(skill);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              _sampleCover(skill),
+              Positioned(
+                left: 8,
+                top: 8,
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 16),
+                    onPressed: () => setState(() => _skill = null),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'ช่าง$skill',
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1F2A6B)),
+        ),
+        const SizedBox(height: 12),
+        if (profiles.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Text('ยังไม่มีช่างในหมวดนี้', style: TextStyle(color: Color(0xFF8A8A8A))),
+          )
+        else
+          _profileGrid(profiles, skill),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(String skill) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'ช่าง$skill',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1F2A6B)),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          onPressed: () => setState(() => _skill = skill),
+        ),
+      ],
+    );
+  }
+
+  Widget _sampleGrid(String skill) {
+    final samples = SkillSamples.bySkill[skill] ?? const <SkillSample>[];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: samples.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 12,
+        mainAxisExtent: 168,
+      ),
       itemBuilder: (context, index) {
-        final profile = profiles[index];
-        final photo = profile.portfolioPaths.isEmpty
-            ? null
-            : profile.portfolioPaths.first;
-        return Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: photo == null
-                  ? Container(
-                      width: 56,
-                      height: 56,
-                      color: const Color(0xFFFFF1EC),
-                      child: Icon(
-                        Icons.handyman_outlined,
-                        color: context.customTheme.primaryColor,
-                      ),
-                    )
-                  : technicianImage(
-                      photo,
-                      width: 56,
-                      height: 56,
-                    ),
-            ),
-            title: Text(profile.displayName),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SkillIconRow(skills: profile.skills),
-                Text(
-                  '${profile.serviceArea} · เริ่ม ${Format.formatCurrency(profile.startingPrice)}'
-                  '${_ratingSuffix(profile.ownerId)}',
+        final sample = samples[index];
+        return InkWell(
+          onTap: () => setState(() => _skill = skill),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  sample.asset,
+                  height: 132,
+                  fit: BoxFit.cover,
                 ),
-              ],
-            ),
-            isThreeLine: true,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TechnicianDetailPage(profile: profile),
-                ),
-              );
-            },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                sample.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
           ),
         );
       },
     );
   }
+
+  Widget _sampleCover(String skill) {
+    final samples = SkillSamples.bySkill[skill];
+    if (samples == null || samples.isEmpty) {
+      return _photoSlot(skill, height: 190);
+    }
+    return Image.asset(
+      samples.first.asset,
+      height: 190,
+      width: double.infinity,
+      fit: BoxFit.cover,
+    );
+  }
+
+  Widget _profileGrid(List<TechnicianProfile> profiles, String skill) {
+    if (profiles.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text('ยังไม่มีช่าง$skill', style: const TextStyle(color: Color(0xFF8A8A8A))),
+      );
+    }
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: profiles.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 12,
+        mainAxisExtent: 228,
+      ),
+      itemBuilder: (context, index) => _profileCard(profiles[index], skill),
+    );
+  }
+
+  Widget _profileCard(TechnicianProfile profile, String skill) {
+    final photo = profile.portfolioPaths.isEmpty ? null : profile.portfolioPaths.first;
+    final rating = _ratingOf(profile.ownerId);
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TechnicianDetailPage(profile: profile),
+          ),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 132,
+              child: photo == null
+                  ? const ColoredBox(
+                      color: Color(0xFFF3F4F6),
+                      child: Icon(Icons.person_outline, color: Color(0xFF9CA3AF), size: 36),
+                    )
+                  : technicianImage(photo, fit: BoxFit.cover),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            profile.displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 2),
+          Text.rich(
+            TextSpan(
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+              children: [
+                const TextSpan(text: 'เริ่มต้น '),
+                TextSpan(
+                  text: Format.formatCurrency(profile.startingPrice),
+                  style: TextStyle(
+                    color: context.customTheme.primaryColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (rating == null)
+            const Text('ยังไม่มีรีวิว', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)))
+          else
+            Row(
+              children: [
+                const Icon(Icons.star, size: 14, color: Color(0xFFE8A317)),
+                const SizedBox(width: 2),
+                Text(rating.average.toStringAsFixed(1), style: const TextStyle(fontSize: 12)),
+                Text(
+                  ' (${rating.count})',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photoSlot(String skill, {required double height}) {
+    return Container(
+      width: double.infinity,
+      height: height,
+      color: const Color(0xFFFFF4EC),
+      alignment: Alignment.center,
+      child: SkillIcon(skill, size: height * 0.46),
+    );
+  }
+}
+
+class _Rating {
+  final double average;
+  final int count;
+
+  const _Rating(this.average, this.count);
 }
