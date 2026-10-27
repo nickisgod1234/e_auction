@@ -198,7 +198,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
               ),
               const BottomNavigationBarItem(
                 icon: Icon(Icons.handyman_outlined),
-                label: 'สินค้าบริการ',
+                label: 'บริการ',
               ),
               const BottomNavigationBarItem(
                 icon: Icon(Icons.inventory_2),

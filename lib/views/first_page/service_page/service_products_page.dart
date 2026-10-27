@@ -156,7 +156,7 @@ class _ServiceProductsPageState extends State<ServiceProductsPage> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
-          'สินค้าบริการ',
+          'บริการ',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
